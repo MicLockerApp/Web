@@ -210,6 +210,15 @@ const ProfilePage = () => {
               <div className="flex items-center gap-4 mb-4">
                 <StarRating rating={profile.rating || 0} showValue totalReviews={profile.review_count} />
                 <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>· {profile.total_sales} sales</span>
+                {/* Lifetime Free Fees Badge - only visible on own profile */}
+                {isOwnProfile && currentUser?.has_lifetime_free_fees && (
+                  <span className="badge bg-green-500/20 text-green-400 border border-green-500/30 flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    0% Fees For Life
+                  </span>
+                )}
               </div>
 
               {/* Location & Member Since */}

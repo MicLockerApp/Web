@@ -108,8 +108,15 @@ async def create_order(
         await db.cart_items.delete_many({"user_id": current_user["id"]})
     
     # Calculate fees
-    # Platform fee: 3% of subtotal (goes to MicLocker)
-    platform_fee = round(subtotal * (settings.platform_fee_percent / 100), 2)
+    # Check if buyer has lifetime free platform fees (first 100 users perk)
+    has_free_fees = current_user.get("has_lifetime_free_fees", False)
+    
+    # Platform fee: 3% of subtotal (goes to MicLocker) - 0% for lifetime free users
+    if has_free_fees:
+        platform_fee = 0.0
+    else:
+        platform_fee = round(subtotal * (settings.platform_fee_percent / 100), 2)
+    
     # Payment processing fee: 3.19% + $0.49 per transaction (goes to payment processor)
     payment_processing_fee = round(subtotal * (settings.payment_processing_percent / 100) + settings.payment_processing_fixed, 2)
     # Total buyer pays

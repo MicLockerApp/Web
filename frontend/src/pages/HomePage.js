@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Music, Mic2, Building2, MapPin, ChevronRight, ShoppingBag } from 'lucide-react';
+import { ArrowRight, Music, Mic2, Building2, MapPin, ChevronRight, ShoppingBag, Users } from 'lucide-react';
 import { listingsAPI } from '../services/api';
 import ListingCard from '../components/ListingCard';
 import LoadingSpinner from '../components/LoadingSpinner';
+import PromoModal from '../components/PromoModal';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 
 const CATEGORIES = [
   { name: 'Guitars', icon: '🎸', color: 'from-orange-500 to-red-500' },
@@ -47,10 +49,15 @@ const AnimatedCounter = ({ target, duration = 2000 }) => {
 
 const HomePage = () => {
   const { isDark } = useTheme();
+  const { isAuthenticated } = useAuth();
   const [featuredListings, setFeaturedListings] = useState([]);
   const [recentListings, setRecentListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeListingsCount, setActiveListingsCount] = useState(0);
+  const [totalUsersCount, setTotalUsersCount] = useState(0);
+  const [promoEligible, setPromoEligible] = useState(false);
+  const [promoSpotsRemaining, setPromoSpotsRemaining] = useState(100);
+  const [showPromoModal, setShowPromoModal] = useState(false);
 
   useEffect(() => {
     const fetchListings = async () => {
@@ -63,6 +70,9 @@ const HomePage = () => {
         setFeaturedListings(featured.data.listings || []);
         setRecentListings(recent.data.listings || []);
         setActiveListingsCount(stats.data.active_listings || 0);
+        setTotalUsersCount(stats.data.total_users || 0);
+        setPromoEligible(stats.data.promo_eligible || false);
+        setPromoSpotsRemaining(stats.data.promo_spots_remaining || 0);
       } catch (error) {
         console.error('Error fetching listings:', error);
       } finally {
@@ -72,8 +82,37 @@ const HomePage = () => {
     fetchListings();
   }, []);
 
+  // Show promo modal for non-authenticated users on first visit
+  useEffect(() => {
+    if (!loading && !isAuthenticated && promoEligible) {
+      // Check if user has seen the promo modal in this session
+      const hasSeenPromo = sessionStorage.getItem('miclocker_promo_seen');
+      
+      if (!hasSeenPromo) {
+        // Small delay for better UX - let the page load first
+        const timer = setTimeout(() => {
+          setShowPromoModal(true);
+          sessionStorage.setItem('miclocker_promo_seen', 'true');
+        }, 1500);
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [loading, isAuthenticated, promoEligible]);
+
+  const handleClosePromoModal = () => {
+    setShowPromoModal(false);
+  };
+
   return (
     <div className="min-h-screen" data-testid="home-page">
+      {/* Promo Modal */}
+      <PromoModal 
+        isOpen={showPromoModal} 
+        onClose={handleClosePromoModal}
+        spotsRemaining={promoSpotsRemaining}
+      />
+
       {/* Hero Section */}
       <section className={`relative py-20 px-4 overflow-hidden ${isDark ? '' : 'bg-gradient-to-br from-gray-50 to-gray-100'}`}>
         {isDark && <div className="absolute inset-0 bg-gradient-to-br from-dark-600 via-dark-500 to-dark-600" />}
@@ -94,8 +133,14 @@ const HomePage = () => {
             </Link>
           </div>
           
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-8 mt-16 max-w-lg mx-auto">
+          {/* Stats - Reordered: Users, Listings, Platform Fee, Satisfaction */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16 max-w-2xl mx-auto">
+            <div>
+              <p className="text-3xl font-bold text-primary">
+                <AnimatedCounter target={totalUsersCount} duration={2500} />
+              </p>
+              <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Active Users</p>
+            </div>
             <div>
               <p className="text-3xl font-bold text-primary">
                 <AnimatedCounter target={activeListingsCount} duration={2500} />
@@ -234,7 +279,13 @@ const HomePage = () => {
           </h2>
           <p className={`mb-8 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             List your gear in minutes and reach thousands of potential buyers. 
-            Only 3% platform fee on completed sales.
+            {promoEligible ? (
+              <span className="block mt-2 text-primary font-semibold">
+                🎁 Sign up now and get 0% platform fees for LIFE! Only {promoSpotsRemaining} spots remaining!
+              </span>
+            ) : (
+              ' Only 3% platform fee on completed sales.'
+            )}
           </p>
           <Link to="/register" className="btn btn-primary px-8 py-3 text-lg">
             Create Your Account <ArrowRight className="w-5 h-5" />

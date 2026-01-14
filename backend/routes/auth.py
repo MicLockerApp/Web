@@ -1,17 +1,26 @@
 from fastapi import APIRouter, HTTPException, status, Depends
-from datetime import timedelta
+from datetime import timedelta, datetime
 from models.user import (
     UserCreate, UserResponse, UserInDB, Token,
-    UserCategoryUpdate, USER_CATEGORIES
+    UserCategoryUpdate, USER_CATEGORIES,
+    PasswordResetRequest, PasswordResetVerify, PasswordResetCode
 )
 from services.auth import (
     get_password_hash, verify_password, create_access_token, get_current_user
 )
 from database import get_database
 from config import settings
-from datetime import datetime
+import random
+import string
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+def generate_reset_code():
+    """Generate a 6-digit verification code"""
+    return ''.join(random.choices(string.digits, k=6))
 
 @router.post("/register", response_model=UserResponse)
 async def register(user_data: UserCreate):
@@ -38,6 +47,9 @@ async def register(user_data: UserCreate):
     user_count = await db.users.count_documents({})
     is_first_user = user_count == 0
     
+    # First 100 users get lifetime 0% platform fees
+    has_lifetime_free_fees = user_count < 100
+    
     # Create user
     user = UserInDB(
         username=user_data.username,
@@ -45,6 +57,7 @@ async def register(user_data: UserCreate):
         hashed_password=get_password_hash(user_data.password),
         is_admin=is_first_user,
         is_first_user=is_first_user,
+        has_lifetime_free_fees=has_lifetime_free_fees,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow()
     )
@@ -195,3 +208,119 @@ async def get_categories():
             "product_types": MERCHANT_PRODUCT_TYPES
         }
     }
+
+
+
+@router.post("/forgot-password")
+async def request_password_reset(data: PasswordResetRequest):
+    """Request a password reset code - sends to email if exists"""
+    from services.email import send_password_reset_email
+    
+    db = get_database()
+    
+    # Check if email exists (don't reveal if it doesn't for security)
+    user = await db.users.find_one({"email": data.email})
+    
+    if user:
+        # Generate a 6-digit code
+        code = generate_reset_code()
+        expires_at = datetime.utcnow() + timedelta(minutes=15)  # Code valid for 15 minutes
+        
+        # Delete any existing codes for this email
+        await db.password_reset_codes.delete_many({"email": data.email})
+        
+        # Store the reset code
+        reset_code = PasswordResetCode(
+            email=data.email,
+            code=code,
+            expires_at=expires_at
+        )
+        await db.password_reset_codes.insert_one(reset_code.model_dump())
+        
+        # Send email via AWS SES
+        email_sent = await send_password_reset_email(data.email, code)
+        
+        if email_sent:
+            logger.info(f"Password reset email sent to {data.email}")
+        else:
+            # Fallback: log the code if email fails
+            logger.warning(f"[FALLBACK] Password reset code for {data.email}: {code}")
+    
+    # Always return success to prevent email enumeration attacks
+    return {
+        "message": "If an account with that email exists, a verification code has been sent.",
+        "email": data.email
+    }
+
+@router.post("/verify-reset-code")
+async def verify_reset_code(data: PasswordResetVerify):
+    """Verify reset code and change password"""
+    db = get_database()
+    
+    # Find the reset code
+    reset_record = await db.password_reset_codes.find_one({
+        "email": data.email,
+        "code": data.code,
+        "used": False
+    })
+    
+    if not reset_record:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification code"
+        )
+    
+    # Check if code has expired
+    if datetime.utcnow() > reset_record["expires_at"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Verification code has expired. Please request a new one."
+        )
+    
+    # Find the user
+    user = await db.users.find_one({"email": data.email})
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Update password
+    hashed_password = get_password_hash(data.new_password)
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {
+            "hashed_password": hashed_password,
+            "updated_at": datetime.utcnow()
+        }}
+    )
+    
+    # Mark code as used
+    await db.password_reset_codes.update_one(
+        {"id": reset_record["id"]},
+        {"$set": {"used": True}}
+    )
+    
+    # Delete all reset codes for this email
+    await db.password_reset_codes.delete_many({"email": data.email})
+    
+    return {"message": "Password has been reset successfully. You can now log in with your new password."}
+
+@router.get("/check-reset-code")
+async def check_reset_code(email: str, code: str):
+    """Check if a reset code is valid without using it"""
+    db = get_database()
+    
+    reset_record = await db.password_reset_codes.find_one({
+        "email": email,
+        "code": code,
+        "used": False
+    })
+    
+    if not reset_record:
+        return {"valid": False, "message": "Invalid verification code"}
+    
+    if datetime.utcnow() > reset_record["expires_at"]:
+        return {"valid": False, "message": "Code has expired"}
+    
+    return {"valid": True, "message": "Code is valid"}

@@ -12,6 +12,7 @@ from routes import (
     orders_router, offers_router, messages_router, reviews_router,
     admin_router, files_router
 )
+from routes.search import router as search_router
 
 # Configure logging
 logging.basicConfig(
@@ -68,6 +69,7 @@ app.include_router(messages_router, prefix="/api")
 app.include_router(reviews_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
 app.include_router(files_router, prefix="/api")
+app.include_router(search_router, prefix="/api")
 
 # Health check
 @app.get("/api/health")

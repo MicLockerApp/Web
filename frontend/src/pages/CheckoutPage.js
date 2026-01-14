@@ -261,6 +261,22 @@ const CheckoutPage = () => {
                   <span>Shipping</span>
                   <span className="text-white">${cart.shipping_total.toLocaleString()}</span>
                 </div>
+                {user?.has_lifetime_free_fees ? (
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Platform Fee</span>
+                    <div className="text-right">
+                      <span className="text-green-400 font-medium">$0.00</span>
+                      <span className="ml-2 text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">
+                        LIFETIME FREE
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-between text-gray-400">
+                    <span>Platform Fee (3%)</span>
+                    <span className="text-white">${(cart.subtotal * 0.03).toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-lg font-semibold pt-2 border-t border-dark-300">
                   <span className="text-white">Total</span>
                   <span className="text-primary">${cart.total.toLocaleString()}</span>

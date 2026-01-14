@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     s3_region: str = os.getenv("S3_REGION", "us-east-1")
     s3_presigned_url_expiration: int = 3600
     
+    # AWS SES (Email)
+    ses_region: str = os.getenv("SES_REGION", "us-east-2")
+    ses_sender_email: str = os.getenv("SES_SENDER_EMAIL", "info@miclockerapp.com")
+    
     # Local Storage
     local_storage_path: str = os.getenv("LOCAL_STORAGE_PATH", "/app/uploads")
     

@@ -43,6 +43,14 @@ export const authAPI = {
   getMe: () => api.get('/auth/me'),
   completeProfile: (data) => api.post('/auth/complete-profile', data),
   getCategories: () => api.get('/auth/categories'),
+  // Password reset
+  requestPasswordReset: (email) => api.post('/auth/forgot-password', { email }),
+  verifyResetCode: (email, code, newPassword) => api.post('/auth/verify-reset-code', { 
+    email, 
+    code, 
+    new_password: newPassword 
+  }),
+  checkResetCode: (email, code) => api.get('/auth/check-reset-code', { params: { email, code } }),
 };
 
 // Users APIs
@@ -65,6 +73,11 @@ export const usersAPI = {
   addFavorite: (listingId) => api.post(`/users/favorites/${listingId}`),
   removeFavorite: (listingId) => api.delete(`/users/favorites/${listingId}`),
   checkFavorite: (listingId) => api.get(`/users/favorites/check/${listingId}`),
+};
+
+// Global Search API (searches both listings and users)
+export const searchAPI = {
+  globalSearch: (q, limit = 5) => api.get('/search/global', { params: { q, limit } }),
 };
 
 // Listings APIs

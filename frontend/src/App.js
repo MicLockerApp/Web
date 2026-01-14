@@ -10,6 +10,8 @@ import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import VerifyResetCodePage from './pages/VerifyResetCodePage';
 import SearchPage from './pages/SearchPage';
 import ListingDetailPage from './pages/ListingDetailPage';
 import CartPage from './pages/CartPage';
@@ -58,6 +60,8 @@ function AppContent() {
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/forgot-password/verify" element={<VerifyResetCodePage />} />
               <Route path="/search" element={<SearchPage />} />
               <Route path="/listing/:id" element={<ListingDetailPage />} />
               <Route path="/cart" element={<CartPage />} />

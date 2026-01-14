@@ -82,7 +82,15 @@ const LoginPage = () => {
             {loading ? 'Signing In...' : 'Sign In'}
           </button>
 
-          <p className={`text-center mt-6 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          <Link 
+            to="/forgot-password" 
+            className={`block text-center mt-4 ${isDark ? 'text-gray-400 hover:text-primary' : 'text-gray-600 hover:text-primary'} transition-colors`}
+            data-testid="forgot-password-link"
+          >
+            Forgot Password?
+          </Link>
+
+          <p className={`text-center mt-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             Don't have an account?{' '}
             <Link to="/register" className="text-primary hover:underline" data-testid="register-link">
               Sign Up

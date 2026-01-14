@@ -141,6 +141,8 @@ class UserInDB(BaseModel):
     is_first_user: bool = False
     is_suspended: bool = False
     profile_completed: bool = False
+    # Lifetime 0% platform fee for first 100 users
+    has_lifetime_free_fees: bool = False
     
     # Profile fields
     bio: Optional[str] = None
@@ -202,6 +204,7 @@ class UserResponse(BaseModel):
     sub_categories: Optional[List[str]] = None
     is_admin: bool = False
     profile_completed: bool = False
+    has_lifetime_free_fees: bool = False
     bio: Optional[str] = None
     location: Optional[str] = None
     profile_image: Optional[str] = None
@@ -295,3 +298,19 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     user_id: Optional[str] = None
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+class PasswordResetVerify(BaseModel):
+    email: EmailStr
+    code: str
+    new_password: str = Field(..., min_length=6)
+
+class PasswordResetCode(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    email: str
+    code: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    expires_at: datetime
+    used: bool = False

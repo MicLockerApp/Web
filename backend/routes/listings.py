@@ -133,15 +133,27 @@ async def get_recent_listings(limit: int = Query(12, ge=1, le=50)):
 
 @router.get("/stats/count")
 async def get_listing_count():
-    """Get total count of active listings"""
+    """Get total count of active listings and platform stats"""
     db = get_database()
     
     active_count = await db.listings.count_documents({"status": "active"})
     total_count = await db.listings.count_documents({})
     
+    # Get total user count for display and promo eligibility
+    total_users = await db.users.count_documents({})
+    
+    # Promo: First 100 users get 0% platform fees for life
+    promo_limit = 100
+    promo_eligible = total_users < promo_limit
+    promo_spots_remaining = max(0, promo_limit - total_users)
+    
     return {
         "active_listings": active_count,
-        "total_listings": total_count
+        "total_listings": total_count,
+        "total_users": total_users,
+        "promo_eligible": promo_eligible,
+        "promo_spots_remaining": promo_spots_remaining,
+        "promo_limit": promo_limit
     }
 
 @router.get("/{listing_id}")
