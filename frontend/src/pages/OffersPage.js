@@ -218,14 +218,14 @@ const OffersPage = () => {
 
                     {offer.message && (
                       <div className="bg-dark-300 rounded-lg p-3 mb-3">
-                        <p className="text-gray-300 text-sm">"{offer.message}"</p>
+                        <p className="text-gray-300 text-sm">&quot;{offer.message}&quot;</p>
                       </div>
                     )}
 
                     {offer.counter_message && offer.status === 'countered' && (
                       <div className="bg-dark-300 rounded-lg p-3 mb-3 border-l-2 border-yellow-400">
                         <p className="text-yellow-400 text-xs mb-1">Counter message:</p>
-                        <p className="text-gray-300 text-sm">"{offer.counter_message}"</p>
+                        <p className="text-gray-300 text-sm">&quot;{offer.counter_message}&quot;</p>
                       </div>
                     )}
 
