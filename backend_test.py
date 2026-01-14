@@ -1072,38 +1072,46 @@ class MicLockerAPITester:
         return False
 
 def main():
-    """Run all backend tests"""
-    print("🚀 Starting MicLocker Backend API Tests")
-    print("=" * 50)
+    """Run all MicLocker marketplace backend tests"""
+    print("🚀 Starting MicLocker Marketplace Backend API Tests")
+    print("=" * 60)
     
     tester = MicLockerAPITester()
     
-    # Test sequence
+    # Test sequence for marketplace features
     tests = [
-        ("Health Check", tester.test_health_check),
-        ("Login with New Admin Credentials", tester.test_login),
-        ("Get Current User", tester.test_get_current_user),
-        ("Auth Categories (5 categories + merchant options)", tester.test_auth_categories),
-        ("Profile Image Upload", tester.test_profile_image_upload),
-        ("Profile Update with Sub-Categories", tester.test_profile_update_with_subcategories),
-        ("Social Media Links Update", tester.test_social_media_links_update),
-        ("Privacy Settings Update", tester.test_privacy_settings_update),
-        ("Shipping Address Update", tester.test_shipping_address_update),
-        ("Physical Address Update", tester.test_physical_address_update),
-        ("Physical Address Privacy Settings", tester.test_physical_address_privacy_settings),
-        ("Physical Address Public Visibility", tester.test_physical_address_public_visibility),
-        ("Display Location vs Mailing Address Conflict", tester.test_display_location_mailing_address_conflict),
-        ("Public Profile Privacy Filtering", tester.test_public_profile_privacy_filtering),
-        ("Own Profile Shows All Data", tester.test_own_profile_shows_all_data),
-        ("Listing Categories", tester.test_listings_categories),
-        ("Search Listings", tester.test_search_listings),
-        ("Featured Listings", tester.test_featured_listings),
-        ("Recent Listings", tester.test_recent_listings),
-        ("Listings Count", tester.test_listings_count),
-        ("Get Cart", tester.test_get_cart),
+        # Authentication Tests
+        ("Login with Regular User", tester.test_login_regular_user),
+        ("Login with Admin User", tester.test_login_admin_user),
+        ("Get Current User Info", tester.test_get_current_user),
+        ("Get Admin User Info", tester.test_get_admin_user),
+        
+        # Offers Testing (P0 Priority)
+        ("Get Received Offers", tester.test_get_received_offers),
+        ("Get Sent Offers", tester.test_get_sent_offers),
+        ("Test Offer Actions (Accept/Counter/Decline)", tester.test_offer_actions),
+        
+        # Orders Testing
+        ("Get User Orders (Purchases)", tester.test_get_orders),
+        ("Get User Sales", tester.test_get_sales),
+        ("Get Order Detail", tester.test_get_order_detail),
+        ("Update Order Status", tester.test_update_order_status),
+        
+        # Reviews Testing (P1 Priority)
+        ("Create Review", tester.test_create_review),
+        ("Get Seller Reviews", tester.test_get_seller_reviews),
+        
+        # Admin Panel Testing
         ("Admin Analytics", tester.test_admin_analytics),
-        ("Admin Users", tester.test_admin_users),
-        ("Admin Orders", tester.test_admin_orders),
+        ("Admin Users Management", tester.test_admin_users),
+        ("Admin Suspend/Unsuspend User", tester.test_admin_suspend_user),
+        ("Admin Listings Management", tester.test_admin_listings),
+        ("Admin Remove Listing", tester.test_admin_remove_listing),
+        ("Admin Orders Management", tester.test_admin_orders),
+        
+        # Basic functionality tests
+        ("Get Cart", tester.test_get_cart),
+        ("Search Listings", tester.test_search_listings),
     ]
     
     failed_tests = []
@@ -1117,14 +1125,14 @@ def main():
             failed_tests.append(test_name)
     
     # Print results
-    print("\n" + "=" * 50)
+    print("\n" + "=" * 60)
     print(f"📊 Test Results: {tester.tests_passed}/{tester.tests_run} passed")
     
     if failed_tests:
         print(f"❌ Failed tests: {', '.join(failed_tests)}")
         return 1
     else:
-        print("✅ All tests passed!")
+        print("✅ All marketplace tests passed!")
         return 0
 
 if __name__ == "__main__":
