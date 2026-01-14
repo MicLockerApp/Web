@@ -21,12 +21,16 @@ import EditProfilePage from './pages/EditProfilePage';
 import FavoritesPage from './pages/FavoritesPage';
 import DashboardPage from './pages/DashboardPage';
 import CreateListingPage from './pages/CreateListingPage';
+import EditListingPage from './pages/EditListingPage';
 import MessagesPage from './pages/MessagesPage';
 import AdminPage from './pages/AdminPage';
 import ReturnPolicyPage from './pages/ReturnPolicyPage';
 import CareersPage from './pages/CareersPage';
 import JobSearchPage from './pages/JobSearchPage';
 import AboutPage from './pages/AboutPage';
+import OffersPage from './pages/OffersPage';
+import OrdersPage from './pages/OrdersPage';
+import OrderDetailPage from './pages/OrderDetailPage';
 
 // Layout component that conditionally shows navbar/footer
 const Layout = ({ children }) => {
@@ -71,7 +75,11 @@ function AppContent() {
               <Route path="/settings" element={<EditProfilePage />} />
               <Route path="/favorites" element={<FavoritesPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/dashboard/listings/:id/edit" element={<EditListingPage />} />
               <Route path="/sell" element={<CreateListingPage />} />
+              <Route path="/offers" element={<OffersPage />} />
+              <Route path="/orders" element={<OrdersPage />} />
+              <Route path="/orders/:id" element={<OrderDetailPage />} />
               <Route path="/messages" element={<MessagesPage />} />
               <Route path="/admin" element={<AdminPage />} />
               <Route path="/returns" element={<ReturnPolicyPage />} />
