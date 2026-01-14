@@ -7,9 +7,13 @@ class MicLockerAPITester:
     def __init__(self, base_url="https://audio-bazaar-6.preview.emergentagent.com"):
         self.base_url = base_url
         self.token = None
+        self.admin_token = None
         self.tests_run = 0
         self.tests_passed = 0
         self.user_id = None
+        self.admin_user_id = None
+        self.test_offer_id = None
+        self.test_order_id = None
 
     def run_test(self, name, method, endpoint, expected_status, data=None, headers=None):
         """Run a single API test"""
