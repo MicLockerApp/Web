@@ -1,0 +1,349 @@
+from fastapi import APIRouter, HTTPException, status, Depends, Query, UploadFile, File
+from models.listing import (
+    ListingCreate, ListingUpdate, ListingInDB, ListingResponse,
+    ListingMedia, LISTING_CATEGORIES, LISTING_CONDITIONS
+)
+from services.auth import get_current_user, get_current_user_optional
+from services.storage import storage_service
+from database import get_database
+from utils.helpers import build_listing_search_filter, build_sort_options, serialize_doc, serialize_docs
+from datetime import datetime
+from typing import Optional, List
+import uuid
+
+router = APIRouter(prefix="/listings", tags=["Listings"])
+
+@router.get("/categories")
+async def get_listing_categories():
+    """Get available listing categories and conditions"""
+    return {
+        "categories": LISTING_CATEGORIES,
+        "conditions": LISTING_CONDITIONS
+    }
+
+@router.post("", response_model=ListingResponse)
+async def create_listing(
+    listing_data: ListingCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a new listing"""
+    db = get_database()
+    
+    if listing_data.category not in LISTING_CATEGORIES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid category. Must be one of: {LISTING_CATEGORIES}"
+        )
+    
+    if listing_data.condition not in LISTING_CONDITIONS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid condition. Must be one of: {LISTING_CONDITIONS}"
+        )
+    
+    listing = ListingInDB(
+        seller_id=current_user["id"],
+        seller_username=current_user["username"],
+        **listing_data.model_dump()
+    )
+    
+    await db.listings.insert_one(listing.model_dump())
+    
+    result = listing.model_dump()
+    result["seller_rating"] = current_user.get("rating", 0)
+    return serialize_doc(result)
+
+@router.get("", response_model=dict)
+async def search_listings(
+    q: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    condition: Optional[str] = Query(None),
+    brand: Optional[str] = Query(None),
+    min_price: Optional[float] = Query(None, ge=0),
+    max_price: Optional[float] = Query(None, ge=0),
+    seller_id: Optional[str] = Query(None),
+    sort_by: str = Query("created_at"),
+    sort_order: str = Query("desc"),
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=50)
+):
+    """Search and filter listings"""
+    db = get_database()
+    
+    filter_query = build_listing_search_filter({
+        "q": q,
+        "category": category,
+        "condition": condition,
+        "brand": brand,
+        "min_price": min_price,
+        "max_price": max_price,
+        "seller_id": seller_id
+    })
+    
+    skip = (page - 1) * limit
+    sort_options = build_sort_options(sort_by, sort_order)
+    
+    # Get total count
+    total = await db.listings.count_documents(filter_query)
+    
+    # Get listings
+    cursor = db.listings.find(filter_query)
+    for sort_field, sort_dir in sort_options:
+        cursor = cursor.sort(sort_field, sort_dir)
+    cursor = cursor.skip(skip).limit(limit)
+    
+    listings = await cursor.to_list(length=limit)
+    
+    # Enrich with seller ratings
+    for listing in listings:
+        seller = await db.users.find_one({"id": listing["seller_id"]})
+        if seller:
+            listing["seller_rating"] = seller.get("rating", 0)
+    
+    return {
+        "listings": serialize_docs(listings),
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "pages": (total + limit - 1) // limit
+    }
+
+@router.get("/featured")
+async def get_featured_listings(limit: int = Query(8, ge=1, le=20)):
+    """Get featured/trending listings"""
+    db = get_database()
+    
+    # Get listings with most views/favorites
+    cursor = db.listings.find({"status": "active"}).sort([
+        ("view_count", -1),
+        ("created_at", -1)
+    ]).limit(limit)
+    
+    listings = await cursor.to_list(length=limit)
+    return {"listings": serialize_docs(listings)}
+
+@router.get("/recent")
+async def get_recent_listings(limit: int = Query(12, ge=1, le=50)):
+    """Get most recent listings"""
+    db = get_database()
+    
+    cursor = db.listings.find({"status": "active"}).sort("created_at", -1).limit(limit)
+    listings = await cursor.to_list(length=limit)
+    return {"listings": serialize_docs(listings)}
+
+@router.get("/{listing_id}")
+async def get_listing(
+    listing_id: str,
+    current_user: Optional[dict] = Depends(get_current_user_optional)
+):
+    """Get a single listing by ID"""
+    db = get_database()
+    
+    listing = await db.listings.find_one({"id": listing_id})
+    if not listing:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Listing not found"
+        )
+    
+    # Increment view count (only if viewer is not the seller)
+    if not current_user or current_user["id"] != listing["seller_id"]:
+        await db.listings.update_one(
+            {"id": listing_id},
+            {"$inc": {"view_count": 1}}
+        )
+    
+    # Get seller rating
+    seller = await db.users.find_one({"id": listing["seller_id"]})
+    listing["seller_rating"] = seller.get("rating", 0) if seller else 0
+    
+    return serialize_doc(listing)
+
+@router.put("/{listing_id}")
+async def update_listing(
+    listing_id: str,
+    listing_data: ListingUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update a listing"""
+    db = get_database()
+    
+    listing = await db.listings.find_one({"id": listing_id})
+    if not listing:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Listing not found"
+        )
+    
+    if listing["seller_id"] != current_user["id"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to update this listing"
+        )
+    
+    update_data = {"updated_at": datetime.utcnow()}
+    for field, value in listing_data.model_dump(exclude_unset=True).items():
+        if value is not None:
+            update_data[field] = value
+    
+    await db.listings.update_one(
+        {"id": listing_id},
+        {"$set": update_data}
+    )
+    
+    updated_listing = await db.listings.find_one({"id": listing_id})
+    updated_listing["seller_rating"] = current_user.get("rating", 0)
+    return serialize_doc(updated_listing)
+
+@router.delete("/{listing_id}")
+async def delete_listing(
+    listing_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete a listing"""
+    db = get_database()
+    
+    listing = await db.listings.find_one({"id": listing_id})
+    if not listing:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Listing not found"
+        )
+    
+    if listing["seller_id"] != current_user["id"] and not current_user.get("is_admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this listing"
+        )
+    
+    # Soft delete - change status to removed
+    await db.listings.update_one(
+        {"id": listing_id},
+        {"$set": {"status": "removed", "updated_at": datetime.utcnow()}}
+    )
+    
+    return {"message": "Listing deleted successfully"}
+
+@router.post("/{listing_id}/media")
+async def add_listing_media(
+    listing_id: str,
+    file: UploadFile = File(...),
+    is_primary: bool = Query(False),
+    current_user: dict = Depends(get_current_user)
+):
+    """Add media to a listing"""
+    db = get_database()
+    
+    listing = await db.listings.find_one({"id": listing_id})
+    if not listing:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Listing not found"
+        )
+    
+    if listing["seller_id"] != current_user["id"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to modify this listing"
+        )
+    
+    # Determine file type
+    content_type = file.content_type or "application/octet-stream"
+    if content_type.startswith("image"):
+        file_type = "image"
+    elif content_type.startswith("video"):
+        file_type = "video"
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid file type. Only images and videos allowed."
+        )
+    
+    # Validate file
+    if not storage_service.validate_file_type(content_type, file_type):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid file format"
+        )
+    
+    # Read and validate size
+    content = await file.read()
+    if not storage_service.validate_file_size(len(content), file_type):
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="File too large"
+        )
+    
+    # Upload file
+    file_key = storage_service.generate_file_key(
+        f"listings/{file_type}s",
+        current_user["id"],
+        file.filename
+    )
+    success, url = await storage_service.upload_file(content, file_key, content_type)
+    
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to upload file"
+        )
+    
+    # Create media record
+    media = ListingMedia(
+        url=url,
+        media_type=file_type,
+        is_primary=is_primary,
+        order=len(listing.get("media", []))
+    )
+    
+    # If setting as primary, unset other primaries
+    if is_primary:
+        existing_media = listing.get("media", [])
+        for m in existing_media:
+            m["is_primary"] = False
+        await db.listings.update_one(
+            {"id": listing_id},
+            {"$set": {"media": existing_media}}
+        )
+    
+    await db.listings.update_one(
+        {"id": listing_id},
+        {
+            "$push": {"media": media.model_dump()},
+            "$set": {"updated_at": datetime.utcnow()}
+        }
+    )
+    
+    return {"message": "Media added successfully", "media": media.model_dump()}
+
+@router.delete("/{listing_id}/media/{media_id}")
+async def remove_listing_media(
+    listing_id: str,
+    media_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Remove media from a listing"""
+    db = get_database()
+    
+    listing = await db.listings.find_one({"id": listing_id})
+    if not listing:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Listing not found"
+        )
+    
+    if listing["seller_id"] != current_user["id"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to modify this listing"
+        )
+    
+    await db.listings.update_one(
+        {"id": listing_id},
+        {
+            "$pull": {"media": {"id": media_id}},
+            "$set": {"updated_at": datetime.utcnow()}
+        }
+    )
+    
+    return {"message": "Media removed successfully"}
