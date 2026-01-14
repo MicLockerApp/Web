@@ -65,10 +65,10 @@ class MicLockerAPITester:
         """Test health check endpoint"""
         return self.run_test("Health Check", "GET", "health", 200)
 
-    def test_login(self, username="jmcdougall", password="Eisenhower1212!!"):
-        """Test login with new admin credentials"""
+    def test_login_regular_user(self, username="guitarking", password="password123"):
+        """Test login with regular user credentials"""
         success, response = self.run_test(
-            "Login with New Admin Credentials",
+            "Login with Regular User",
             "POST",
             f"auth/login?username={username}&password={password}",
             200
@@ -76,6 +76,20 @@ class MicLockerAPITester:
         if success and 'access_token' in response:
             self.token = response['access_token']
             print(f"   Token obtained: {self.token[:20]}...")
+            return True
+        return False
+
+    def test_login_admin_user(self, username="jmcdougall", password="Eisenhower1212!!"):
+        """Test login with admin user credentials"""
+        success, response = self.run_test(
+            "Login with Admin User",
+            "POST",
+            f"auth/login?username={username}&password={password}",
+            200
+        )
+        if success and 'access_token' in response:
+            self.admin_token = response['access_token']
+            print(f"   Admin Token obtained: {self.admin_token[:20]}...")
             return True
         return False
 
