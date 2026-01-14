@@ -330,7 +330,7 @@ const CheckoutPage = () => {
                 <Shield className="w-6 h-6 text-green-400 flex-shrink-0" />
                 <div>
                   <p className="text-white text-sm font-medium">MicLocker Buyer Protection</p>
-                  <p className="text-gray-400 text-xs">Your purchase is protected. If there's an issue, we've got you covered.</p>
+                  <p className="text-gray-400 text-xs">Your purchase is protected. If there&apos;s an issue, we&apos;ve got you covered.</p>
                 </div>
               </div>
 
