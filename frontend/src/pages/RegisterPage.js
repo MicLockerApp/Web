@@ -34,12 +34,21 @@ const RegisterPage = () => {
     business_name: '',
     // Contact info (Step 5)
     phone: '',
+    // Mailing address
     address_line1: '',
     address_line2: '',
     city: '',
     state: '',
     postal_code: '',
     country: '',
+    // Physical address
+    same_as_mailing: true,
+    physical_address_line1: '',
+    physical_address_line2: '',
+    physical_city: '',
+    physical_state: '',
+    physical_postal_code: '',
+    physical_country: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -143,6 +152,8 @@ const RegisterPage = () => {
 
       // Add contact info if provided
       if (formData.phone) profileData.phone = formData.phone;
+      
+      // Add mailing/shipping address
       if (formData.address_line1) {
         profileData.shipping_address = {
           address_line1: formData.address_line1,
@@ -151,6 +162,30 @@ const RegisterPage = () => {
           state: formData.state,
           postal_code: formData.postal_code,
           country: formData.country,
+        };
+      }
+
+      // Add physical address
+      profileData.same_as_mailing = formData.same_as_mailing;
+      if (formData.same_as_mailing && formData.address_line1) {
+        // Physical is same as mailing
+        profileData.physical_address = {
+          address_line1: formData.address_line1,
+          address_line2: formData.address_line2 || '',
+          city: formData.city,
+          state: formData.state,
+          postal_code: formData.postal_code,
+          country: formData.country,
+        };
+      } else if (!formData.same_as_mailing && formData.physical_address_line1) {
+        // Physical is different
+        profileData.physical_address = {
+          address_line1: formData.physical_address_line1,
+          address_line2: formData.physical_address_line2 || '',
+          city: formData.physical_city,
+          state: formData.physical_state,
+          postal_code: formData.physical_postal_code,
+          country: formData.physical_country,
         };
       }
 
@@ -252,77 +287,86 @@ const RegisterPage = () => {
         data-testid="register-submit"
       >
         {loading ? 'Creating Account...' : 'Continue'}
+        <ChevronRight className="w-4 h-4 inline ml-1" />
       </button>
     </form>
   );
 
   const renderStep2 = () => (
     <form onSubmit={handleCategorySubmit}>
-      <p className="text-gray-400 mb-6">What best describes you? (Primary category)</p>
+      <p className="text-gray-400 mb-6">What best describes you?</p>
       <div className="space-y-3 mb-6">
         {CATEGORY_OPTIONS.map(cat => (
-          <button
+          <div
             key={cat.value}
-            type="button"
-            onClick={() => setFormData({ ...formData, category: cat.value, sub_categories: [] })}
-            className={`w-full p-4 rounded-lg border-2 text-left transition-all flex items-center gap-4 ${
+            onClick={() => setFormData({ ...formData, category: cat.value })}
+            className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
               formData.category === cat.value
                 ? 'border-primary bg-primary/10'
                 : 'border-dark-300 hover:border-gray-600'
             }`}
-            data-testid={`category-${cat.value}`}
           >
-            <span className="text-3xl">{cat.icon}</span>
-            <div className="flex-1">
-              <span className="text-white font-medium block">{cat.label}</span>
-              <span className="text-gray-500 text-sm">{cat.description}</span>
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">{cat.icon}</span>
+              <div>
+                <h3 className="text-white font-medium">{cat.label}</h3>
+                <p className="text-gray-500 text-sm">{cat.description}</p>
+              </div>
             </div>
-            {formData.category === cat.value && (
-              <Check className="w-5 h-5 text-primary" />
-            )}
-          </button>
+          </div>
         ))}
       </div>
 
-      <button
-        type="submit"
-        className="btn btn-primary w-full py-3"
-        disabled={!formData.category}
-      >
-        Continue <ChevronRight className="w-4 h-4 inline ml-1" />
-      </button>
+      <div className="flex gap-3">
+        <button
+          type="button"
+          onClick={() => setStep(1)}
+          className="btn btn-secondary py-3 px-4"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <button
+          type="submit"
+          className="btn btn-primary flex-1 py-3"
+          disabled={!formData.category}
+        >
+          Continue <ChevronRight className="w-4 h-4 inline ml-1" />
+        </button>
+      </div>
     </form>
   );
 
   const renderStep3 = () => (
     <form onSubmit={handleSubCategoriesSubmit}>
-      <p className="text-gray-400 mb-2">Do you also identify with any other categories?</p>
-      <p className="text-gray-500 text-sm mb-6">(Optional - Select all that apply)</p>
+      <p className="text-gray-400 mb-4">Do you wear multiple hats? Select any additional categories that apply to you.</p>
+      <p className="text-gray-500 text-sm mb-6">This is optional but helps you connect with the right community.</p>
       
       <div className="space-y-3 mb-6">
         {CATEGORY_OPTIONS.filter(cat => cat.value !== formData.category).map(cat => (
           <div
             key={cat.value}
             onClick={(e) => toggleSubCategory(cat.value, e)}
-            className={`w-full p-4 rounded-lg border-2 text-left transition-all flex items-center gap-4 cursor-pointer ${
+            className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
               formData.sub_categories.includes(cat.value)
                 ? 'border-primary bg-primary/10'
                 : 'border-dark-300 hover:border-gray-600'
             }`}
           >
-            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
-              formData.sub_categories.includes(cat.value)
-                ? 'bg-primary border-primary'
-                : 'border-gray-500'
-            }`}>
-              {formData.sub_categories.includes(cat.value) && (
-                <Check className="w-3 h-3 text-black" />
-              )}
-            </div>
-            <span className="text-2xl">{cat.icon}</span>
-            <div className="flex-1">
-              <span className="text-white font-medium block">{cat.label}</span>
-              <span className="text-gray-500 text-sm">{cat.description}</span>
+            <div className="flex items-center gap-3">
+              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                formData.sub_categories.includes(cat.value)
+                  ? 'bg-primary border-primary'
+                  : 'border-gray-500'
+              }`}>
+                {formData.sub_categories.includes(cat.value) && (
+                  <Check className="w-3 h-3 text-black" />
+                )}
+              </div>
+              <span className="text-xl">{cat.icon}</span>
+              <div>
+                <h3 className="text-white font-medium">{cat.label}</h3>
+                <p className="text-gray-500 text-sm">{cat.description}</p>
+              </div>
             </div>
           </div>
         ))}
@@ -336,10 +380,7 @@ const RegisterPage = () => {
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
-        <button
-          type="submit"
-          className="btn btn-primary flex-1 py-3"
-        >
+        <button type="submit" className="btn btn-primary flex-1 py-3">
           Continue <ChevronRight className="w-4 h-4 inline ml-1" />
         </button>
       </div>
@@ -347,8 +388,8 @@ const RegisterPage = () => {
   );
 
   const renderStep4 = () => {
-    const allCategories = [formData.category, ...formData.sub_categories];
-    
+    const allCategories = [formData.category, ...formData.sub_categories].filter(Boolean);
+
     return (
       <form onSubmit={handleFinalSubmit}>
         {/* Musician Section */}
@@ -357,56 +398,52 @@ const RegisterPage = () => {
             <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
               <span className="text-xl">🎸</span> Musician Details
             </h3>
-            <div className="mb-4">
-              <label className="block text-gray-400 mb-3">What genre of music do you play? (Select all that apply)</label>
-              <div className="max-h-48 overflow-y-auto grid grid-cols-2 gap-2 p-1">
-                {categoryOptions?.musician_options?.genres?.map(g => (
-                  <div
-                    key={g}
-                    onClick={(e) => toggleSelection('genres', g, e)}
-                    className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 cursor-pointer ${
-                      formData.genres.includes(g)
-                        ? 'bg-primary text-black'
-                        : 'bg-dark-300 text-gray-300 hover:bg-dark-200'
-                    }`}
-                  >
-                    <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${
-                      formData.genres.includes(g)
-                        ? 'bg-black border-black'
-                        : 'border-gray-500'
-                    }`}>
-                      {formData.genres.includes(g) && <Check className="w-3 h-3 text-primary" />}
-                    </div>
-                    {g}
+            <p className="text-gray-500 text-sm mb-3">Select your genres (multiple allowed)</p>
+            <div className="mb-4 max-h-32 overflow-y-auto grid grid-cols-2 gap-2 p-1">
+              {categoryOptions?.musician_options?.genres?.map(g => (
+                <div
+                  key={g}
+                  onClick={(e) => toggleSelection('genres', g, e)}
+                  className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 cursor-pointer ${
+                    formData.genres.includes(g)
+                      ? 'bg-primary text-black'
+                      : 'bg-dark-300 text-gray-300 hover:bg-dark-200'
+                  }`}
+                >
+                  <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${
+                    formData.genres.includes(g)
+                      ? 'bg-black border-black'
+                      : 'border-gray-500'
+                  }`}>
+                    {formData.genres.includes(g) && <Check className="w-3 h-3 text-primary" />}
                   </div>
-                ))}
-              </div>
+                  {g}
+                </div>
+              ))}
             </div>
 
-            <div>
-              <label className="block text-gray-400 mb-3">Select your instruments (multiple allowed)</label>
-              <div className="max-h-48 overflow-y-auto grid grid-cols-2 gap-2 p-1">
-                {categoryOptions?.musician_options?.instruments?.map(inst => (
-                  <div
-                    key={inst}
-                    onClick={(e) => toggleSelection('instruments', inst, e)}
-                    className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 cursor-pointer ${
-                      formData.instruments.includes(inst)
-                        ? 'bg-primary text-black'
-                        : 'bg-dark-300 text-gray-300 hover:bg-dark-200'
-                    }`}
-                  >
-                    <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${
-                      formData.instruments.includes(inst)
-                        ? 'bg-black border-black'
-                        : 'border-gray-500'
-                    }`}>
-                      {formData.instruments.includes(inst) && <Check className="w-3 h-3 text-primary" />}
-                    </div>
-                    {inst}
+            <p className="text-gray-500 text-sm mb-3">Select your instruments</p>
+            <div className="max-h-48 overflow-y-auto grid grid-cols-2 gap-2 p-1">
+              {categoryOptions?.musician_options?.instruments?.map(inst => (
+                <div
+                  key={inst}
+                  onClick={(e) => toggleSelection('instruments', inst, e)}
+                  className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 cursor-pointer ${
+                    formData.instruments.includes(inst)
+                      ? 'bg-primary text-black'
+                      : 'bg-dark-300 text-gray-300 hover:bg-dark-200'
+                  }`}
+                >
+                  <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${
+                    formData.instruments.includes(inst)
+                      ? 'bg-black border-black'
+                      : 'border-gray-500'
+                  }`}>
+                    {formData.instruments.includes(inst) && <Check className="w-3 h-3 text-primary" />}
                   </div>
-                ))}
-              </div>
+                  {inst}
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -578,9 +615,10 @@ const RegisterPage = () => {
   };
 
   const renderStep5 = () => {
-    const selectedCountry = COUNTRIES.find(c => c.code === formData.country);
     const states = getStatesForCountry(formData.country);
     const showStates = countryHasStates(formData.country);
+    const physicalStates = getStatesForCountry(formData.physical_country);
+    const showPhysicalStates = countryHasStates(formData.physical_country);
 
     return (
       <form onSubmit={handleContactInfoSubmit}>
@@ -719,6 +757,142 @@ const RegisterPage = () => {
           </div>
         </div>
 
+        {/* Physical Address Section */}
+        <div className="border-t border-dark-300 my-6 pt-6">
+          <h3 className="text-white font-semibold mb-4">Physical Address</h3>
+          
+          {/* Same as mailing checkbox */}
+          <div 
+            className="flex items-center gap-3 p-4 bg-dark-300 rounded-lg cursor-pointer mb-4 hover:bg-dark-200 transition-colors"
+            onClick={() => setFormData({ ...formData, same_as_mailing: !formData.same_as_mailing })}
+          >
+            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+              formData.same_as_mailing ? 'bg-primary border-primary' : 'border-gray-500'
+            }`}>
+              {formData.same_as_mailing && <Check className="w-3 h-3 text-black" />}
+            </div>
+            <span className="text-white">Same as mailing address</span>
+          </div>
+
+          {/* Animated Physical Address Fields */}
+          <div 
+            className={`overflow-hidden transition-all duration-500 ease-in-out ${
+              formData.same_as_mailing 
+                ? 'max-h-0 opacity-0' 
+                : 'max-h-[600px] opacity-100'
+            }`}
+          >
+            <div className="pt-4 space-y-4">
+              {/* Physical Country */}
+              <div>
+                <label className="block text-gray-400 mb-2">Country</label>
+                <select
+                  value={formData.physical_country}
+                  onChange={(e) => setFormData({ ...formData, physical_country: e.target.value, physical_state: '' })}
+                  data-testid="register-physical-country"
+                >
+                  <option value="">Select a country</option>
+                  <optgroup label="Military (APO/FPO/DPO)">
+                    {COUNTRIES.filter(c => c.isMilitary).map(country => (
+                      <option key={country.code} value={country.code}>{country.name}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Countries">
+                    {COUNTRIES.filter(c => !c.isMilitary).map(country => (
+                      <option key={country.code} value={country.code}>{country.name}</option>
+                    ))}
+                  </optgroup>
+                </select>
+              </div>
+
+              {/* Physical Street Address */}
+              <div>
+                <label className="block text-gray-400 mb-2">Street Address</label>
+                <input
+                  type="text"
+                  value={formData.physical_address_line1}
+                  onChange={(e) => setFormData({ ...formData, physical_address_line1: e.target.value })}
+                  placeholder="123 Main St"
+                  data-testid="register-physical-address1"
+                />
+              </div>
+
+              {/* Physical Address Line 2 */}
+              <div>
+                <label className="block text-gray-400 mb-2">Apt, Suite, Unit (optional)</label>
+                <input
+                  type="text"
+                  value={formData.physical_address_line2}
+                  onChange={(e) => setFormData({ ...formData, physical_address_line2: e.target.value })}
+                  placeholder="Apt 4B"
+                  data-testid="register-physical-address2"
+                />
+              </div>
+
+              {/* Physical City */}
+              <div>
+                <label className="block text-gray-400 mb-2">City</label>
+                <input
+                  type="text"
+                  value={formData.physical_city}
+                  onChange={(e) => setFormData({ ...formData, physical_city: e.target.value })}
+                  placeholder="City"
+                  data-testid="register-physical-city"
+                />
+              </div>
+
+              {/* Physical State - dropdown or text */}
+              {showPhysicalStates && (
+                <div>
+                  <label className="block text-gray-400 mb-2">
+                    {formData.physical_country === 'CA' ? 'Province' : 
+                     formData.physical_country === 'AU' ? 'State/Territory' : 
+                     formData.physical_country === 'JP' ? 'Prefecture' :
+                     'State/Region'}
+                  </label>
+                  <select
+                    value={formData.physical_state}
+                    onChange={(e) => setFormData({ ...formData, physical_state: e.target.value })}
+                    data-testid="register-physical-state"
+                  >
+                    <option value="">Select {formData.physical_country === 'CA' ? 'province' : 'state'}</option>
+                    {physicalStates.map(state => (
+                      <option key={state.code} value={state.code}>{state.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {formData.physical_country && !showPhysicalStates && (
+                <div>
+                  <label className="block text-gray-400 mb-2">State/Province/Region (optional)</label>
+                  <input
+                    type="text"
+                    value={formData.physical_state}
+                    onChange={(e) => setFormData({ ...formData, physical_state: e.target.value })}
+                    placeholder="State or region"
+                    data-testid="register-physical-state-text"
+                  />
+                </div>
+              )}
+
+              {/* Physical Postal Code */}
+              <div>
+                <label className="block text-gray-400 mb-2">
+                  {formData.physical_country === 'US' ? 'ZIP Code' : 'Postal Code'}
+                </label>
+                <input
+                  type="text"
+                  value={formData.physical_postal_code}
+                  onChange={(e) => setFormData({ ...formData, physical_postal_code: e.target.value })}
+                  placeholder={formData.physical_country === 'US' ? '12345' : 'Postal code'}
+                  data-testid="register-physical-postal"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="flex gap-3">
           <button
             type="button"
@@ -745,6 +919,13 @@ const RegisterPage = () => {
               state: '',
               postal_code: '',
               country: '',
+              same_as_mailing: true,
+              physical_address_line1: '',
+              physical_address_line2: '',
+              physical_city: '',
+              physical_state: '',
+              physical_postal_code: '',
+              physical_country: '',
             }));
             handleContactInfoSubmit(new Event('submit'));
           }}

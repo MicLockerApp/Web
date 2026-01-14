@@ -1,14 +1,91 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { usersAPI, authAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { Camera, Check, Save, X, User, Mail, Phone, Globe, Eye, EyeOff, MapPin } from 'lucide-react';
+import { Camera, Check, Save, X, User, Mail, Phone, Globe, Eye, EyeOff, MapPin, AlertTriangle } from 'lucide-react';
 import { COUNTRIES, getStatesForCountry, countryHasStates } from '../data/countries';
+
+// Privacy toggle component
+const PrivacyToggle = ({ label, checked, onChange, description, disabled }) => (
+  <div className={`flex items-center justify-between p-3 bg-dark-300 rounded-lg ${disabled ? 'opacity-50' : ''}`}>
+    <div className="flex items-center gap-3">
+      {checked ? <Eye className="w-4 h-4 text-primary" /> : <EyeOff className="w-4 h-4 text-gray-500" />}
+      <div>
+        <span className="text-white text-sm">{label}</span>
+        {description && <p className="text-gray-500 text-xs">{description}</p>}
+      </div>
+    </div>
+    <button
+      type="button"
+      onClick={onChange}
+      disabled={disabled}
+      className={`relative w-12 h-6 rounded-full transition-colors ${checked ? 'bg-primary' : 'bg-dark-200'} ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+    >
+      <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${checked ? 'left-7' : 'left-1'}`} />
+    </button>
+  </div>
+);
+
+// Physical Address Warning Modal
+const PhysicalAddressWarningModal = ({ isOpen, onConfirm, onCancel }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/80" onClick={onCancel} />
+      
+      {/* Modal */}
+      <div className="relative bg-dark-400 rounded-xl p-6 max-w-md w-full shadow-2xl border border-red-500/30">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
+            <AlertTriangle className="w-6 h-6 text-red-500" />
+          </div>
+          <h3 className="text-xl font-bold text-white">Security Warning</h3>
+        </div>
+        
+        <p className="text-gray-300 mb-4">
+          Are you sure that you want to share your physical address on your profile?
+        </p>
+        
+        <p className="text-gray-400 text-sm mb-4">
+          If you select yes, you understand that the general public will be able to see your physical address.
+        </p>
+        
+        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-6">
+          <p className="text-red-400 text-sm font-semibold mb-2">
+            ⚠️ MicLocker STRONGLY urges people not to share this address if this is your home address.
+          </p>
+          <p className="text-gray-400 text-xs">
+            By selecting this option, you understand that MicLocker and its affiliates are not responsible for any actions that are out of the control of MicLocker.
+          </p>
+        </div>
+        
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            className="btn btn-secondary flex-1"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="btn bg-red-600 hover:bg-red-700 text-white flex-1"
+          >
+            I Understand, Show Address
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const EditProfilePage = () => {
   const navigate = useNavigate();
   const { user, refreshUser, loading: authLoading } = useAuth();
+  const { isDark } = useTheme();
   const fileInputRef = useRef(null);
   const [categoryOptions, setCategoryOptions] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -16,6 +93,7 @@ const EditProfilePage = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showPhysicalAddressWarning, setShowPhysicalAddressWarning] = useState(false);
   
   const [formData, setFormData] = useState({
     bio: '',
@@ -41,18 +119,27 @@ const EditProfilePage = () => {
     youtube: '',
     soundcloud: '',
     spotify: '',
-    // Address fields
+    // Mailing address fields
     address_line1: '',
     address_line2: '',
     city: '',
     state: '',
     postal_code: '',
     country: '',
+    // Physical address fields
+    same_as_mailing: true,
+    physical_address_line1: '',
+    physical_address_line2: '',
+    physical_city: '',
+    physical_state: '',
+    physical_postal_code: '',
+    physical_country: '',
     // Privacy settings
     show_email: false,
     show_phone: false,
     show_address: false,
     show_social: true,
+    show_physical_address: false,
   });
 
   const CATEGORY_OPTIONS = [
@@ -83,6 +170,7 @@ const EditProfilePage = () => {
         
         // Extract address from shipping_address if available
         const shippingAddress = profile.shipping_address || {};
+        const physicalAddress = profile.physical_address || {};
         
         setFormData({
           bio: profile.bio || '',
@@ -108,18 +196,27 @@ const EditProfilePage = () => {
           youtube: profile.youtube || '',
           soundcloud: profile.soundcloud || '',
           spotify: profile.spotify || '',
-          // Address fields from shipping_address
+          // Mailing address fields from shipping_address
           address_line1: shippingAddress.address_line1 || '',
           address_line2: shippingAddress.address_line2 || '',
           city: shippingAddress.city || '',
           state: shippingAddress.state || '',
           postal_code: shippingAddress.postal_code || '',
           country: shippingAddress.country || '',
+          // Physical address fields
+          same_as_mailing: profile.same_as_mailing !== false,
+          physical_address_line1: physicalAddress.address_line1 || '',
+          physical_address_line2: physicalAddress.address_line2 || '',
+          physical_city: physicalAddress.city || '',
+          physical_state: physicalAddress.state || '',
+          physical_postal_code: physicalAddress.postal_code || '',
+          physical_country: physicalAddress.country || '',
           // Privacy settings
           show_email: profile.show_email || false,
           show_phone: profile.show_phone || false,
           show_address: profile.show_address || false,
-          show_social: profile.show_social !== false, // Default to true
+          show_social: profile.show_social !== false,
+          show_physical_address: profile.show_physical_address || false,
         });
       } catch (err) {
         console.error('Error loading profile:', err);
@@ -162,6 +259,36 @@ const EditProfilePage = () => {
     }
   };
 
+  // Handle show_address toggle with location conflict check
+  const handleShowAddressToggle = () => {
+    if (!formData.show_address && formData.location.trim()) {
+      setError('You cannot show your mailing address while you have a Display Location set. This is for your protection and to keep other users from being confused. Please clear the Display Location field first.');
+      setTimeout(() => setError(''), 8000);
+      return;
+    }
+    setFormData({ ...formData, show_address: !formData.show_address });
+  };
+
+  // Handle show_physical_address toggle with warning modal
+  const handleShowPhysicalAddressToggle = () => {
+    if (!formData.show_physical_address) {
+      // Show warning modal when enabling
+      setShowPhysicalAddressWarning(true);
+    } else {
+      // No warning needed when disabling
+      setFormData({ ...formData, show_physical_address: false });
+    }
+  };
+
+  const confirmShowPhysicalAddress = () => {
+    setFormData({ ...formData, show_physical_address: true });
+    setShowPhysicalAddressWarning(false);
+  };
+
+  const cancelShowPhysicalAddress = () => {
+    setShowPhysicalAddressWarning(false);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -181,15 +308,39 @@ const EditProfilePage = () => {
           postal_code: formData.postal_code,
           country: formData.country,
         } : null,
+        // Build physical_address object
+        physical_address: formData.same_as_mailing 
+          ? (formData.country ? {
+              address_line1: formData.address_line1,
+              address_line2: formData.address_line2,
+              city: formData.city,
+              state: formData.state,
+              postal_code: formData.postal_code,
+              country: formData.country,
+            } : null)
+          : (formData.physical_country ? {
+              address_line1: formData.physical_address_line1,
+              address_line2: formData.physical_address_line2,
+              city: formData.physical_city,
+              state: formData.physical_state,
+              postal_code: formData.physical_postal_code,
+              country: formData.physical_country,
+            } : null),
       };
       
-      // Remove individual address fields from root (they're in shipping_address now)
+      // Remove individual address fields from root (they're in shipping_address/physical_address now)
       delete updateData.address_line1;
       delete updateData.address_line2;
       delete updateData.city;
       delete updateData.state;
       delete updateData.postal_code;
       delete updateData.country;
+      delete updateData.physical_address_line1;
+      delete updateData.physical_address_line2;
+      delete updateData.physical_city;
+      delete updateData.physical_state;
+      delete updateData.physical_postal_code;
+      delete updateData.physical_country;
       
       await usersAPI.updateProfile(updateData);
       setSuccess('Profile updated successfully!');
@@ -230,38 +381,29 @@ const EditProfilePage = () => {
   if (authLoading || loading) return <LoadingSpinner />;
 
   const allCategories = [formData.category, ...formData.sub_categories].filter(Boolean);
-  const selectedCountry = COUNTRIES.find(c => c.code === formData.country);
   const states = getStatesForCountry(formData.country);
   const showStates = countryHasStates(formData.country);
+  const physicalStates = getStatesForCountry(formData.physical_country);
+  const showPhysicalStates = countryHasStates(formData.physical_country);
 
-  // Privacy toggle component
-  const PrivacyToggle = ({ label, checked, onChange, description }) => (
-    <div className="flex items-center justify-between p-3 bg-dark-300 rounded-lg">
-      <div className="flex items-center gap-3">
-        {checked ? <Eye className="w-4 h-4 text-primary" /> : <EyeOff className="w-4 h-4 text-gray-500" />}
-        <div>
-          <span className="text-white text-sm">{label}</span>
-          {description && <p className="text-gray-500 text-xs">{description}</p>}
-        </div>
-      </div>
-      <button
-        type="button"
-        onClick={onChange}
-        className={`relative w-12 h-6 rounded-full transition-colors ${checked ? 'bg-primary' : 'bg-dark-200'}`}
-      >
-        <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${checked ? 'left-7' : 'left-1'}`} />
-      </button>
-    </div>
-  );
+  // Check if display location conflicts with show_address
+  const hasLocationConflict = formData.location.trim().length > 0;
 
   return (
     <div className="min-h-screen py-8 px-4" data-testid="edit-profile-page">
+      {/* Physical Address Warning Modal */}
+      <PhysicalAddressWarningModal
+        isOpen={showPhysicalAddressWarning}
+        onConfirm={confirmShowPhysicalAddress}
+        onCancel={cancelShowPhysicalAddress}
+      />
+
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-bold text-white">Edit Profile</h1>
+          <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Edit Profile</h1>
           <button
             onClick={() => navigate(-1)}
-            className="text-gray-400 hover:text-white"
+            className={isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}
           >
             <X className="w-6 h-6" />
           </button>
@@ -281,8 +423,8 @@ const EditProfilePage = () => {
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Profile Image Section */}
-          <div className="bg-dark-400 rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Profile Picture</h2>
+          <div className={`rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
+            <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Profile Picture</h2>
             <div className="flex items-center gap-6">
               <div className="relative">
                 {formData.profile_image ? (
@@ -324,11 +466,11 @@ const EditProfilePage = () => {
           </div>
 
           {/* Basic Info Section */}
-          <div className="bg-dark-400 rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Basic Information</h2>
+          <div className={`rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
+            <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Basic Information</h2>
             
             <div className="mb-4">
-              <label className="block text-gray-400 mb-2">Bio</label>
+              <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Bio</label>
               <textarea
                 value={formData.bio}
                 onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
@@ -339,7 +481,7 @@ const EditProfilePage = () => {
             </div>
 
             <div>
-              <label className="block text-gray-400 mb-2">Display Location (e.g., "Nashville, TN")</label>
+              <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Display Location (e.g., &quot;Nashville, TN&quot;)</label>
               <input
                 type="text"
                 value={formData.location}
@@ -351,10 +493,10 @@ const EditProfilePage = () => {
           </div>
 
           {/* Mailing Address Section */}
-          <div className="bg-dark-400 rounded-xl p-6">
+          <div className={`rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                <h2 className={`text-lg font-semibold flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   <MapPin className="w-5 h-5" />
                   Mailing Address
                 </h2>
@@ -364,7 +506,7 @@ const EditProfilePage = () => {
 
             {/* Country */}
             <div className="mb-4">
-              <label className="block text-gray-400 mb-2">Country</label>
+              <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Country</label>
               <select
                 value={formData.country}
                 onChange={(e) => setFormData({ ...formData, country: e.target.value, state: '' })}
@@ -387,7 +529,7 @@ const EditProfilePage = () => {
               <>
                 {/* Address Line 1 */}
                 <div className="mb-4">
-                  <label className="block text-gray-400 mb-2">Street Address</label>
+                  <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Street Address</label>
                   <input
                     type="text"
                     value={formData.address_line1}
@@ -398,7 +540,7 @@ const EditProfilePage = () => {
 
                 {/* Address Line 2 */}
                 <div className="mb-4">
-                  <label className="block text-gray-400 mb-2">Apt, Suite, Unit (optional)</label>
+                  <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Apt, Suite, Unit (optional)</label>
                   <input
                     type="text"
                     value={formData.address_line2}
@@ -410,7 +552,7 @@ const EditProfilePage = () => {
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   {/* City */}
                   <div>
-                    <label className="block text-gray-400 mb-2">City</label>
+                    <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>City</label>
                     <input
                       type="text"
                       value={formData.city}
@@ -421,7 +563,7 @@ const EditProfilePage = () => {
 
                   {/* State/Province */}
                   <div>
-                    <label className="block text-gray-400 mb-2">
+                    <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                       {formData.country === 'CA' ? 'Province' : 
                        formData.country === 'AU' ? 'State/Territory' : 
                        formData.country === 'JP' ? 'Prefecture' :
@@ -450,7 +592,7 @@ const EditProfilePage = () => {
 
                 {/* Postal Code */}
                 <div className="mb-4">
-                  <label className="block text-gray-400 mb-2">
+                  <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                     {formData.country === 'US' ? 'ZIP Code' : 'Postal Code'}
                   </label>
                   <input
@@ -464,24 +606,186 @@ const EditProfilePage = () => {
               </>
             )}
 
-            {/* Show address on profile toggle */}
+            {/* Show mailing address on profile toggle */}
             <div className="mt-4 pt-4 border-t border-dark-300">
+              {hasLocationConflict && (
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mb-3">
+                  <p className="text-yellow-400 text-xs">
+                    ⚠️ You have a Display Location set. You cannot show your mailing address while Display Location is filled. This is for your protection.
+                  </p>
+                </div>
+              )}
               <PrivacyToggle
-                label="Show address on public profile"
+                label="Show mailing address on public profile"
                 description="Allow others to see your mailing address"
                 checked={formData.show_address}
-                onChange={() => setFormData({ ...formData, show_address: !formData.show_address })}
+                onChange={handleShowAddressToggle}
+                disabled={hasLocationConflict}
+              />
+            </div>
+          </div>
+
+          {/* Physical Address Section */}
+          <div className={`rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className={`text-lg font-semibold flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  <MapPin className="w-5 h-5" />
+                  Physical Address
+                </h2>
+                <p className="text-gray-500 text-sm">Your business or physical location</p>
+              </div>
+            </div>
+
+            {/* Same as mailing checkbox */}
+            <div 
+              className="flex items-center gap-3 p-4 bg-dark-300 rounded-lg cursor-pointer mb-4 hover:bg-dark-200 transition-colors"
+              onClick={() => setFormData({ ...formData, same_as_mailing: !formData.same_as_mailing })}
+            >
+              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                formData.same_as_mailing ? 'bg-primary border-primary' : 'border-gray-500'
+              }`}>
+                {formData.same_as_mailing && <Check className="w-3 h-3 text-black" />}
+              </div>
+              <span className="text-white">Same as mailing address</span>
+            </div>
+
+            {/* Animated Physical Address Fields */}
+            <div 
+              className={`overflow-hidden transition-all duration-500 ease-in-out ${
+                formData.same_as_mailing 
+                  ? 'max-h-0 opacity-0' 
+                  : 'max-h-[600px] opacity-100'
+              }`}
+            >
+              <div className="pt-4 space-y-4">
+                {/* Physical Country */}
+                <div>
+                  <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Country</label>
+                  <select
+                    value={formData.physical_country}
+                    onChange={(e) => setFormData({ ...formData, physical_country: e.target.value, physical_state: '' })}
+                  >
+                    <option value="">Select a country</option>
+                    <optgroup label="Military (APO/FPO/DPO)">
+                      {COUNTRIES.filter(c => c.isMilitary).map(country => (
+                        <option key={country.code} value={country.code}>{country.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Countries">
+                      {COUNTRIES.filter(c => !c.isMilitary).map(country => (
+                        <option key={country.code} value={country.code}>{country.name}</option>
+                      ))}
+                    </optgroup>
+                  </select>
+                </div>
+
+                {formData.physical_country && (
+                  <>
+                    {/* Physical Street Address */}
+                    <div>
+                      <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Street Address</label>
+                      <input
+                        type="text"
+                        value={formData.physical_address_line1}
+                        onChange={(e) => setFormData({ ...formData, physical_address_line1: e.target.value })}
+                        placeholder="123 Main St"
+                      />
+                    </div>
+
+                    {/* Physical Address Line 2 */}
+                    <div>
+                      <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Apt, Suite, Unit (optional)</label>
+                      <input
+                        type="text"
+                        value={formData.physical_address_line2}
+                        onChange={(e) => setFormData({ ...formData, physical_address_line2: e.target.value })}
+                        placeholder="Apt 4B"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Physical City */}
+                      <div>
+                        <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>City</label>
+                        <input
+                          type="text"
+                          value={formData.physical_city}
+                          onChange={(e) => setFormData({ ...formData, physical_city: e.target.value })}
+                          placeholder="City"
+                        />
+                      </div>
+
+                      {/* Physical State */}
+                      <div>
+                        <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                          {formData.physical_country === 'CA' ? 'Province' : 
+                           formData.physical_country === 'AU' ? 'State/Territory' : 
+                           formData.physical_country === 'JP' ? 'Prefecture' :
+                           'State/Region'}
+                        </label>
+                        {showPhysicalStates ? (
+                          <select
+                            value={formData.physical_state}
+                            onChange={(e) => setFormData({ ...formData, physical_state: e.target.value })}
+                          >
+                            <option value="">Select</option>
+                            {physicalStates.map(state => (
+                              <option key={state.code} value={state.code}>{state.name}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type="text"
+                            value={formData.physical_state}
+                            onChange={(e) => setFormData({ ...formData, physical_state: e.target.value })}
+                            placeholder="State or region"
+                          />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Physical Postal Code */}
+                    <div>
+                      <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {formData.physical_country === 'US' ? 'ZIP Code' : 'Postal Code'}
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.physical_postal_code}
+                        onChange={(e) => setFormData({ ...formData, physical_postal_code: e.target.value })}
+                        placeholder={formData.physical_country === 'US' ? '12345' : 'Postal code'}
+                        className="w-1/2"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Show physical address on profile toggle */}
+            <div className="mt-4 pt-4 border-t border-dark-300">
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-3">
+                <p className="text-red-400 text-xs">
+                  ⚠️ Enabling this will show your physical address publicly. Use caution if this is your home address.
+                </p>
+              </div>
+              <PrivacyToggle
+                label="Show physical address on public profile"
+                description="Allow others to see your physical address with a map"
+                checked={formData.show_physical_address}
+                onChange={handleShowPhysicalAddressToggle}
               />
             </div>
           </div>
 
           {/* Contact Information Section */}
-          <div className="bg-dark-400 rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Contact Information</h2>
+          <div className={`rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
+            <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Contact Information</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div>
-                <label className="block text-gray-400 mb-2">
+                <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                   <Phone className="w-4 h-4 inline mr-2" />
                   Phone Number
                 </label>
@@ -494,7 +798,7 @@ const EditProfilePage = () => {
               </div>
 
               <div>
-                <label className="block text-gray-400 mb-2">
+                <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                   <Globe className="w-4 h-4 inline mr-2" />
                   Website
                 </label>
@@ -524,7 +828,7 @@ const EditProfilePage = () => {
             <h3 className="text-white font-medium mb-3">Social Media</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-gray-400 mb-2">Instagram</label>
+                <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Instagram</label>
                 <div className="flex">
                   <span className="px-3 py-2 bg-dark-300 rounded-l-lg text-gray-500 border border-r-0 border-dark-200">@</span>
                   <input
@@ -538,7 +842,7 @@ const EditProfilePage = () => {
               </div>
 
               <div>
-                <label className="block text-gray-400 mb-2">Twitter / X</label>
+                <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Twitter / X</label>
                 <div className="flex">
                   <span className="px-3 py-2 bg-dark-300 rounded-l-lg text-gray-500 border border-r-0 border-dark-200">@</span>
                   <input
@@ -552,7 +856,7 @@ const EditProfilePage = () => {
               </div>
 
               <div>
-                <label className="block text-gray-400 mb-2">Facebook</label>
+                <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Facebook</label>
                 <div className="flex">
                   <span className="px-3 py-2 bg-dark-300 rounded-l-lg text-gray-500 border border-r-0 border-dark-200 text-xs">facebook.com/</span>
                   <input
@@ -566,7 +870,7 @@ const EditProfilePage = () => {
               </div>
 
               <div>
-                <label className="block text-gray-400 mb-2">YouTube</label>
+                <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>YouTube</label>
                 <div className="flex">
                   <span className="px-3 py-2 bg-dark-300 rounded-l-lg text-gray-500 border border-r-0 border-dark-200 text-xs">youtube.com/</span>
                   <input
@@ -580,7 +884,7 @@ const EditProfilePage = () => {
               </div>
 
               <div>
-                <label className="block text-gray-400 mb-2">SoundCloud</label>
+                <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>SoundCloud</label>
                 <div className="flex">
                   <span className="px-3 py-2 bg-dark-300 rounded-l-lg text-gray-500 border border-r-0 border-dark-200 text-xs">soundcloud.com/</span>
                   <input
@@ -594,7 +898,7 @@ const EditProfilePage = () => {
               </div>
 
               <div>
-                <label className="block text-gray-400 mb-2">Spotify Artist ID</label>
+                <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Spotify Artist ID</label>
                 <input
                   type="text"
                   value={formData.spotify}
@@ -615,8 +919,8 @@ const EditProfilePage = () => {
           </div>
 
           {/* Primary Category Section */}
-          <div className="bg-dark-400 rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Primary Category</h2>
+          <div className={`rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
+            <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Primary Category</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {CATEGORY_OPTIONS.map(cat => (
                 <button
@@ -641,8 +945,8 @@ const EditProfilePage = () => {
           </div>
 
           {/* Sub-Categories Section */}
-          <div className="bg-dark-400 rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-white mb-2">Secondary Categories</h2>
+          <div className={`rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
+            <h2 className={`text-lg font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>Secondary Categories</h2>
             <p className="text-gray-500 text-sm mb-4">Select additional roles that apply to you</p>
             <div className="space-y-2">
               {CATEGORY_OPTIONS.filter(cat => cat.value !== formData.category).map(cat => (
@@ -673,13 +977,13 @@ const EditProfilePage = () => {
 
           {/* Category-Specific Fields */}
           {allCategories.includes('musician') && (
-            <div className="bg-dark-400 rounded-xl p-6">
-              <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <div className={`rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
+              <h2 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 <span>🎸</span> Musician Details
               </h2>
               
               <div className="mb-4">
-                <label className="block text-gray-400 mb-2">Genre</label>
+                <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Genre</label>
                 <select
                   value={formData.genre}
                   onChange={(e) => setFormData({ ...formData, genre: e.target.value })}
@@ -721,8 +1025,8 @@ const EditProfilePage = () => {
           )}
 
           {allCategories.includes('audio_engineer') && (
-            <div className="bg-dark-400 rounded-xl p-6">
-              <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <div className={`rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
+              <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 <span>🎚️</span> Audio Engineer Specializations
               </h2>
               <div className="max-h-64 overflow-y-auto grid grid-cols-1 gap-2">
@@ -751,8 +1055,8 @@ const EditProfilePage = () => {
           )}
 
           {allCategories.includes('recording_studio') && (
-            <div className="bg-dark-400 rounded-xl p-6">
-              <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <div className={`rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
+              <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 <span>🎙️</span> Studio Offerings
               </h2>
               <div className="max-h-64 overflow-y-auto grid grid-cols-1 gap-2">
@@ -781,65 +1085,62 @@ const EditProfilePage = () => {
           )}
 
           {allCategories.includes('venue') && (
-            <div className="bg-dark-400 rounded-xl p-6">
-              <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <div className={`rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
+              <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 <span>🏟️</span> Venue Details
               </h2>
-              
-              <div className="mb-4">
-                <label className="block text-gray-400 mb-2">Venue Name</label>
-                <input
-                  type="text"
-                  value={formData.venue_name}
-                  onChange={(e) => setFormData({ ...formData, venue_name: e.target.value })}
-                  placeholder="Enter venue name"
-                />
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-gray-400 mb-2">City</label>
-                <input
-                  type="text"
-                  value={formData.venue_city}
-                  onChange={(e) => setFormData({ ...formData, venue_city: e.target.value })}
-                  placeholder="Enter city"
-                />
-              </div>
-
-              <div>
-                <label className="block text-gray-400 mb-2">Capacity</label>
-                <select
-                  value={formData.venue_capacity}
-                  onChange={(e) => setFormData({ ...formData, venue_capacity: e.target.value })}
-                >
-                  <option value="">Select capacity</option>
-                  <option value="small">Small (under 100)</option>
-                  <option value="medium">Medium (100-500)</option>
-                  <option value="large">Large (500-2000)</option>
-                  <option value="arena">Arena (2000+)</option>
-                </select>
+              <div className="space-y-4">
+                <div>
+                  <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Venue Name</label>
+                  <input
+                    type="text"
+                    value={formData.venue_name}
+                    onChange={(e) => setFormData({ ...formData, venue_name: e.target.value })}
+                    placeholder="Enter venue name"
+                  />
+                </div>
+                <div>
+                  <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>City</label>
+                  <input
+                    type="text"
+                    value={formData.venue_city}
+                    onChange={(e) => setFormData({ ...formData, venue_city: e.target.value })}
+                    placeholder="Enter city"
+                  />
+                </div>
+                <div>
+                  <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Capacity</label>
+                  <select
+                    value={formData.venue_capacity}
+                    onChange={(e) => setFormData({ ...formData, venue_capacity: e.target.value })}
+                  >
+                    <option value="">Select capacity</option>
+                    <option value="small">Small (under 100)</option>
+                    <option value="medium">Medium (100-500)</option>
+                    <option value="large">Large (500-2000)</option>
+                    <option value="arena">Arena (2000+)</option>
+                  </select>
+                </div>
               </div>
             </div>
           )}
 
           {allCategories.includes('merchant') && (
-            <div className="bg-dark-400 rounded-xl p-6">
-              <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <div className={`rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
+              <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 <span>🛍️</span> Merchant Details
               </h2>
-              
               <div className="mb-4">
-                <label className="block text-gray-400 mb-2">Business Name</label>
+                <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Business Name</label>
                 <input
                   type="text"
                   value={formData.business_name}
                   onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
-                  placeholder="Enter your business name"
+                  placeholder="Enter business name"
                 />
               </div>
-
               <div>
-                <label className="block text-gray-400 mb-3">Products You Sell</label>
+                <label className="block text-gray-400 mb-3">Product Types</label>
                 <div className="max-h-48 overflow-y-auto grid grid-cols-2 gap-2">
                   {categoryOptions?.merchant_options?.product_types?.map(product => (
                     <div
@@ -866,21 +1167,20 @@ const EditProfilePage = () => {
             </div>
           )}
 
-          {/* Save Button */}
+          {/* Submit Button */}
           <div className="flex gap-4">
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="btn btn-secondary flex-1 py-3"
+              className="btn btn-secondary flex-1"
             >
               Cancel
             </button>
             <button
               type="submit"
+              className="btn btn-primary flex-1"
               disabled={saving}
-              className="btn btn-primary flex-1 py-3 flex items-center justify-center gap-2"
             >
-              <Save className="w-4 h-4" />
               {saving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>

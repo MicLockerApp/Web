@@ -90,6 +90,8 @@ class UserCategoryUpdate(BaseModel):
     # Contact info (optional during registration)
     phone: Optional[str] = None
     shipping_address: Optional[dict] = None
+    physical_address: Optional[dict] = None  # Physical/business address
+    same_as_mailing: Optional[bool] = None  # Whether physical = mailing
 
 class UserProfileUpdate(BaseModel):
     bio: Optional[str] = None
@@ -98,6 +100,7 @@ class UserProfileUpdate(BaseModel):
     category: Optional[str] = None
     sub_categories: Optional[List[str]] = None
     genre: Optional[str] = None
+    genres: Optional[List[str]] = None
     instruments: Optional[List[str]] = None
     specializations: Optional[List[str]] = None
     studio_offerings: Optional[List[str]] = None
@@ -115,6 +118,17 @@ class UserProfileUpdate(BaseModel):
     youtube: Optional[str] = None
     soundcloud: Optional[str] = None
     spotify: Optional[str] = None
+    # Shipping address (mailing)
+    shipping_address: Optional[dict] = None
+    # Physical address
+    physical_address: Optional[dict] = None
+    same_as_mailing: Optional[bool] = None
+    # Privacy settings
+    show_email: Optional[bool] = None
+    show_phone: Optional[bool] = None
+    show_address: Optional[bool] = None
+    show_social: Optional[bool] = None
+    show_physical_address: Optional[bool] = None
 
 class UserInDB(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -161,6 +175,17 @@ class UserInDB(BaseModel):
     # Shipping address
     shipping_address: Optional[dict] = None  # {address_line1, address_line2, city, state, postal_code, country}
     
+    # Physical address
+    physical_address: Optional[dict] = None  # Same structure as shipping_address
+    same_as_mailing: bool = False  # Whether physical address is same as mailing
+    
+    # Privacy settings
+    show_email: bool = False
+    show_phone: bool = False
+    show_address: bool = False
+    show_social: bool = True  # Default to showing social media
+    show_physical_address: bool = False  # Default to NOT showing physical address
+    
     # Stats
     rating: float = 0.0
     review_count: int = 0
@@ -204,6 +229,15 @@ class UserResponse(BaseModel):
     favorites: Optional[List[str]] = None
     # Shipping address
     shipping_address: Optional[dict] = None
+    # Physical address
+    physical_address: Optional[dict] = None
+    same_as_mailing: bool = False
+    # Privacy settings
+    show_email: bool = False
+    show_phone: bool = False
+    show_address: bool = False
+    show_social: bool = True
+    show_physical_address: bool = False
     # Stats
     rating: float = 0.0
     review_count: int = 0
@@ -228,6 +262,11 @@ class UserPublicProfile(BaseModel):
     youtube: Optional[str] = None
     soundcloud: Optional[str] = None
     spotify: Optional[str] = None
+    # Shipping address
+    shipping_address: Optional[dict] = None
+    # Physical address
+    physical_address: Optional[dict] = None
+    same_as_mailing: bool = False
     # Category fields
     genre: Optional[str] = None  # Backward compatibility
     genres: Optional[List[str]] = None  # New multi-select genres
@@ -238,6 +277,13 @@ class UserPublicProfile(BaseModel):
     venue_city: Optional[str] = None
     merchant_products: Optional[List[str]] = None
     business_name: Optional[str] = None
+    # Privacy settings
+    show_email: bool = False
+    show_phone: bool = False
+    show_address: bool = False
+    show_social: bool = True
+    show_physical_address: bool = False
+    # Stats
     rating: float = 0.0
     review_count: int = 0
     total_sales: int = 0

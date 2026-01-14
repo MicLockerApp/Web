@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 
@@ -28,6 +29,7 @@ import AboutPage from './pages/AboutPage';
 // Layout component that conditionally shows navbar/footer
 const Layout = ({ children }) => {
   const location = useLocation();
+  const { isDark } = useTheme();
   const isJobsPage = location.pathname === '/careers/jobs';
 
   if (isJobsPage) {
@@ -36,7 +38,7 @@ const Layout = ({ children }) => {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-dark-600">
+    <div className={`flex flex-col min-h-screen transition-colors duration-300 ${isDark ? 'bg-dark-600' : 'bg-gray-50'}`}>
       <Navbar />
       <main className="flex-1">
         {children}
@@ -46,7 +48,7 @@ const Layout = ({ children }) => {
   );
 };
 
-function App() {
+function AppContent() {
   return (
     <Router>
       <AuthProvider>
@@ -76,8 +78,8 @@ function App() {
               <Route path="*" element={
                 <div className="min-h-screen flex items-center justify-center">
                   <div className="text-center">
-                    <h1 className="text-4xl font-bold text-white mb-4">404</h1>
-                    <p className="text-gray-400">Page not found</p>
+                    <h1 className="text-4xl font-bold text-theme-primary mb-4">404</h1>
+                    <p className="text-theme-secondary">Page not found</p>
                   </div>
                 </div>
               } />
@@ -86,6 +88,14 @@ function App() {
         </CartProvider>
       </AuthProvider>
     </Router>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 }
 

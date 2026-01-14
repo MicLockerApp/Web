@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Query, UploadFile, File
 from models.user import UserResponse, UserPublicProfile, UserProfileUpdate
-from services.auth import get_current_user
+from services.auth import get_current_user, get_current_user_optional
 from services.storage import storage_service
 from database import get_database
 from utils.helpers import serialize_docs, serialize_doc
@@ -10,8 +10,11 @@ from typing import Optional
 router = APIRouter(prefix="/users", tags=["Users"])
 
 @router.get("/profile/{user_id}", response_model=UserPublicProfile)
-async def get_user_profile(user_id: str):
-    """Get public profile of a user"""
+async def get_user_profile(
+    user_id: str,
+    current_user: Optional[dict] = Depends(get_current_user_optional)
+):
+    """Get public profile of a user, respecting privacy settings"""
     db = get_database()
     
     user = await db.users.find_one({"id": user_id})
@@ -21,7 +24,40 @@ async def get_user_profile(user_id: str):
             detail="User not found"
         )
     
-    return UserPublicProfile(**user)
+    # Check if it's the user's own profile
+    is_own_profile = current_user and current_user.get("id") == user_id
+    
+    # Create profile response
+    profile_data = dict(user)
+    
+    # If not own profile, apply privacy settings
+    if not is_own_profile:
+        # Hide email unless show_email is true
+        if not user.get("show_email", False):
+            profile_data["email"] = None
+        
+        # Hide phone unless show_phone is true
+        if not user.get("show_phone", False):
+            profile_data["phone"] = None
+        
+        # Hide address unless show_address is true
+        if not user.get("show_address", False):
+            profile_data["shipping_address"] = None
+        
+        # Hide physical address unless show_physical_address is true
+        if not user.get("show_physical_address", False):
+            profile_data["physical_address"] = None
+        
+        # Hide social media unless show_social is true
+        if not user.get("show_social", True):
+            profile_data["instagram"] = None
+            profile_data["twitter"] = None
+            profile_data["facebook"] = None
+            profile_data["youtube"] = None
+            profile_data["soundcloud"] = None
+            profile_data["spotify"] = None
+    
+    return UserPublicProfile(**profile_data)
 
 @router.get("/profile/by-username/{username}", response_model=UserPublicProfile)
 async def get_user_profile_by_username(username: str):

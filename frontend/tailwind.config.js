@@ -4,6 +4,7 @@ module.exports = {
     "./src/**/*.{js,jsx,ts,tsx}",
     "./public/index.html"
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
@@ -32,6 +33,20 @@ module.exports = {
           700: '#000000',
           800: '#000000',
           900: '#000000'
+        },
+        // Light mode colors
+        light: {
+          DEFAULT: '#FFFFFF',
+          50: '#FFFFFF',
+          100: '#FAFAFA',
+          200: '#F5F5F5',
+          300: '#E5E5E5',
+          400: '#D4D4D4',
+          500: '#A3A3A3',
+          600: '#737373',
+          700: '#525252',
+          800: '#262626',
+          900: '#171717'
         }
       },
       animation: {

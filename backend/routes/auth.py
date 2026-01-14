@@ -158,6 +158,10 @@ async def complete_profile(
         update_data["phone"] = category_data.phone
     if category_data.shipping_address:
         update_data["shipping_address"] = category_data.shipping_address
+    if category_data.physical_address:
+        update_data["physical_address"] = category_data.physical_address
+    if category_data.same_as_mailing is not None:
+        update_data["same_as_mailing"] = category_data.same_as_mailing
     
     await db.users.update_one(
         {"id": current_user["id"]},

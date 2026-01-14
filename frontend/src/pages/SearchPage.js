@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Search, Filter, X, ChevronDown } from 'lucide-react';
 import { listingsAPI } from '../services/api';
+import { useTheme } from '../context/ThemeContext';
 import ListingCard from '../components/ListingCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 
@@ -16,6 +17,7 @@ const CONDITIONS = ['Brand New', 'Mint', 'Excellent', 'Very Good', 'Good', 'Fair
 
 const SearchPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { isDark } = useTheme();
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [totalResults, setTotalResults] = useState(0);
@@ -94,10 +96,10 @@ const SearchPage = () => {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-white">
+            <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
               {filters.q ? `Results for "${filters.q}"` : filters.category || 'All Listings'}
             </h1>
-            <p className="text-gray-400 mt-1">{totalResults} results found</p>
+            <p className={`mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{totalResults} results found</p>
           </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
@@ -111,9 +113,11 @@ const SearchPage = () => {
         <div className="flex gap-8">
           {/* Filters Sidebar */}
           <div className={`w-64 flex-shrink-0 ${showFilters ? 'block' : 'hidden md:block'}`}>
-            <div className="bg-dark-400 rounded-xl p-6 sticky top-24">
+            <div className={`rounded-xl p-6 sticky top-24 ${
+              isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'
+            }`}>
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold text-white">Filters</h2>
+                <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Filters</h2>
                 {hasActiveFilters && (
                   <button
                     onClick={clearFilters}
@@ -126,7 +130,7 @@ const SearchPage = () => {
 
               {/* Category */}
               <div className="mb-6">
-                <label className="block text-gray-400 mb-2 text-sm">Category</label>
+                <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Category</label>
                 <select
                   value={filters.category}
                   onChange={(e) => updateFilter('category', e.target.value)}
@@ -142,7 +146,7 @@ const SearchPage = () => {
 
               {/* Condition */}
               <div className="mb-6">
-                <label className="block text-gray-400 mb-2 text-sm">Condition</label>
+                <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Condition</label>
                 <select
                   value={filters.condition}
                   onChange={(e) => updateFilter('condition', e.target.value)}
@@ -158,7 +162,7 @@ const SearchPage = () => {
 
               {/* Price Range */}
               <div className="mb-6">
-                <label className="block text-gray-400 mb-2 text-sm">Price Range</label>
+                <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Price Range</label>
                 <div className="flex gap-2">
                   <input
                     type="number"
@@ -181,7 +185,7 @@ const SearchPage = () => {
 
               {/* Sort */}
               <div>
-                <label className="block text-gray-400 mb-2 text-sm">Sort By</label>
+                <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Sort By</label>
                 <select
                   value={filters.sortBy}
                   onChange={(e) => updateFilter('sortBy', e.target.value)}
@@ -218,7 +222,9 @@ const SearchPage = () => {
                         className={`w-10 h-10 rounded-lg ${
                           filters.page === page
                             ? 'bg-primary text-black'
-                            : 'bg-dark-400 text-gray-400 hover:bg-dark-300'
+                            : isDark 
+                              ? 'bg-dark-400 text-gray-400 hover:bg-dark-300' 
+                              : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                         }`}
                       >
                         {page}
@@ -229,9 +235,9 @@ const SearchPage = () => {
               </>
             ) : (
               <div className="text-center py-16">
-                <Search className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-white mb-2">No listings found</h3>
-                <p className="text-gray-400 mb-6">Try adjusting your filters or search terms</p>
+                <Search className={`w-16 h-16 mx-auto mb-4 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} />
+                <h3 className={`text-xl font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>No listings found</h3>
+                <p className={`mb-6 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Try adjusting your filters or search terms</p>
                 <button onClick={clearFilters} className="btn btn-primary">
                   Clear Filters
                 </button>

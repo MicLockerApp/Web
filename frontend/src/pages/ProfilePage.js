@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { MapPin, Star, MessageSquare, Calendar, Music, Mic2, Building2, Package, Mail, Phone, Globe, ShoppingBag } from 'lucide-react';
 import { usersAPI, listingsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ListingCard from '../components/ListingCard';
 import StarRating from '../components/StarRating';
@@ -47,6 +48,7 @@ const SocialIcon = ({ platform }) => {
 const ProfilePage = () => {
   const { id } = useParams();
   const { user: currentUser } = useAuth();
+  const { isDark } = useTheme();
   const [profile, setProfile] = useState(null);
   const [listings, setListings] = useState([]);
   const [reviews, setReviews] = useState([]);
@@ -95,20 +97,70 @@ const ProfilePage = () => {
 
   const CategoryIcon = getCategoryIcon(profile.category);
 
-  // Check if user has any contact info
-  const hasContactInfo = profile.email || profile.phone || profile.website || 
-    profile.instagram || profile.twitter || profile.facebook || 
-    profile.youtube || profile.soundcloud || profile.spotify;
+  // Check if user has any contact info that they've opted to show
+  const hasContactInfo = (profile.show_email && profile.email) || 
+    (profile.show_phone && profile.phone) || 
+    profile.website || 
+    (profile.show_social && (profile.instagram || profile.twitter || profile.facebook || 
+      profile.youtube || profile.soundcloud || profile.spotify));
 
-  // Check if user has any social media
-  const hasSocialMedia = profile.instagram || profile.twitter || profile.facebook || 
-    profile.youtube || profile.soundcloud || profile.spotify;
+  // Check if user has any social media they've opted to show
+  const hasSocialMedia = profile.show_social && (profile.instagram || profile.twitter || profile.facebook || 
+    profile.youtube || profile.soundcloud || profile.spotify);
+
+  // Build formatted address from shipping_address
+  const formattedAddress = profile.show_address && profile.shipping_address ? (() => {
+    const addr = profile.shipping_address;
+    const parts = [];
+    if (addr.address_line1) parts.push(addr.address_line1);
+    if (addr.address_line2) parts.push(addr.address_line2);
+    if (addr.city || addr.state || addr.postal_code) {
+      const cityStateParts = [];
+      if (addr.city) cityStateParts.push(addr.city);
+      if (addr.state) cityStateParts.push(addr.state);
+      if (addr.postal_code) cityStateParts.push(addr.postal_code);
+      parts.push(cityStateParts.join(', '));
+    }
+    if (addr.country) parts.push(addr.country);
+    return parts.join(' • ');
+  })() : null;
+
+  // Build formatted physical address
+  const formattedPhysicalAddress = profile.show_physical_address && profile.physical_address ? (() => {
+    const addr = profile.physical_address;
+    const parts = [];
+    if (addr.address_line1) parts.push(addr.address_line1);
+    if (addr.address_line2) parts.push(addr.address_line2);
+    if (addr.city || addr.state || addr.postal_code) {
+      const cityStateParts = [];
+      if (addr.city) cityStateParts.push(addr.city);
+      if (addr.state) cityStateParts.push(addr.state);
+      if (addr.postal_code) cityStateParts.push(addr.postal_code);
+      parts.push(cityStateParts.join(', '));
+    }
+    if (addr.country) parts.push(addr.country);
+    return parts.join(', ');
+  })() : null;
+
+  // Build Google Maps query for physical address
+  const googleMapsQuery = profile.show_physical_address && profile.physical_address ? (() => {
+    const addr = profile.physical_address;
+    const parts = [];
+    if (addr.address_line1) parts.push(addr.address_line1);
+    if (addr.city) parts.push(addr.city);
+    if (addr.state) parts.push(addr.state);
+    if (addr.postal_code) parts.push(addr.postal_code);
+    if (addr.country) parts.push(addr.country);
+    return encodeURIComponent(parts.join(', '));
+  })() : null;
+
+  const GOOGLE_MAPS_API_KEY = 'AIzaSyBzqrdVWl7XQRUv6yID3vIAEAwdr6p1mBY';
 
   return (
     <div className="min-h-screen" data-testid="profile-page">
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Profile Header */}
-        <div className="bg-dark-400 rounded-xl p-6 md:p-8 mb-8">
+        <div className={`rounded-xl p-6 md:p-8 mb-8 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
           <div className="flex flex-col md:flex-row gap-6">
             {/* Avatar */}
             <div className="flex-shrink-0">
@@ -119,7 +171,7 @@ const ProfilePage = () => {
                   className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover"
                 />
               ) : (
-                <div className="w-24 h-24 md:w-32 md:h-32 bg-dark-300 rounded-full flex items-center justify-center">
+                <div className={`w-24 h-24 md:w-32 md:h-32 rounded-full flex items-center justify-center ${isDark ? 'bg-dark-300' : 'bg-gray-200'}`}>
                   <span className="text-4xl md:text-5xl font-bold text-primary">
                     {profile.username?.[0]?.toUpperCase()}
                   </span>
@@ -130,7 +182,7 @@ const ProfilePage = () => {
             {/* Info */}
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2 flex-wrap">
-                <h1 className="text-2xl md:text-3xl font-bold text-white">{profile.username}</h1>
+                <h1 className={`text-2xl md:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{profile.username}</h1>
                 {profile.category && (
                   <span className="badge badge-primary flex items-center gap-1">
                     <CategoryIcon className="w-3 h-3" />
@@ -145,7 +197,7 @@ const ProfilePage = () => {
                   {profile.sub_categories.map(subCat => {
                     const SubCatIcon = getCategoryIcon(subCat);
                     return (
-                      <span key={subCat} className="badge bg-dark-300 text-gray-300 flex items-center gap-1">
+                      <span key={subCat} className={`badge flex items-center gap-1 ${isDark ? 'bg-dark-300 text-gray-300' : 'bg-gray-200 text-gray-700'}`}>
                         <SubCatIcon className="w-3 h-3" />
                         {getCategoryLabel(subCat)}
                       </span>
@@ -157,11 +209,11 @@ const ProfilePage = () => {
               {/* Rating */}
               <div className="flex items-center gap-4 mb-4">
                 <StarRating rating={profile.rating || 0} showValue totalReviews={profile.review_count} />
-                <span className="text-gray-400">· {profile.total_sales} sales</span>
+                <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>· {profile.total_sales} sales</span>
               </div>
 
               {/* Location & Member Since */}
-              <div className="flex flex-wrap gap-4 text-gray-400 text-sm mb-4">
+              <div className={`flex flex-wrap gap-4 text-sm mb-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                 {profile.location && (
                   <span className="flex items-center gap-1">
                     <MapPin className="w-4 h-4" />
@@ -176,20 +228,20 @@ const ProfilePage = () => {
 
               {/* Bio */}
               {profile.bio && (
-                <p className="text-gray-300 mb-4">{profile.bio}</p>
+                <p className={`mb-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{profile.bio}</p>
               )}
 
               {/* Category Specific Info */}
               {profile.category === 'musician' && profile.instruments?.length > 0 && (
                 <div className="mb-4">
-                  <p className="text-gray-400 text-sm mb-2">
+                  <p className={`text-sm mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                     {profile.genre && <span className="text-primary">{profile.genre}</span>}
                     {profile.genre && ' · '}
                     Instruments:
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {profile.instruments.map(inst => (
-                      <span key={inst} className="badge bg-dark-300 text-gray-300">{inst}</span>
+                      <span key={inst} className={`badge ${isDark ? 'bg-dark-300 text-gray-300' : 'bg-gray-200 text-gray-700'}`}>{inst}</span>
                     ))}
                   </div>
                 </div>
@@ -197,13 +249,13 @@ const ProfilePage = () => {
 
               {profile.category === 'audio_engineer' && profile.specializations?.length > 0 && (
                 <div className="mb-4">
-                  <p className="text-gray-400 text-sm mb-2">Specializations:</p>
+                  <p className={`text-sm mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Specializations:</p>
                   <div className="flex flex-wrap gap-2">
                     {profile.specializations.slice(0, 5).map(spec => (
-                      <span key={spec} className="badge bg-dark-300 text-gray-300">{spec}</span>
+                      <span key={spec} className={`badge ${isDark ? 'bg-dark-300 text-gray-300' : 'bg-gray-200 text-gray-700'}`}>{spec}</span>
                     ))}
                     {profile.specializations.length > 5 && (
-                      <span className="badge bg-dark-300 text-gray-400">+{profile.specializations.length - 5} more</span>
+                      <span className={`badge ${isDark ? 'bg-dark-300 text-gray-400' : 'bg-gray-200 text-gray-500'}`}>+{profile.specializations.length - 5} more</span>
                     )}
                   </div>
                 </div>
@@ -211,7 +263,7 @@ const ProfilePage = () => {
 
               {profile.category === 'merchant' && profile.business_name && (
                 <div className="mb-4">
-                  <p className="text-gray-400 text-sm">Business: <span className="text-white">{profile.business_name}</span></p>
+                  <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Business: <span className={isDark ? 'text-white' : 'text-gray-900'}>{profile.business_name}</span></p>
                 </div>
               )}
             </div>
@@ -237,60 +289,70 @@ const ProfilePage = () => {
           </div>
 
           {/* Contact Information Section */}
-          {hasContactInfo && (
-            <div className="mt-6 pt-6 border-t border-dark-300">
-              <h3 className="text-white font-semibold mb-4">Contact Information</h3>
+          {(hasContactInfo || formattedAddress) && (
+            <div className={`mt-6 pt-6 border-t ${isDark ? 'border-dark-300' : 'border-gray-200'}`}>
+              <h3 className={`font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Contact Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {profile.email && (
-                  <a href={`mailto:${profile.email}`} className="flex items-center gap-3 text-gray-300 hover:text-primary transition-colors">
-                    <Mail className="w-5 h-5 text-gray-500" />
+                {profile.show_email && profile.email && (
+                  <a href={`mailto:${profile.email}`} className={`flex items-center gap-3 hover:text-primary transition-colors ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                    <Mail className={`w-5 h-5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
                     <span>{profile.email}</span>
                   </a>
                 )}
-                {profile.phone && (
-                  <a href={`tel:${profile.phone}`} className="flex items-center gap-3 text-gray-300 hover:text-primary transition-colors">
-                    <Phone className="w-5 h-5 text-gray-500" />
+                {profile.show_phone && profile.phone && (
+                  <a href={`tel:${profile.phone}`} className={`flex items-center gap-3 hover:text-primary transition-colors ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                    <Phone className={`w-5 h-5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
                     <span>{profile.phone}</span>
                   </a>
                 )}
                 {profile.website && (
-                  <a href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-gray-300 hover:text-primary transition-colors">
-                    <Globe className="w-5 h-5 text-gray-500" />
+                  <a href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-3 hover:text-primary transition-colors ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                    <Globe className={`w-5 h-5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
                     <span>{profile.website}</span>
                   </a>
                 )}
               </div>
 
+              {/* Show formatted address if enabled */}
+              {formattedAddress && (
+                <div className="mt-4">
+                  <div className={`flex items-center gap-3 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                    <MapPin className={`w-5 h-5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+                    <span>{formattedAddress}</span>
+                  </div>
+                </div>
+              )}
+
               {/* Social Media Links */}
               {hasSocialMedia && (
                 <div className="flex flex-wrap gap-3 mt-4">
                   {profile.instagram && (
-                    <a href={`https://instagram.com/${profile.instagram}`} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-dark-300 rounded-full flex items-center justify-center text-gray-400 hover:text-pink-500 hover:bg-dark-200 transition-colors" title="Instagram">
+                    <a href={`https://instagram.com/${profile.instagram}`} target="_blank" rel="noopener noreferrer" className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:text-pink-500 ${isDark ? 'bg-dark-300 text-gray-400 hover:bg-dark-200' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`} title="Instagram">
                       <SocialIcon platform="instagram" />
                     </a>
                   )}
                   {profile.twitter && (
-                    <a href={`https://twitter.com/${profile.twitter}`} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-dark-300 rounded-full flex items-center justify-center text-gray-400 hover:text-blue-400 hover:bg-dark-200 transition-colors" title="Twitter/X">
+                    <a href={`https://twitter.com/${profile.twitter}`} target="_blank" rel="noopener noreferrer" className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:text-blue-400 ${isDark ? 'bg-dark-300 text-gray-400 hover:bg-dark-200' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`} title="Twitter/X">
                       <SocialIcon platform="twitter" />
                     </a>
                   )}
                   {profile.facebook && (
-                    <a href={`https://facebook.com/${profile.facebook}`} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-dark-300 rounded-full flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-dark-200 transition-colors" title="Facebook">
+                    <a href={`https://facebook.com/${profile.facebook}`} target="_blank" rel="noopener noreferrer" className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:text-blue-600 ${isDark ? 'bg-dark-300 text-gray-400 hover:bg-dark-200' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`} title="Facebook">
                       <SocialIcon platform="facebook" />
                     </a>
                   )}
                   {profile.youtube && (
-                    <a href={`https://youtube.com/${profile.youtube}`} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-dark-300 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-dark-200 transition-colors" title="YouTube">
+                    <a href={`https://youtube.com/${profile.youtube}`} target="_blank" rel="noopener noreferrer" className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:text-red-500 ${isDark ? 'bg-dark-300 text-gray-400 hover:bg-dark-200' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`} title="YouTube">
                       <SocialIcon platform="youtube" />
                     </a>
                   )}
                   {profile.soundcloud && (
-                    <a href={`https://soundcloud.com/${profile.soundcloud}`} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-dark-300 rounded-full flex items-center justify-center text-gray-400 hover:text-orange-500 hover:bg-dark-200 transition-colors" title="SoundCloud">
+                    <a href={`https://soundcloud.com/${profile.soundcloud}`} target="_blank" rel="noopener noreferrer" className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:text-orange-500 ${isDark ? 'bg-dark-300 text-gray-400 hover:bg-dark-200' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`} title="SoundCloud">
                       <SocialIcon platform="soundcloud" />
                     </a>
                   )}
                   {profile.spotify && (
-                    <a href={`https://open.spotify.com/artist/${profile.spotify}`} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-dark-300 rounded-full flex items-center justify-center text-gray-400 hover:text-green-500 hover:bg-dark-200 transition-colors" title="Spotify">
+                    <a href={`https://open.spotify.com/artist/${profile.spotify}`} target="_blank" rel="noopener noreferrer" className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:text-green-500 ${isDark ? 'bg-dark-300 text-gray-400 hover:bg-dark-200' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'}`} title="Spotify">
                       <SocialIcon platform="spotify" />
                     </a>
                   )}
@@ -298,16 +360,49 @@ const ProfilePage = () => {
               )}
             </div>
           )}
+
+          {/* Physical Address Section with Google Map */}
+          {formattedPhysicalAddress && googleMapsQuery && (
+            <div className={`mt-6 pt-6 border-t ${isDark ? 'border-dark-300' : 'border-gray-200'}`}>
+              <h3 className={`font-semibold mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <MapPin className="w-5 h-5 text-primary" />
+                Physical Location
+              </h3>
+              <div className={`flex items-center gap-3 mb-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                <span>{formattedPhysicalAddress}</span>
+              </div>
+              <div className={`rounded-lg overflow-hidden border ${isDark ? 'border-dark-300' : 'border-gray-200'}`}>
+                <iframe
+                  title="Physical Location Map"
+                  width="100%"
+                  height="250"
+                  style={{ border: 0 }}
+                  loading="lazy"
+                  allowFullScreen
+                  referrerPolicy="no-referrer-when-downgrade"
+                  src={`https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${googleMapsQuery}`}
+                />
+              </div>
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${googleMapsQuery}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary text-sm hover:underline mt-2 inline-block"
+              >
+                View on Google Maps →
+              </a>
+            </div>
+          )}
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-4 border-b border-dark-300 mb-8">
+        <div className={`flex gap-4 border-b mb-8 ${isDark ? 'border-dark-300' : 'border-gray-200'}`}>
           <button
             onClick={() => setActiveTab('listings')}
             className={`pb-4 px-2 font-medium transition-colors ${
               activeTab === 'listings'
                 ? 'text-primary border-b-2 border-primary'
-                : 'text-gray-400 hover:text-white'
+                : isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'
             }`}
           >
             <Package className="w-4 h-4 inline mr-2" />
@@ -318,7 +413,7 @@ const ProfilePage = () => {
             className={`pb-4 px-2 font-medium transition-colors ${
               activeTab === 'reviews'
                 ? 'text-primary border-b-2 border-primary'
-                : 'text-gray-400 hover:text-white'
+                : isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'
             }`}
           >
             <Star className="w-4 h-4 inline mr-2" />
@@ -336,7 +431,7 @@ const ProfilePage = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12 text-gray-400">
+              <div className={`text-center py-12 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                 <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
                 <p>No listings yet</p>
               </div>
@@ -349,25 +444,25 @@ const ProfilePage = () => {
             {reviews.length > 0 ? (
               <div className="space-y-4">
                 {reviews.map(review => (
-                  <div key={review.id} className="bg-dark-400 rounded-xl p-6">
+                  <div key={review.id} className={`rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
                     <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 bg-dark-300 rounded-full flex items-center justify-center">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? 'bg-dark-300' : 'bg-gray-200'}`}>
                         <span className="font-bold text-primary">
                           {review.buyer_username?.[0]?.toUpperCase()}
                         </span>
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <span className="text-white font-medium">{review.buyer_username}</span>
+                          <span className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{review.buyer_username}</span>
                           <StarRating rating={review.rating} size={14} />
                         </div>
-                        <p className="text-gray-400 text-sm mb-2">
+                        <p className={`text-sm mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                           For: {review.listing_title}
                         </p>
                         {review.comment && (
-                          <p className="text-gray-300">{review.comment}</p>
+                          <p className={isDark ? 'text-gray-300' : 'text-gray-600'}>{review.comment}</p>
                         )}
-                        <p className="text-gray-500 text-sm mt-2">
+                        <p className={`text-sm mt-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
                           {new Date(review.created_at).toLocaleDateString()}
                         </p>
                       </div>
@@ -376,7 +471,7 @@ const ProfilePage = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12 text-gray-400">
+              <div className={`text-center py-12 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                 <Star className="w-12 h-12 mx-auto mb-4 opacity-50" />
                 <p>No reviews yet</p>
               </div>

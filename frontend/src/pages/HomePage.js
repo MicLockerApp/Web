@@ -4,6 +4,7 @@ import { ArrowRight, Music, Mic2, Building2, MapPin, ChevronRight, ShoppingBag }
 import { listingsAPI } from '../services/api';
 import ListingCard from '../components/ListingCard';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { useTheme } from '../context/ThemeContext';
 
 const CATEGORIES = [
   { name: 'Guitars', icon: '🎸', color: 'from-orange-500 to-red-500' },
@@ -45,6 +46,7 @@ const AnimatedCounter = ({ target, duration = 2000 }) => {
 };
 
 const HomePage = () => {
+  const { isDark } = useTheme();
   const [featuredListings, setFeaturedListings] = useState([]);
   const [recentListings, setRecentListings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -73,14 +75,14 @@ const HomePage = () => {
   return (
     <div className="min-h-screen" data-testid="home-page">
       {/* Hero Section */}
-      <section className="relative py-20 px-4 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-dark-600 via-dark-500 to-dark-600" />
+      <section className={`relative py-20 px-4 overflow-hidden ${isDark ? '' : 'bg-gradient-to-br from-gray-50 to-gray-100'}`}>
+        {isDark && <div className="absolute inset-0 bg-gradient-to-br from-dark-600 via-dark-500 to-dark-600" />}
         
         <div className="relative max-w-7xl mx-auto text-center">
-          <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
+          <h1 className={`text-4xl md:text-6xl font-bold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>
             By Music Pros. <span className="text-primary">For Music Pros.</span>
           </h1>
-          <p className="text-xl text-gray-400 mb-8 max-w-2xl mx-auto">
+          <p className={`text-xl mb-8 max-w-2xl mx-auto ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             The gold standard of the music industry
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -98,25 +100,25 @@ const HomePage = () => {
               <p className="text-3xl font-bold text-primary">
                 <AnimatedCounter target={activeListingsCount} duration={2500} />
               </p>
-              <p className="text-gray-500 text-sm">Active Listings</p>
+              <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Active Listings</p>
             </div>
             <div>
               <p className="text-3xl font-bold text-primary">3%</p>
-              <p className="text-gray-500 text-sm">Platform Fee</p>
+              <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Platform Fee</p>
             </div>
             <div>
               <p className="text-3xl font-bold text-primary">100%</p>
-              <p className="text-gray-500 text-sm">Satisfaction</p>
+              <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Satisfaction</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Categories */}
-      <section className="py-16 px-4 bg-dark-500">
+      <section className={`py-16 px-4 ${isDark ? 'bg-dark-500' : 'bg-white'}`}>
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold text-white">Shop by Category</h2>
+            <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Shop by Category</h2>
             <Link to="/search" className="text-primary hover:underline flex items-center gap-1">
               View All <ChevronRight className="w-4 h-4" />
             </Link>
@@ -126,11 +128,15 @@ const HomePage = () => {
               <Link
                 key={category.name}
                 to={`/search?category=${encodeURIComponent(category.name)}`}
-                className="bg-dark-400 rounded-xl p-6 text-center hover:bg-dark-300 transition-colors group"
+                className={`rounded-xl p-6 text-center transition-colors group ${
+                  isDark 
+                    ? 'bg-dark-400 hover:bg-dark-300' 
+                    : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                }`}
                 data-testid={`category-${category.name}`}
               >
                 <span className="text-4xl mb-3 block">{category.icon}</span>
-                <span className="text-white font-medium group-hover:text-primary transition-colors">
+                <span className={`font-medium group-hover:text-primary transition-colors ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   {category.name}
                 </span>
               </Link>
@@ -140,10 +146,10 @@ const HomePage = () => {
       </section>
 
       {/* Featured Listings */}
-      <section className="py-16 px-4">
+      <section className={`py-16 px-4 ${isDark ? '' : 'bg-gray-50'}`}>
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold text-white">Trending Gear</h2>
+            <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Trending Gear</h2>
             <Link to="/search?sort=popular" className="text-primary hover:underline flex items-center gap-1">
               View All <ChevronRight className="w-4 h-4" />
             </Link>
@@ -157,7 +163,7 @@ const HomePage = () => {
               ))}
             </div>
           ) : (
-            <div className="text-center py-12 text-gray-400">
+            <div className={`text-center py-12 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
               <p>No featured listings yet. Be the first to list!</p>
               <Link to="/sell" className="btn btn-primary mt-4">List Your Gear</Link>
             </div>
@@ -166,10 +172,10 @@ const HomePage = () => {
       </section>
 
       {/* Recent Listings */}
-      <section className="py-16 px-4 bg-dark-500">
+      <section className={`py-16 px-4 ${isDark ? 'bg-dark-500' : 'bg-white'}`}>
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold text-white">Recently Listed</h2>
+            <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Recently Listed</h2>
             <Link to="/search?sort=newest" className="text-primary hover:underline flex items-center gap-1">
               View All <ChevronRight className="w-4 h-4" />
             </Link>
@@ -183,7 +189,7 @@ const HomePage = () => {
               ))}
             </div>
           ) : (
-            <div className="text-center py-12 text-gray-400">
+            <div className={`text-center py-12 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
               <p>No listings yet. Be the first!</p>
             </div>
           )}
@@ -191,9 +197,9 @@ const HomePage = () => {
       </section>
 
       {/* User Types */}
-      <section className="py-16 px-4">
+      <section className={`py-16 px-4 ${isDark ? '' : 'bg-gray-50'}`}>
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-2xl font-bold text-white text-center mb-12">
+          <h2 className={`text-2xl font-bold text-center mb-12 ${isDark ? 'text-white' : 'text-gray-900'}`}>
             A Marketplace for Everyone
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
@@ -204,12 +210,16 @@ const HomePage = () => {
               { icon: MapPin, title: 'Venues', desc: 'Source sound systems and stage equipment' },
               { icon: ShoppingBag, title: 'Merchants', desc: 'Sell apparel, accessories, and music merchandise' },
             ].map((item, index) => (
-              <div key={index} className="bg-dark-400 rounded-xl p-6 text-center">
+              <div key={index} className={`rounded-xl p-6 text-center ${
+                isDark 
+                  ? 'bg-dark-400' 
+                  : 'bg-white border border-gray-200 shadow-sm'
+              }`}>
                 <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
                   <item.icon className="w-8 h-8 text-primary" />
                 </div>
-                <h3 className="text-white font-semibold mb-2">{item.title}</h3>
-                <p className="text-gray-400 text-sm">{item.desc}</p>
+                <h3 className={`font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>{item.title}</h3>
+                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{item.desc}</p>
               </div>
             ))}
           </div>
@@ -217,12 +227,12 @@ const HomePage = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 bg-gradient-to-r from-primary/20 to-primary/5">
+      <section className={`py-20 px-4 ${isDark ? 'bg-gradient-to-r from-primary/20 to-primary/5' : 'bg-gradient-to-r from-yellow-50 to-orange-50'}`}>
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">
+          <h2 className={`text-3xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
             Ready to Start Selling?
           </h2>
-          <p className="text-gray-400 mb-8">
+          <p className={`mb-8 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             List your gear in minutes and reach thousands of potential buyers. 
             Only 3% platform fee on completed sales.
           </p>

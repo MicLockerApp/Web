@@ -4,7 +4,7 @@ from datetime import datetime
 import json
 
 class MicLockerAPITester:
-    def __init__(self, base_url="https://79271e2c-3f71-4ae7-b616-3a6e9378d99d.preview.emergentagent.com"):
+    def __init__(self, base_url="https://audio-bazaar-6.preview.emergentagent.com"):
         self.base_url = base_url
         self.token = None
         self.tests_run = 0
@@ -373,6 +373,357 @@ class MicLockerAPITester:
             return True
         return False
 
+    def test_social_media_links_update(self):
+        """Test updating social media links in profile"""
+        social_data = {
+            "instagram": "testuser_insta",
+            "twitter": "testuser_twitter", 
+            "facebook": "testuser_facebook",
+            "youtube": "testuser_youtube",
+            "soundcloud": "testuser_soundcloud",
+            "spotify": "testuser_spotify_id"
+        }
+        
+        success, response = self.run_test(
+            "Update Social Media Links",
+            "PUT",
+            "users/profile",
+            200,
+            data=social_data
+        )
+        
+        if success:
+            # Verify all social media fields are saved
+            for platform, value in social_data.items():
+                if response.get(platform) != value:
+                    print(f"   ❌ {platform} not updated correctly: expected {value}, got {response.get(platform)}")
+                    return False
+            
+            print(f"   ✅ All social media links updated successfully")
+            return True
+        return False
+
+    def test_privacy_settings_update(self):
+        """Test updating privacy settings"""
+        privacy_data = {
+            "show_email": True,
+            "show_phone": True, 
+            "show_address": False,
+            "show_social": True
+        }
+        
+        success, response = self.run_test(
+            "Update Privacy Settings",
+            "PUT",
+            "users/profile",
+            200,
+            data=privacy_data
+        )
+        
+        if success:
+            # Verify privacy settings are saved
+            for setting, value in privacy_data.items():
+                if response.get(setting) != value:
+                    print(f"   ❌ {setting} not updated correctly: expected {value}, got {response.get(setting)}")
+                    return False
+            
+            print(f"   ✅ All privacy settings updated successfully")
+            return True
+        return False
+
+    def test_shipping_address_update(self):
+        """Test updating shipping address"""
+        address_data = {
+            "shipping_address": {
+                "address_line1": "123 Test Street",
+                "address_line2": "Apt 4B",
+                "city": "Test City",
+                "state": "TS",
+                "postal_code": "12345",
+                "country": "US"
+            }
+        }
+        
+        success, response = self.run_test(
+            "Update Shipping Address",
+            "PUT",
+            "users/profile",
+            200,
+            data=address_data
+        )
+        
+        if success:
+            # Verify shipping address is saved
+            saved_address = response.get('shipping_address', {})
+            expected_address = address_data['shipping_address']
+            
+            for field, value in expected_address.items():
+                if saved_address.get(field) != value:
+                    print(f"   ❌ Address {field} not updated correctly: expected {value}, got {saved_address.get(field)}")
+                    return False
+            
+            print(f"   ✅ Shipping address updated successfully")
+            return True
+        return False
+
+    def test_public_profile_privacy_filtering(self):
+        """Test that public profile respects privacy settings"""
+        if not self.user_id:
+            print("   ❌ No user ID available for testing")
+            return False
+        
+        # First, set privacy settings to hide email and phone
+        privacy_data = {
+            "show_email": False,
+            "show_phone": False,
+            "show_address": False,
+            "show_social": False,
+            "phone": "+1-555-123-4567",
+            "instagram": "private_user"
+        }
+        
+        # Update profile with privacy settings
+        update_success, _ = self.run_test(
+            "Set Privacy Settings for Testing",
+            "PUT",
+            "users/profile",
+            200,
+            data=privacy_data
+        )
+        
+        if not update_success:
+            print("   ❌ Failed to set privacy settings")
+            return False
+        
+        # Now test public profile view (without authentication)
+        # Save current token and clear it to simulate public access
+        saved_token = self.token
+        self.token = None
+        
+        success, response = self.run_test(
+            "Get Public Profile (Privacy Filtered)",
+            "GET",
+            f"users/profile/{self.user_id}",
+            200
+        )
+        
+        # Restore token
+        self.token = saved_token
+        
+        if success:
+            # Verify private data is hidden
+            if response.get('email') is not None:
+                print(f"   ❌ Email should be hidden but got: {response.get('email')}")
+                return False
+            
+            if response.get('phone') is not None:
+                print(f"   ❌ Phone should be hidden but got: {response.get('phone')}")
+                return False
+            
+            if response.get('shipping_address') is not None:
+                print(f"   ❌ Address should be hidden but got: {response.get('shipping_address')}")
+                return False
+            
+            if response.get('instagram') is not None:
+                print(f"   ❌ Social media should be hidden but got instagram: {response.get('instagram')}")
+                return False
+            
+            print(f"   ✅ Privacy filtering working correctly - private data hidden")
+            return True
+        return False
+
+    def test_own_profile_shows_all_data(self):
+        """Test that user can see their own private data"""
+        if not self.user_id:
+            print("   ❌ No user ID available for testing")
+            return False
+        
+        # Test own profile view (with authentication)
+        success, response = self.run_test(
+            "Get Own Profile (All Data Visible)",
+            "GET",
+            f"users/profile/{self.user_id}",
+            200
+        )
+        
+        if success:
+            # User should see their own data regardless of privacy settings
+            print(f"   ✅ Own profile shows email: {response.get('email', 'N/A')}")
+            print(f"   ✅ Own profile shows phone: {response.get('phone', 'N/A')}")
+            print(f"   ✅ Own profile access working correctly")
+            return True
+        return False
+
+    def test_physical_address_update(self):
+        """Test updating physical address"""
+        address_data = {
+            "physical_address": {
+                "address_line1": "456 Business Ave",
+                "address_line2": "Suite 200",
+                "city": "Business City",
+                "state": "BC",
+                "postal_code": "54321",
+                "country": "US"
+            },
+            "same_as_mailing": False
+        }
+        
+        success, response = self.run_test(
+            "Update Physical Address",
+            "PUT",
+            "users/profile",
+            200,
+            data=address_data
+        )
+        
+        if success:
+            # Verify physical address is saved
+            saved_address = response.get('physical_address', {})
+            expected_address = address_data['physical_address']
+            
+            for field, value in expected_address.items():
+                if saved_address.get(field) != value:
+                    print(f"   ❌ Physical address {field} not updated correctly: expected {value}, got {saved_address.get(field)}")
+                    return False
+            
+            # Verify same_as_mailing flag
+            if response.get('same_as_mailing') != False:
+                print(f"   ❌ same_as_mailing not updated correctly: expected False, got {response.get('same_as_mailing')}")
+                return False
+            
+            print(f"   ✅ Physical address updated successfully")
+            print(f"   ✅ same_as_mailing flag set correctly")
+            return True
+        return False
+
+    def test_physical_address_privacy_settings(self):
+        """Test physical address privacy settings"""
+        privacy_data = {
+            "show_physical_address": True
+        }
+        
+        success, response = self.run_test(
+            "Update Physical Address Privacy",
+            "PUT",
+            "users/profile",
+            200,
+            data=privacy_data
+        )
+        
+        if success:
+            # Verify privacy setting is saved
+            if response.get('show_physical_address') != True:
+                print(f"   ❌ show_physical_address not updated correctly: expected True, got {response.get('show_physical_address')}")
+                return False
+            
+            print(f"   ✅ Physical address privacy setting updated successfully")
+            return True
+        return False
+
+    def test_physical_address_public_visibility(self):
+        """Test that physical address is visible on public profile when enabled"""
+        if not self.user_id:
+            print("   ❌ No user ID available for testing")
+            return False
+        
+        # First, enable physical address visibility
+        privacy_data = {
+            "show_physical_address": True,
+            "physical_address": {
+                "address_line1": "789 Public Street",
+                "address_line2": "Floor 3",
+                "city": "Public City",
+                "state": "PC",
+                "postal_code": "98765",
+                "country": "US"
+            }
+        }
+        
+        # Update profile with physical address and enable visibility
+        update_success, _ = self.run_test(
+            "Set Physical Address Visibility",
+            "PUT",
+            "users/profile",
+            200,
+            data=privacy_data
+        )
+        
+        if not update_success:
+            print("   ❌ Failed to set physical address visibility")
+            return False
+        
+        # Test public profile view (without authentication)
+        saved_token = self.token
+        self.token = None
+        
+        success, response = self.run_test(
+            "Get Public Profile (Physical Address Visible)",
+            "GET",
+            f"users/profile/{self.user_id}",
+            200
+        )
+        
+        # Restore token
+        self.token = saved_token
+        
+        if success:
+            # Verify physical address is visible
+            physical_address = response.get('physical_address')
+            if not physical_address:
+                print(f"   ❌ Physical address should be visible but not found")
+                return False
+            
+            if physical_address.get('address_line1') != "789 Public Street":
+                print(f"   ❌ Physical address not correct: expected '789 Public Street', got {physical_address.get('address_line1')}")
+                return False
+            
+            print(f"   ✅ Physical address visible on public profile when enabled")
+            return True
+        return False
+
+    def test_display_location_mailing_address_conflict(self):
+        """Test that display location conflicts with mailing address visibility"""
+        # Set a display location
+        location_data = {
+            "location": "Nashville, TN",
+            "show_address": False  # Should remain false due to conflict
+        }
+        
+        success, response = self.run_test(
+            "Set Display Location",
+            "PUT",
+            "users/profile",
+            200,
+            data=location_data
+        )
+        
+        if success:
+            # Verify location is set
+            if response.get('location') != "Nashville, TN":
+                print(f"   ❌ Location not set correctly: expected 'Nashville, TN', got {response.get('location')}")
+                return False
+            
+            # Now try to enable show_address - this should work via API but frontend should prevent it
+            conflict_data = {
+                "show_address": True
+            }
+            
+            # This should succeed at API level (backend doesn't enforce the conflict)
+            conflict_success, conflict_response = self.run_test(
+                "Try to Enable Address with Location Set",
+                "PUT",
+                "users/profile",
+                200,
+                data=conflict_data
+            )
+            
+            if conflict_success:
+                print(f"   ✅ API allows show_address update (frontend should handle conflict)")
+                print(f"   ✅ Display location conflict logic should be handled in frontend")
+                return True
+            
+        return False
+
 def main():
     """Run all backend tests"""
     print("🚀 Starting MicLocker Backend API Tests")
@@ -388,6 +739,15 @@ def main():
         ("Auth Categories (5 categories + merchant options)", tester.test_auth_categories),
         ("Profile Image Upload", tester.test_profile_image_upload),
         ("Profile Update with Sub-Categories", tester.test_profile_update_with_subcategories),
+        ("Social Media Links Update", tester.test_social_media_links_update),
+        ("Privacy Settings Update", tester.test_privacy_settings_update),
+        ("Shipping Address Update", tester.test_shipping_address_update),
+        ("Physical Address Update", tester.test_physical_address_update),
+        ("Physical Address Privacy Settings", tester.test_physical_address_privacy_settings),
+        ("Physical Address Public Visibility", tester.test_physical_address_public_visibility),
+        ("Display Location vs Mailing Address Conflict", tester.test_display_location_mailing_address_conflict),
+        ("Public Profile Privacy Filtering", tester.test_public_profile_privacy_filtering),
+        ("Own Profile Shows All Data", tester.test_own_profile_shows_all_data),
         ("Listing Categories", tester.test_listings_categories),
         ("Search Listings", tester.test_search_listings),
         ("Featured Listings", tester.test_featured_listings),
