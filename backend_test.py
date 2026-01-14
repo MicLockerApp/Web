@@ -406,12 +406,20 @@ class MicLockerAPITester:
 
     def test_admin_analytics(self):
         """Test admin analytics (requires admin user)"""
+        # Switch to admin token
+        saved_token = self.token
+        self.token = self.admin_token
+        
         success, response = self.run_test(
             "Get Admin Analytics",
             "GET",
             "admin/analytics",
             200
         )
+        
+        # Restore regular token
+        self.token = saved_token
+        
         if success:
             print(f"   Total GMV: ${response.get('total_gmv', 0)}")
             print(f"   Platform Fees (3%): ${response.get('total_fees_collected', 0)}")
@@ -445,26 +453,140 @@ class MicLockerAPITester:
 
     def test_admin_users(self):
         """Test getting users list (admin only)"""
+        # Switch to admin token
+        saved_token = self.token
+        self.token = self.admin_token
+        
         success, response = self.run_test(
             "Get Users List (Admin)",
             "GET",
             "admin/users",
             200
         )
+        
+        # Restore regular token
+        self.token = saved_token
+        
         if success:
             users = response.get('users', [])
             print(f"   Found {len(users)} users")
             return True
         return False
 
+    def test_admin_suspend_user(self):
+        """Test suspending a user (admin only)"""
+        if not self.user_id:
+            print("   ⚠️  No regular user ID available, skipping suspend test")
+            return True
+            
+        # Switch to admin token
+        saved_token = self.token
+        self.token = self.admin_token
+        
+        success, response = self.run_test(
+            "Suspend User (Admin)",
+            "POST",
+            f"admin/users/{self.user_id}/suspend",
+            200
+        )
+        
+        if success:
+            print("   ✅ User suspended successfully")
+            
+            # Unsuspend the user
+            unsuspend_success, _ = self.run_test(
+                "Unsuspend User (Admin)",
+                "POST",
+                f"admin/users/{self.user_id}/unsuspend",
+                200
+            )
+            if unsuspend_success:
+                print("   ✅ User unsuspended successfully")
+        
+        # Restore regular token
+        self.token = saved_token
+        return success
+
+    def test_admin_listings(self):
+        """Test getting all listings (admin only)"""
+        # Switch to admin token
+        saved_token = self.token
+        self.token = self.admin_token
+        
+        success, response = self.run_test(
+            "Get All Listings (Admin)",
+            "GET",
+            "admin/listings",
+            200
+        )
+        
+        # Restore regular token
+        self.token = saved_token
+        
+        if success:
+            listings = response.get('listings', [])
+            print(f"   Found {len(listings)} listings")
+            return True
+        return False
+
+    def test_admin_remove_listing(self):
+        """Test removing a listing (admin only)"""
+        # First get a listing to remove
+        saved_token = self.token
+        self.token = self.admin_token
+        
+        # Get listings first
+        listings_success, listings_response = self.run_test(
+            "Get Listings for Removal Test",
+            "GET",
+            "admin/listings?status=active",
+            200
+        )
+        
+        if not listings_success:
+            self.token = saved_token
+            print("   ⚠️  Could not get listings for removal test")
+            return True
+            
+        listings = listings_response.get('listings', [])
+        if not listings:
+            self.token = saved_token
+            print("   ⚠️  No active listings available for removal test")
+            return True
+            
+        test_listing_id = listings[0]['id']
+        
+        success, response = self.run_test(
+            "Remove Listing (Admin)",
+            "POST",
+            f"admin/listings/{test_listing_id}/remove",
+            200
+        )
+        
+        # Restore regular token
+        self.token = saved_token
+        
+        if success:
+            print(f"   ✅ Listing {test_listing_id} removed successfully")
+            return True
+        return False
+
     def test_admin_orders(self):
         """Test getting orders list (admin only)"""
+        # Switch to admin token
+        saved_token = self.token
+        self.token = self.admin_token
+        
         success, response = self.run_test(
             "Get Orders List (Admin)",
             "GET",
             "admin/orders",
             200
         )
+        
+        # Restore regular token
+        self.token = saved_token
+        
         if success:
             orders = response.get('orders', [])
             print(f"   Found {len(orders)} orders")
