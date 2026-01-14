@@ -109,6 +109,213 @@ class MicLockerAPITester:
             return True
         return False
 
+    def test_get_admin_user(self):
+        """Test getting admin user info"""
+        # Switch to admin token temporarily
+        saved_token = self.token
+        self.token = self.admin_token
+        
+        success, response = self.run_test(
+            "Get Admin User Info",
+            "GET",
+            "auth/me",
+            200
+        )
+        
+        # Restore regular token
+        self.token = saved_token
+        
+        if success and 'id' in response:
+            self.admin_user_id = response['id']
+            print(f"   Admin User ID: {self.admin_user_id}")
+            print(f"   Admin Username: {response.get('username')}")
+            print(f"   Is Admin: {response.get('is_admin')}")
+            return True
+        return False
+
+    # OFFERS TESTING
+    def test_get_received_offers(self):
+        """Test getting received offers (as seller)"""
+        success, response = self.run_test(
+            "Get Received Offers",
+            "GET",
+            "offers?type=received",
+            200
+        )
+        if success:
+            offers = response.get('offers', [])
+            print(f"   Found {len(offers)} received offers")
+            if offers:
+                self.test_offer_id = offers[0]['id']
+                print(f"   First offer ID: {self.test_offer_id}")
+            return True
+        return False
+
+    def test_get_sent_offers(self):
+        """Test getting sent offers (as buyer)"""
+        success, response = self.run_test(
+            "Get Sent Offers",
+            "GET",
+            "offers?type=sent",
+            200
+        )
+        if success:
+            offers = response.get('offers', [])
+            print(f"   Found {len(offers)} sent offers")
+            return True
+        return False
+
+    def test_offer_actions(self):
+        """Test offer accept, counter, decline actions"""
+        if not self.test_offer_id:
+            print("   ⚠️  No test offer available, skipping offer actions")
+            return True
+        
+        # Test getting specific offer
+        success, response = self.run_test(
+            "Get Specific Offer",
+            "GET",
+            f"offers/{self.test_offer_id}",
+            200
+        )
+        
+        if success:
+            offer_status = response.get('status')
+            print(f"   Offer status: {offer_status}")
+            
+            # Test counter offer (if pending)
+            if offer_status == 'pending':
+                counter_data = {
+                    "counter_price": 150.00,
+                    "message": "Counter offer test"
+                }
+                counter_success, _ = self.run_test(
+                    "Counter Offer",
+                    "POST",
+                    f"offers/{self.test_offer_id}/counter",
+                    200,
+                    data=counter_data
+                )
+                if counter_success:
+                    print("   ✅ Counter offer successful")
+            
+            return True
+        return False
+
+    # ORDERS TESTING  
+    def test_get_orders(self):
+        """Test getting user orders (purchases)"""
+        success, response = self.run_test(
+            "Get User Orders",
+            "GET",
+            "orders",
+            200
+        )
+        if success:
+            orders = response.get('orders', [])
+            print(f"   Found {len(orders)} orders")
+            if orders:
+                self.test_order_id = orders[0]['id']
+                print(f"   First order ID: {self.test_order_id}")
+            return True
+        return False
+
+    def test_get_sales(self):
+        """Test getting user sales"""
+        success, response = self.run_test(
+            "Get User Sales",
+            "GET",
+            "orders/sales",
+            200
+        )
+        if success:
+            sales = response.get('orders', [])
+            print(f"   Found {len(sales)} sales")
+            return True
+        return False
+
+    def test_get_order_detail(self):
+        """Test getting specific order details"""
+        if not self.test_order_id:
+            print("   ⚠️  No test order available, skipping order detail")
+            return True
+            
+        success, response = self.run_test(
+            "Get Order Detail",
+            "GET",
+            f"orders/{self.test_order_id}",
+            200
+        )
+        if success:
+            print(f"   Order status: {response.get('status')}")
+            print(f"   Order total: ${response.get('total')}")
+            return True
+        return False
+
+    def test_update_order_status(self):
+        """Test updating order status"""
+        if not self.test_order_id:
+            print("   ⚠️  No test order available, skipping status update")
+            return True
+            
+        status_data = {"status": "shipped"}
+        success, response = self.run_test(
+            "Update Order Status",
+            "PUT",
+            f"orders/{self.test_order_id}/status",
+            200,
+            data=status_data
+        )
+        if success:
+            print(f"   Order status updated to: {response.get('status')}")
+            return True
+        return False
+
+    # REVIEWS TESTING
+    def test_create_review(self):
+        """Test creating a review"""
+        if not self.test_order_id:
+            print("   ⚠️  No test order available, skipping review creation")
+            return True
+            
+        review_data = {
+            "order_id": self.test_order_id,
+            "rating": 5,
+            "comment": "Great transaction, highly recommended seller!"
+        }
+        
+        success, response = self.run_test(
+            "Create Review",
+            "POST",
+            "reviews",
+            200,
+            data=review_data
+        )
+        if success:
+            print(f"   Review created with rating: {response.get('rating')}")
+            return True
+        return False
+
+    def test_get_seller_reviews(self):
+        """Test getting reviews for a seller"""
+        if not self.admin_user_id:
+            print("   ⚠️  No seller ID available, skipping seller reviews")
+            return True
+            
+        success, response = self.run_test(
+            "Get Seller Reviews",
+            "GET",
+            f"reviews/seller/{self.admin_user_id}",
+            200
+        )
+        if success:
+            reviews = response.get('reviews', [])
+            avg_rating = response.get('average_rating', 0)
+            print(f"   Found {len(reviews)} reviews")
+            print(f"   Average rating: {avg_rating}")
+            return True
+        return False
+
     def test_listings_categories(self):
         """Test getting listing categories"""
         return self.run_test(
