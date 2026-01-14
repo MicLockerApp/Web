@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, User, Menu, X, MessageSquare, LogOut, Settings, Package } from 'lucide-react';
+import { Search, ShoppingCart, User, Menu, X, MessageSquare, LogOut, Settings, Package, Edit, Heart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { messagesAPI } from '../services/api';
 import VinylLogo from './VinylLogo';
 
 const Navbar = () => {
@@ -12,6 +13,28 @@ const Navbar = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Fetch unread message count when authenticated
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      if (!isAuthenticated) {
+        setUnreadCount(0);
+        return;
+      }
+      try {
+        const response = await messagesAPI.getUnreadCount();
+        setUnreadCount(response.data.unread_count || 0);
+      } catch (error) {
+        console.error('Error fetching unread count:', error);
+      }
+    };
+
+    fetchUnreadCount();
+    // Poll for new messages every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -64,8 +87,13 @@ const Navbar = () => {
 
             {isAuthenticated ? (
               <>
-                <Link to="/messages" className="p-2 text-gray-400 hover:text-white" data-testid="messages-link">
+                <Link to="/messages" className="p-2 text-gray-400 hover:text-white relative" data-testid="messages-link">
                   <MessageSquare className="w-5 h-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
                 </Link>
                 <Link to="/cart" className="p-2 text-gray-400 hover:text-white relative" data-testid="cart-link">
                   <ShoppingCart className="w-5 h-5" />
@@ -96,6 +124,24 @@ const Navbar = () => {
                         Profile
                       </Link>
                       <Link
+                        to="/settings"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2 text-gray-300 hover:bg-dark-300 hover:text-white"
+                        data-testid="edit-profile-link"
+                      >
+                        <Edit className="w-4 h-4" />
+                        Edit Profile
+                      </Link>
+                      <Link
+                        to="/favorites"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2 text-gray-300 hover:bg-dark-300 hover:text-white"
+                        data-testid="favorites-link"
+                      >
+                        <Heart className="w-4 h-4" />
+                        Favorites
+                      </Link>
+                      <Link
                         to="/dashboard"
                         onClick={() => setUserMenuOpen(false)}
                         className="flex items-center gap-2 px-4 py-2 text-gray-300 hover:bg-dark-300 hover:text-white"
@@ -103,15 +149,6 @@ const Navbar = () => {
                       >
                         <Package className="w-4 h-4" />
                         Dashboard
-                      </Link>
-                      <Link
-                        to="/settings"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-2 px-4 py-2 text-gray-300 hover:bg-dark-300 hover:text-white"
-                        data-testid="settings-link"
-                      >
-                        <Settings className="w-4 h-4" />
-                        Settings
                       </Link>
                       {user?.is_admin && (
                         <Link
@@ -203,6 +240,19 @@ const Navbar = () => {
                   >
                     <MessageSquare className="w-5 h-5" />
                     Messages
+                    {unreadCount > 0 && (
+                      <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
+                  </Link>
+                  <Link
+                    to="/favorites"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2 text-gray-300 hover:text-white"
+                  >
+                    <Heart className="w-5 h-5" />
+                    Favorites
                   </Link>
                   <Link
                     to="/dashboard"

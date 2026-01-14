@@ -107,16 +107,31 @@ async def complete_profile(
             detail=f"Invalid category. Must be one of: {USER_CATEGORIES}"
         )
     
+    # Validate sub-categories if provided
+    if category_data.sub_categories:
+        for sub_cat in category_data.sub_categories:
+            if sub_cat not in USER_CATEGORIES:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid sub-category: {sub_cat}. Must be one of: {USER_CATEGORIES}"
+                )
+    
     update_data = {
         "category": category_data.category,
         "profile_completed": True,
         "updated_at": datetime.utcnow()
     }
     
+    # Add sub-categories if provided
+    if category_data.sub_categories:
+        update_data["sub_categories"] = category_data.sub_categories
+    
     # Add category-specific data
     if category_data.category == "musician":
         if category_data.genre:
             update_data["genre"] = category_data.genre
+        if category_data.genres:
+            update_data["genres"] = category_data.genres
         if category_data.instruments:
             update_data["instruments"] = category_data.instruments
     elif category_data.category == "audio_engineer":
@@ -132,6 +147,17 @@ async def complete_profile(
             update_data["venue_city"] = category_data.venue_city
         if category_data.venue_capacity:
             update_data["venue_capacity"] = category_data.venue_capacity
+    elif category_data.category == "merchant":
+        if category_data.merchant_products:
+            update_data["merchant_products"] = category_data.merchant_products
+        if category_data.business_name:
+            update_data["business_name"] = category_data.business_name
+    
+    # Add contact info if provided
+    if category_data.phone:
+        update_data["phone"] = category_data.phone
+    if category_data.shipping_address:
+        update_data["shipping_address"] = category_data.shipping_address
     
     await db.users.update_one(
         {"id": current_user["id"]},
@@ -146,7 +172,7 @@ async def get_categories():
     """Get available user categories and their options"""
     from models.user import (
         MUSICIAN_INSTRUMENTS, AUDIO_ENGINEER_SPECS,
-        RECORDING_STUDIO_OFFERINGS, MUSIC_GENRES
+        RECORDING_STUDIO_OFFERINGS, MUSIC_GENRES, MERCHANT_PRODUCT_TYPES
     )
     
     return {
@@ -160,5 +186,8 @@ async def get_categories():
         },
         "recording_studio_options": {
             "offerings": RECORDING_STUDIO_OFFERINGS
+        },
+        "merchant_options": {
+            "product_types": MERCHANT_PRODUCT_TYPES
         }
     }

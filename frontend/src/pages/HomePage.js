@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Music, Mic2, Building2, MapPin, ChevronRight } from 'lucide-react';
+import { ArrowRight, Music, Mic2, Building2, MapPin, ChevronRight, ShoppingBag } from 'lucide-react';
 import { listingsAPI } from '../services/api';
 import ListingCard from '../components/ListingCard';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -48,17 +48,19 @@ const HomePage = () => {
   const [featuredListings, setFeaturedListings] = useState([]);
   const [recentListings, setRecentListings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeListingsCount] = useState(7523); // Active listings counter
+  const [activeListingsCount, setActiveListingsCount] = useState(0);
 
   useEffect(() => {
     const fetchListings = async () => {
       try {
-        const [featured, recent] = await Promise.all([
+        const [featured, recent, stats] = await Promise.all([
           listingsAPI.getFeatured(8),
-          listingsAPI.getRecent(12)
+          listingsAPI.getRecent(12),
+          listingsAPI.getCount()
         ]);
         setFeaturedListings(featured.data.listings || []);
         setRecentListings(recent.data.listings || []);
+        setActiveListingsCount(stats.data.active_listings || 0);
       } catch (error) {
         console.error('Error fetching listings:', error);
       } finally {
@@ -76,11 +78,10 @@ const HomePage = () => {
         
         <div className="relative max-w-7xl mx-auto text-center">
           <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
-            Buy & Sell <span className="text-primary">Musical Gear</span>
+            By Music Pros. <span className="text-primary">For Music Pros.</span>
           </h1>
           <p className="text-xl text-gray-400 mb-8 max-w-2xl mx-auto">
-            The marketplace for musicians, audio engineers, studios, and venues. 
-            Find your next instrument or sell your unused gear.
+            The gold standard of the music industry
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/search" className="btn btn-primary px-8 py-3 text-lg">
@@ -104,8 +105,8 @@ const HomePage = () => {
               <p className="text-gray-500 text-sm">Platform Fee</p>
             </div>
             <div>
-              <p className="text-3xl font-bold text-primary">24/7</p>
-              <p className="text-gray-500 text-sm">Support</p>
+              <p className="text-3xl font-bold text-primary">100%</p>
+              <p className="text-gray-500 text-sm">Satisfaction</p>
             </div>
           </div>
         </div>
@@ -195,12 +196,13 @@ const HomePage = () => {
           <h2 className="text-2xl font-bold text-white text-center mb-12">
             A Marketplace for Everyone
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
             {[
               { icon: Music, title: 'Musicians', desc: 'Buy and sell instruments, gear, and accessories' },
               { icon: Mic2, title: 'Audio Engineers', desc: 'Find professional recording and mixing equipment' },
               { icon: Building2, title: 'Studios', desc: 'Upgrade your studio with quality gear' },
               { icon: MapPin, title: 'Venues', desc: 'Source sound systems and stage equipment' },
+              { icon: ShoppingBag, title: 'Merchants', desc: 'Sell apparel, accessories, and music merchandise' },
             ].map((item, index) => (
               <div key={index} className="bg-dark-400 rounded-xl p-6 text-center">
                 <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">

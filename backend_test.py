@@ -61,10 +61,10 @@ class MicLockerAPITester:
         """Test health check endpoint"""
         return self.run_test("Health Check", "GET", "health", 200)
 
-    def test_login(self, username="admin", password="admin123"):
-        """Test login with demo credentials"""
+    def test_login(self, username="jmcdougall", password="Eisenhower1212!!"):
+        """Test login with new admin credentials"""
         success, response = self.run_test(
-            "Login with Demo Credentials",
+            "Login with New Admin Credentials",
             "POST",
             f"auth/login?username={username}&password={password}",
             200
@@ -129,6 +129,28 @@ class MicLockerAPITester:
             return True
         return False
 
+    def test_listings_count(self):
+        """Test getting listings count"""
+        success, response = self.run_test(
+            "Get Listings Count",
+            "GET",
+            "listings/stats/count",
+            200
+        )
+        if success:
+            active_listings = response.get('active_listings', 0)
+            total_listings = response.get('total_listings', 0)
+            print(f"   Active Listings: {active_listings}")
+            print(f"   Total Listings: {total_listings}")
+            
+            # Verify response structure
+            if 'active_listings' not in response or 'total_listings' not in response:
+                print("   ❌ Missing required fields in response")
+                return False
+            print("   ✅ Listings count endpoint working correctly")
+            return True
+        return False
+
     def test_recent_listings(self):
         """Test getting recent listings"""
         success, response = self.run_test(
@@ -167,9 +189,32 @@ class MicLockerAPITester:
         )
         if success:
             print(f"   Total GMV: ${response.get('total_gmv', 0)}")
-            print(f"   Total Fees: ${response.get('total_fees_collected', 0)}")
+            print(f"   Platform Fees (3%): ${response.get('total_fees_collected', 0)}")
+            print(f"   Processing Fees (3.19% + $0.49): ${response.get('total_processing_fees_collected', 0)}")
             print(f"   Active Listings: {response.get('active_listings', 0)}")
             print(f"   Total Users: {response.get('total_users', 0)}")
+            
+            # Verify fee structure
+            platform_fee_percent = response.get('platform_fee_percent', 0)
+            payment_processing_percent = response.get('payment_processing_percent', 0)
+            payment_processing_fixed = response.get('payment_processing_fixed', 0)
+            
+            print(f"   Platform Fee %: {platform_fee_percent}%")
+            print(f"   Payment Processing %: {payment_processing_percent}%")
+            print(f"   Payment Processing Fixed: ${payment_processing_fixed}")
+            
+            # Validate fee structure matches requirements
+            if platform_fee_percent != 3.0:
+                print(f"   ❌ Platform fee should be 3%, got {platform_fee_percent}%")
+                return False
+            if payment_processing_percent != 3.19:
+                print(f"   ❌ Payment processing % should be 3.19%, got {payment_processing_percent}%")
+                return False
+            if payment_processing_fixed != 0.49:
+                print(f"   ❌ Payment processing fixed should be $0.49, got ${payment_processing_fixed}")
+                return False
+                
+            print("   ✅ Fee structure matches requirements (3% + 3.19% + $0.49)")
             return True
         return False
 
@@ -201,6 +246,133 @@ class MicLockerAPITester:
             return True
         return False
 
+    def test_auth_categories(self):
+        """Test auth categories endpoint - should return 5 categories including merchant"""
+        success, response = self.run_test(
+            "Get Auth Categories",
+            "GET",
+            "auth/categories",
+            200
+        )
+        if success:
+            categories = response.get('categories', [])
+            print(f"   Found {len(categories)} categories: {categories}")
+            
+            # Check if we have exactly 5 categories
+            if len(categories) != 5:
+                print(f"   ❌ Expected 5 categories, got {len(categories)}")
+                return False
+            
+            # Check if 'merchant' is included
+            if 'merchant' not in categories:
+                print(f"   ❌ 'merchant' category not found in categories")
+                return False
+            
+            # Check merchant options
+            merchant_options = response.get('merchant_options', {})
+            if not merchant_options:
+                print(f"   ❌ merchant_options not found in response")
+                return False
+            
+            product_types = merchant_options.get('product_types', [])
+            if not product_types:
+                print(f"   ❌ product_types not found in merchant_options")
+                return False
+            
+            print(f"   ✅ Found {len(product_types)} merchant product types")
+            
+            # Check Audio Engineer specializations don't contain 'Cello'
+            audio_engineer_options = response.get('audio_engineer_options', {})
+            specializations = audio_engineer_options.get('specializations', [])
+            if 'Cello' in specializations:
+                print(f"   ❌ 'Cello' found in Audio Engineer specializations (should be removed)")
+                return False
+            
+            print(f"   ✅ 'Cello' correctly removed from Audio Engineer specializations")
+            print(f"   ✅ Categories API working correctly")
+            return True
+        return False
+
+    def test_profile_image_upload(self):
+        """Test profile image upload endpoint"""
+        # Create a simple test image data (1x1 pixel PNG)
+        import base64
+        # Minimal PNG data for a 1x1 transparent pixel
+        png_data = base64.b64decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAI9jU8'
+            'AAABJRU5ErkJggg=='
+        )
+        
+        # Test with multipart form data
+        import requests
+        url = f"{self.base_url}/api/users/profile/image"
+        headers = {'Authorization': f'Bearer {self.token}'}
+        files = {'file': ('test.png', png_data, 'image/png')}
+        
+        self.tests_run += 1
+        print(f"\n🔍 Testing Profile Image Upload...")
+        
+        try:
+            response = requests.post(url, headers=headers, files=files)
+            success = response.status_code == 200
+            
+            if success:
+                self.tests_passed += 1
+                print(f"✅ Passed - Status: {response.status_code}")
+                response_data = response.json()
+                if 'profile_image' in response_data:
+                    print(f"   ✅ Profile image URL returned: {response_data['profile_image'][:50]}...")
+                return True
+            else:
+                print(f"❌ Failed - Expected 200, got {response.status_code}")
+                try:
+                    error_detail = response.json()
+                    print(f"   Error: {error_detail}")
+                except:
+                    print(f"   Response: {response.text}")
+                return False
+        except Exception as e:
+            print(f"❌ Failed - Error: {str(e)}")
+            return False
+
+    def test_profile_update_with_subcategories(self):
+        """Test profile update with sub_categories field"""
+        profile_data = {
+            "bio": "Updated bio for testing",
+            "location": "Test City, Test State",
+            "category": "musician",
+            "sub_categories": ["audio_engineer", "merchant"],
+            "genre": "Rock",
+            "instruments": ["Electric Guitar", "Bass Electric"],
+            "specializations": ["Mixing Engineers", "Mastering Engineers"],
+            "merchant_products": ["Shirts", "Vinyl Records"]
+        }
+        
+        success, response = self.run_test(
+            "Update Profile with Sub-Categories",
+            "PUT",
+            "users/profile",
+            200,
+            data=profile_data
+        )
+        
+        if success:
+            # Verify the response contains the updated data
+            if response.get('category') != 'musician':
+                print(f"   ❌ Category not updated correctly")
+                return False
+            
+            sub_categories = response.get('sub_categories', [])
+            if 'audio_engineer' not in sub_categories or 'merchant' not in sub_categories:
+                print(f"   ❌ Sub-categories not updated correctly: {sub_categories}")
+                return False
+            
+            print(f"   ✅ Profile updated with category: {response.get('category')}")
+            print(f"   ✅ Sub-categories: {sub_categories}")
+            print(f"   ✅ Profile update with sub_categories working correctly")
+            return True
+        return False
+
 def main():
     """Run all backend tests"""
     print("🚀 Starting MicLocker Backend API Tests")
@@ -211,12 +383,16 @@ def main():
     # Test sequence
     tests = [
         ("Health Check", tester.test_health_check),
-        ("Login", tester.test_login),
+        ("Login with New Admin Credentials", tester.test_login),
         ("Get Current User", tester.test_get_current_user),
+        ("Auth Categories (5 categories + merchant options)", tester.test_auth_categories),
+        ("Profile Image Upload", tester.test_profile_image_upload),
+        ("Profile Update with Sub-Categories", tester.test_profile_update_with_subcategories),
         ("Listing Categories", tester.test_listings_categories),
         ("Search Listings", tester.test_search_listings),
         ("Featured Listings", tester.test_featured_listings),
         ("Recent Listings", tester.test_recent_listings),
+        ("Listings Count", tester.test_listings_count),
         ("Get Cart", tester.test_get_cart),
         ("Admin Analytics", tester.test_admin_analytics),
         ("Admin Users", tester.test_admin_users),

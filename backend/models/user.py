@@ -4,7 +4,7 @@ from datetime import datetime
 import uuid
 
 # User Categories
-USER_CATEGORIES = ["musician", "audio_engineer", "recording_studio", "venue"]
+USER_CATEGORIES = ["musician", "audio_engineer", "recording_studio", "venue", "merchant"]
 
 # Musician Instruments
 MUSICIAN_INSTRUMENTS = [
@@ -16,9 +16,9 @@ MUSICIAN_INSTRUMENTS = [
     "Timpani", "Trombone", "Trumpet", "Tuba", "Ukulele", "Viola", "Violin"
 ]
 
-# Audio Engineer Specializations
+# Audio Engineer Specializations (Cello removed per user request)
 AUDIO_ENGINEER_SPECS = [
-    "Boom Operator", "Cello", "Dialogue Editing", "Dolby Atmos & Immersive Audio",
+    "Boom Operator", "Dialogue Editing", "Dolby Atmos & Immersive Audio",
     "Editing", "Film Composers", "Full Instrumental Productions", "Game Audio",
     "Ghost Producers", "Live Drum Tracks", "Live Sound", "Mastering Engineers",
     "Mixing Engineers", "Podcast Editing & Mastering", "Pop Rock Arranger",
@@ -52,6 +52,15 @@ MUSIC_GENRES = [
     "World Music", "Gospel", "Indie", "Alternative", "Other"
 ]
 
+# Merchant Product Types
+MERCHANT_PRODUCT_TYPES = [
+    "Shirts", "Pants", "Shorts", "Jackets", "Hoodies", "Hats", "Caps",
+    "Shoes", "Boots", "Socks", "Accessories", "Bags", "Backpacks",
+    "Vinyl Records", "CDs", "Posters", "Stickers", "Patches", "Pins",
+    "Guitar Picks", "Drumsticks", "Straps", "Cases", "Stands",
+    "Cables", "Strings", "Picks", "Capos", "Tuners", "Other Merchandise"
+]
+
 class UserBase(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
@@ -61,8 +70,11 @@ class UserCreate(UserBase):
 
 class UserCategoryUpdate(BaseModel):
     category: str
+    # Sub-categories - users can have secondary roles
+    sub_categories: Optional[List[str]] = None
     # Musician fields
-    genre: Optional[str] = None
+    genre: Optional[str] = None  # Keep for backward compatibility
+    genres: Optional[List[str]] = None  # New multi-select genres
     instruments: Optional[List[str]] = None
     # Audio Engineer fields
     specializations: Optional[List[str]] = None
@@ -72,12 +84,19 @@ class UserCategoryUpdate(BaseModel):
     venue_name: Optional[str] = None
     venue_city: Optional[str] = None
     venue_capacity: Optional[str] = None
+    # Merchant fields
+    merchant_products: Optional[List[str]] = None
+    business_name: Optional[str] = None
+    # Contact info (optional during registration)
+    phone: Optional[str] = None
+    shipping_address: Optional[dict] = None
 
 class UserProfileUpdate(BaseModel):
     bio: Optional[str] = None
     location: Optional[str] = None
     profile_image: Optional[str] = None
     category: Optional[str] = None
+    sub_categories: Optional[List[str]] = None
     genre: Optional[str] = None
     instruments: Optional[List[str]] = None
     specializations: Optional[List[str]] = None
@@ -85,6 +104,17 @@ class UserProfileUpdate(BaseModel):
     venue_name: Optional[str] = None
     venue_city: Optional[str] = None
     venue_capacity: Optional[str] = None
+    merchant_products: Optional[List[str]] = None
+    business_name: Optional[str] = None
+    # Contact information
+    phone: Optional[str] = None
+    website: Optional[str] = None
+    instagram: Optional[str] = None
+    twitter: Optional[str] = None
+    facebook: Optional[str] = None
+    youtube: Optional[str] = None
+    soundcloud: Optional[str] = None
+    spotify: Optional[str] = None
 
 class UserInDB(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -92,8 +122,10 @@ class UserInDB(BaseModel):
     email: str
     hashed_password: str
     category: Optional[str] = None
+    sub_categories: Optional[List[str]] = None
     is_admin: bool = False
     is_first_user: bool = False
+    is_suspended: bool = False
     profile_completed: bool = False
     
     # Profile fields
@@ -101,14 +133,33 @@ class UserInDB(BaseModel):
     location: Optional[str] = None
     profile_image: Optional[str] = None
     
+    # Contact information
+    phone: Optional[str] = None
+    website: Optional[str] = None
+    instagram: Optional[str] = None
+    twitter: Optional[str] = None
+    facebook: Optional[str] = None
+    youtube: Optional[str] = None
+    soundcloud: Optional[str] = None
+    spotify: Optional[str] = None
+    
     # Category-specific fields
-    genre: Optional[str] = None
+    genre: Optional[str] = None  # Keep for backward compatibility
+    genres: Optional[List[str]] = None  # New multi-select genres
     instruments: Optional[List[str]] = None
     specializations: Optional[List[str]] = None
     studio_offerings: Optional[List[str]] = None
     venue_name: Optional[str] = None
     venue_city: Optional[str] = None
     venue_capacity: Optional[str] = None
+    merchant_products: Optional[List[str]] = None
+    business_name: Optional[str] = None
+    
+    # Favorites
+    favorites: Optional[List[str]] = None  # List of listing IDs
+    
+    # Shipping address
+    shipping_address: Optional[dict] = None  # {address_line1, address_line2, city, state, postal_code, country}
     
     # Stats
     rating: float = 0.0
@@ -123,18 +174,37 @@ class UserResponse(BaseModel):
     username: str
     email: str
     category: Optional[str] = None
+    sub_categories: Optional[List[str]] = None
     is_admin: bool = False
     profile_completed: bool = False
     bio: Optional[str] = None
     location: Optional[str] = None
     profile_image: Optional[str] = None
-    genre: Optional[str] = None
+    # Contact info
+    phone: Optional[str] = None
+    website: Optional[str] = None
+    instagram: Optional[str] = None
+    twitter: Optional[str] = None
+    facebook: Optional[str] = None
+    youtube: Optional[str] = None
+    soundcloud: Optional[str] = None
+    spotify: Optional[str] = None
+    # Category fields
+    genre: Optional[str] = None  # Backward compatibility
+    genres: Optional[List[str]] = None  # New multi-select genres
     instruments: Optional[List[str]] = None
     specializations: Optional[List[str]] = None
     studio_offerings: Optional[List[str]] = None
     venue_name: Optional[str] = None
     venue_city: Optional[str] = None
     venue_capacity: Optional[str] = None
+    merchant_products: Optional[List[str]] = None
+    business_name: Optional[str] = None
+    # Favorites
+    favorites: Optional[List[str]] = None
+    # Shipping address
+    shipping_address: Optional[dict] = None
+    # Stats
     rating: float = 0.0
     review_count: int = 0
     total_sales: int = 0
@@ -143,16 +213,31 @@ class UserResponse(BaseModel):
 class UserPublicProfile(BaseModel):
     id: str
     username: str
+    email: Optional[str] = None  # Show email on profile
     category: Optional[str] = None
+    sub_categories: Optional[List[str]] = None
     bio: Optional[str] = None
     location: Optional[str] = None
     profile_image: Optional[str] = None
-    genre: Optional[str] = None
+    # Contact info (public)
+    phone: Optional[str] = None
+    website: Optional[str] = None
+    instagram: Optional[str] = None
+    twitter: Optional[str] = None
+    facebook: Optional[str] = None
+    youtube: Optional[str] = None
+    soundcloud: Optional[str] = None
+    spotify: Optional[str] = None
+    # Category fields
+    genre: Optional[str] = None  # Backward compatibility
+    genres: Optional[List[str]] = None  # New multi-select genres
     instruments: Optional[List[str]] = None
     specializations: Optional[List[str]] = None
     studio_offerings: Optional[List[str]] = None
     venue_name: Optional[str] = None
     venue_city: Optional[str] = None
+    merchant_products: Optional[List[str]] = None
+    business_name: Optional[str] = None
     rating: float = 0.0
     review_count: int = 0
     total_sales: int = 0

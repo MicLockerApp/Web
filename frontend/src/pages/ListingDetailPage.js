@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ShoppingCart, MessageSquare, Heart, Share2, Star, ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
-import { listingsAPI, offersAPI, cartAPI } from '../services/api';
+import { ShoppingCart, MessageSquare, Heart, Share2, Star, ChevronLeft, ChevronRight, Check, X, Copy, Facebook, Twitter, Mail, Link as LinkIcon } from 'lucide-react';
+import { listingsAPI, offersAPI, cartAPI, usersAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -17,16 +17,30 @@ const ListingDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showOfferModal, setShowOfferModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [offerPrice, setOfferPrice] = useState('');
   const [offerMessage, setOfferMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [favLoading, setFavLoading] = useState(false);
 
   useEffect(() => {
     const fetchListing = async () => {
       try {
         const response = await listingsAPI.getById(id);
         setListing(response.data);
+        
+        // Check if listing is favorited
+        if (isAuthenticated) {
+          try {
+            const favResponse = await usersAPI.getFavorites();
+            const favorites = favResponse.data.listings || [];
+            setIsFavorited(favorites.some(fav => fav.id === id));
+          } catch (err) {
+            console.error('Error checking favorites:', err);
+          }
+        }
       } catch (error) {
         console.error('Error fetching listing:', error);
         navigate('/404');
@@ -35,7 +49,60 @@ const ListingDetailPage = () => {
       }
     };
     fetchListing();
-  }, [id, navigate]);
+  }, [id, navigate, isAuthenticated]);
+
+  const handleToggleFavorite = async () => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    setFavLoading(true);
+    try {
+      if (isFavorited) {
+        await usersAPI.removeFavorite(listing.id);
+        setIsFavorited(false);
+        setMessage({ type: 'success', text: 'Removed from favorites' });
+      } else {
+        await usersAPI.addFavorite(listing.id);
+        setIsFavorited(true);
+        setMessage({ type: 'success', text: 'Added to favorites!' });
+      }
+      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to update favorites' });
+    } finally {
+      setFavLoading(false);
+    }
+  };
+
+  const handleShare = (platform) => {
+    const url = window.location.href;
+    const title = listing?.title || 'Check out this listing on MicLocker';
+    const text = `${title} - $${listing?.price?.toLocaleString()} on MicLocker`;
+    
+    switch (platform) {
+      case 'copy':
+        navigator.clipboard.writeText(url);
+        setMessage({ type: 'success', text: 'Link copied to clipboard!' });
+        setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+        setShowShareModal(false);
+        break;
+      case 'facebook':
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
+        setShowShareModal(false);
+        break;
+      case 'twitter':
+        window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`, '_blank');
+        setShowShareModal(false);
+        break;
+      case 'email':
+        window.location.href = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(`Check out this listing: ${url}`)}`;
+        setShowShareModal(false);
+        break;
+      default:
+        break;
+    }
+  };
 
   const handleAddToCart = async () => {
     if (!isAuthenticated) {
@@ -167,10 +234,23 @@ const ListingDetailPage = () => {
             <div className="flex items-start justify-between gap-4 mb-4">
               <h1 className="text-2xl md:text-3xl font-bold text-white">{listing.title}</h1>
               <div className="flex gap-2">
-                <button className="p-2 bg-dark-400 rounded-lg hover:bg-dark-300">
-                  <Heart className="w-5 h-5 text-gray-400" />
+                <button 
+                  onClick={handleToggleFavorite}
+                  disabled={favLoading}
+                  className={`p-2 rounded-lg transition-colors ${
+                    isFavorited 
+                      ? 'bg-primary text-black hover:bg-primary/80' 
+                      : 'bg-dark-400 hover:bg-dark-300'
+                  }`}
+                  data-testid="favorite-button"
+                >
+                  <Heart className={`w-5 h-5 ${isFavorited ? 'fill-current' : 'text-gray-400'}`} />
                 </button>
-                <button className="p-2 bg-dark-400 rounded-lg hover:bg-dark-300">
+                <button 
+                  onClick={() => setShowShareModal(true)}
+                  className="p-2 bg-dark-400 rounded-lg hover:bg-dark-300"
+                  data-testid="share-button"
+                >
                   <Share2 className="w-5 h-5 text-gray-400" />
                 </button>
               </div>
@@ -347,6 +427,62 @@ const ListingDetailPage = () => {
                 {submitting ? 'Submitting...' : 'Submit Offer'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+          <div className="bg-dark-400 rounded-xl p-6 max-w-md w-full">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-white">Share this listing</h2>
+              <button onClick={() => setShowShareModal(false)} className="text-gray-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => handleShare('copy')}
+                className="flex items-center justify-center gap-2 p-4 bg-dark-300 rounded-lg hover:bg-dark-200 transition-colors"
+              >
+                <Copy className="w-5 h-5 text-primary" />
+                <span className="text-white">Copy Link</span>
+              </button>
+              
+              <button
+                onClick={() => handleShare('facebook')}
+                className="flex items-center justify-center gap-2 p-4 bg-dark-300 rounded-lg hover:bg-dark-200 transition-colors"
+              >
+                <Facebook className="w-5 h-5 text-blue-500" />
+                <span className="text-white">Facebook</span>
+              </button>
+              
+              <button
+                onClick={() => handleShare('twitter')}
+                className="flex items-center justify-center gap-2 p-4 bg-dark-300 rounded-lg hover:bg-dark-200 transition-colors"
+              >
+                <Twitter className="w-5 h-5 text-sky-400" />
+                <span className="text-white">Twitter</span>
+              </button>
+              
+              <button
+                onClick={() => handleShare('email')}
+                className="flex items-center justify-center gap-2 p-4 bg-dark-300 rounded-lg hover:bg-dark-200 transition-colors"
+              >
+                <Mail className="w-5 h-5 text-red-400" />
+                <span className="text-white">Email</span>
+              </button>
+            </div>
+
+            {/* URL Preview */}
+            <div className="mt-6 p-3 bg-dark-500 rounded-lg">
+              <div className="flex items-center gap-2 text-gray-400 text-sm">
+                <LinkIcon className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate">{window.location.href}</span>
+              </div>
+            </div>
           </div>
         </div>
       )}

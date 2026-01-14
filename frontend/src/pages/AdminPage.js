@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { adminAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { DollarSign, Package, Users, ShoppingCart, TrendingUp, AlertCircle } from 'lucide-react';
+import { DollarSign, Package, Users, ShoppingCart, TrendingUp, AlertCircle, CreditCard, Percent } from 'lucide-react';
 
 const AdminPage = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [analytics, setAnalytics] = useState(null);
   const [users, setUsers] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -15,12 +15,15 @@ const AdminPage = () => {
   const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
+    // Wait for auth to finish loading
+    if (authLoading) return;
+    
     if (!isAuthenticated || !user?.is_admin) {
       navigate('/');
       return;
     }
     fetchData();
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, user, navigate, authLoading]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -50,7 +53,7 @@ const AdminPage = () => {
     }
   };
 
-  if (loading) return <LoadingSpinner />;
+  if (authLoading || loading) return <LoadingSpinner />;
 
   return (
     <div className="min-h-screen" data-testid="admin-page">
@@ -61,7 +64,7 @@ const AdminPage = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
           <div className="bg-dark-400 rounded-xl p-6">
             <DollarSign className="w-10 h-10 text-green-400 mb-3" />
             <p className="text-3xl font-bold text-white">
@@ -74,7 +77,24 @@ const AdminPage = () => {
             <p className="text-3xl font-bold text-white">
               ${analytics?.total_fees_collected?.toLocaleString() || '0'}
             </p>
-            <p className="text-gray-400 text-sm">Platform Fees (3%)</p>
+            <p className="text-gray-400 text-sm">Platform Fees ({analytics?.platform_fee_percent || 3}%)</p>
+          </div>
+          <div className="bg-dark-400 rounded-xl p-6">
+            <CreditCard className="w-10 h-10 text-cyan-400 mb-3" />
+            <p className="text-3xl font-bold text-white">
+              ${analytics?.total_processing_fees_collected?.toLocaleString() || '0'}
+            </p>
+            <p className="text-gray-400 text-sm">Payment Processing</p>
+            <p className="text-gray-500 text-xs mt-1">
+              {analytics?.payment_processing_percent || 3.19}% + ${analytics?.payment_processing_fixed || 0.49}
+            </p>
+          </div>
+          <div className="bg-dark-400 rounded-xl p-6">
+            <Percent className="w-10 h-10 text-emerald-400 mb-3" />
+            <p className="text-3xl font-bold text-white">
+              ${((analytics?.total_fees_collected || 0) + (analytics?.total_processing_fees_collected || 0)).toLocaleString()}
+            </p>
+            <p className="text-gray-400 text-sm">Total Fees Collected</p>
           </div>
           <div className="bg-dark-400 rounded-xl p-6">
             <Package className="w-10 h-10 text-blue-400 mb-3" />
@@ -192,7 +212,8 @@ const AdminPage = () => {
                   <th className="px-6 py-3 text-left text-gray-400 text-sm">Order</th>
                   <th className="px-6 py-3 text-left text-gray-400 text-sm">Buyer</th>
                   <th className="px-6 py-3 text-left text-gray-400 text-sm">Total</th>
-                  <th className="px-6 py-3 text-left text-gray-400 text-sm">Fee</th>
+                  <th className="px-6 py-3 text-left text-gray-400 text-sm">Platform Fee</th>
+                  <th className="px-6 py-3 text-left text-gray-400 text-sm">Processing Fee</th>
                   <th className="px-6 py-3 text-left text-gray-400 text-sm">Status</th>
                   <th className="px-6 py-3 text-left text-gray-400 text-sm">Date</th>
                 </tr>
@@ -204,6 +225,7 @@ const AdminPage = () => {
                     <td className="px-6 py-4 text-gray-400">{order.buyer_username}</td>
                     <td className="px-6 py-4 text-white">${order.total?.toLocaleString()}</td>
                     <td className="px-6 py-4 text-primary">${order.platform_fee?.toFixed(2)}</td>
+                    <td className="px-6 py-4 text-cyan-400">${(order.payment_processing_fee || 0)?.toFixed(2)}</td>
                     <td className="px-6 py-4">
                       <span className="badge badge-primary">{order.status}</span>
                     </td>

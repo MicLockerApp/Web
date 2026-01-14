@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import VinylLogo from '../components/VinylLogo';
@@ -9,19 +9,30 @@ const LoginPage = () => {
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const formRef = useRef(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    
+    const username = formData.username;
+    const password = formData.password;
+    
+    // Clear previous error
     setError('');
     setLoading(true);
 
     try {
-      await login(formData.username, formData.password);
+      await login(username, password);
+      // Only navigate on success
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.detail || 'Login failed. Please try again.');
-    } finally {
+      // Set error and keep it visible - don't navigate or reload
+      const errorMessage = err.response?.data?.detail || 'Login failed. Please check your credentials and try again.';
+      setError(errorMessage);
       setLoading(false);
+      // Restore form values in case they were cleared
+      setFormData({ username, password });
     }
   };
 
@@ -85,7 +96,7 @@ const LoginPage = () => {
         <div className="mt-6 p-4 bg-dark-400 rounded-lg text-center">
           <p className="text-gray-400 text-sm">Demo Credentials:</p>
           <p className="text-gray-300 text-sm mt-1">
-            <span className="text-primary">admin</span> / <span className="text-primary">admin123</span>
+            <span className="text-primary">jmcdougall</span> / <span className="text-primary">Eisenhower1212!!</span>
           </p>
         </div>
       </div>

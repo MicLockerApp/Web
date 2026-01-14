@@ -22,7 +22,11 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Don't redirect on login/register failures - let the component handle those
+    const isAuthEndpoint = error.config?.url?.includes('/auth/login') || 
+                           error.config?.url?.includes('/auth/register');
+    
+    if (error.response?.status === 401 && !isAuthEndpoint) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
@@ -46,9 +50,21 @@ export const usersAPI = {
   getProfile: (userId) => api.get(`/users/profile/${userId}`),
   getProfileByUsername: (username) => api.get(`/users/profile/by-username/${username}`),
   updateProfile: (data) => api.put('/users/profile', data),
+  uploadProfileImage: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/users/profile/image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
   searchUsers: (params) => api.get('/users/search', { params }),
   getUserListings: (userId, params) => api.get(`/users/${userId}/listings`, { params }),
   getUserReviews: (userId, params) => api.get(`/users/${userId}/reviews`, { params }),
+  // Favorites
+  getFavorites: (params) => api.get('/users/favorites/list', { params }),
+  addFavorite: (listingId) => api.post(`/users/favorites/${listingId}`),
+  removeFavorite: (listingId) => api.delete(`/users/favorites/${listingId}`),
+  checkFavorite: (listingId) => api.get(`/users/favorites/check/${listingId}`),
 };
 
 // Listings APIs
@@ -57,6 +73,7 @@ export const listingsAPI = {
   search: (params) => api.get('/listings', { params }),
   getFeatured: (limit = 8) => api.get('/listings/featured', { params: { limit } }),
   getRecent: (limit = 12) => api.get('/listings/recent', { params: { limit } }),
+  getCount: () => api.get('/listings/stats/count'),
   getById: (id) => api.get(`/listings/${id}`),
   create: (data) => api.post('/listings', data),
   update: (id, data) => api.put(`/listings/${id}`, data),

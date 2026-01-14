@@ -17,6 +17,7 @@ class MessageInDB(BaseModel):
     listing_id: Optional[str] = None
     listing_title: Optional[str] = None
     is_read: bool = False
+    read_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class MessageThreadInDB(BaseModel):
@@ -39,6 +40,7 @@ class MessageResponse(BaseModel):
     listing_id: Optional[str] = None
     listing_title: Optional[str] = None
     is_read: bool
+    read_at: Optional[datetime] = None
     created_at: datetime
 
 class MessageThreadResponse(BaseModel):

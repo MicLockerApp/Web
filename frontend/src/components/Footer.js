@@ -66,7 +66,6 @@ const Footer = () => {
 
         <div className="border-t border-dark-300 mt-8 pt-8 text-center text-gray-500 text-sm">
           <p>&copy; {new Date().getFullYear()} MicLocker. All rights reserved.</p>
-          <p className="mt-2">Platform fee: 3% on all completed sales + payment processing</p>
         </div>
       </div>
     </footer>

@@ -1,11 +1,55 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Star, MapPin } from 'lucide-react';
+import { Star, MapPin, Heart } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { usersAPI } from '../services/api';
 
-const ListingCard = ({ listing }) => {
+const ListingCard = ({ listing, onFavoriteChange }) => {
+  const { isAuthenticated } = useAuth();
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [loading, setLoading] = useState(false);
+
   const primaryImage = listing.media?.find(m => m.is_primary)?.url || 
                        listing.media?.[0]?.url || 
                        'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=400';
+
+  useEffect(() => {
+    const checkFavorite = async () => {
+      if (!isAuthenticated) return;
+      try {
+        const response = await usersAPI.checkFavorite(listing.id);
+        setIsFavorite(response.data.is_favorite);
+      } catch (error) {
+        // Ignore errors for favorite check
+      }
+    };
+    checkFavorite();
+  }, [listing.id, isAuthenticated]);
+
+  const handleFavoriteClick = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!isAuthenticated) return;
+    
+    setLoading(true);
+    try {
+      if (isFavorite) {
+        await usersAPI.removeFavorite(listing.id);
+        setIsFavorite(false);
+      } else {
+        await usersAPI.addFavorite(listing.id);
+        setIsFavorite(true);
+      }
+      if (onFavoriteChange) {
+        onFavoriteChange(listing.id, !isFavorite);
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Link 
@@ -25,10 +69,20 @@ const ListingCard = ({ listing }) => {
             {listing.condition}
           </span>
         )}
-        {listing.accepts_offers && (
-          <span className="absolute top-2 right-2 badge bg-dark-400 text-white">
-            Offers
-          </span>
+        {/* Favorite Button */}
+        {isAuthenticated && (
+          <button
+            onClick={handleFavoriteClick}
+            disabled={loading}
+            className={`absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+              isFavorite 
+                ? 'bg-primary text-black' 
+                : 'bg-dark-400/80 text-gray-300 hover:bg-dark-300 hover:text-white'
+            }`}
+            data-testid={`favorite-button-${listing.id}`}
+          >
+            <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
+          </button>
         )}
       </div>
       <div className="p-4">

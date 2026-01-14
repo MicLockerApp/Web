@@ -135,24 +135,33 @@ async def get_threads(
     # Format threads with other user info
     formatted_threads = []
     for thread in threads:
-        other_user_id = [p for p in thread["participants"] if p != current_user["id"]][0]
-        other_username = None
-        for i, p in enumerate(thread["participants"]):
-            if p == other_user_id:
-                other_username = thread["participant_usernames"][i] if i < len(thread["participant_usernames"]) else None
+        # Find the other user (not current user)
+        other_user_id = None
+        for p in thread["participants"]:
+            if p != current_user["id"]:
+                other_user_id = p
                 break
         
-        formatted_threads.append(MessageThreadResponse(
-            id=thread["id"],
-            participants=thread["participants"],
-            participant_usernames=thread["participant_usernames"],
-            other_user_id=other_user_id,
-            other_username=other_username,
-            last_message=thread.get("last_message"),
-            last_message_at=thread.get("last_message_at"),
-            unread_count=thread.get("unread_count", {}).get(current_user["id"], 0),
-            created_at=thread["created_at"]
-        ))
+        if not other_user_id:
+            continue
+            
+        # Fetch the other user's profile for username and avatar
+        other_user = await db.users.find_one({"id": other_user_id})
+        other_username = other_user.get("username") if other_user else "Unknown"
+        other_user_avatar = other_user.get("profile_image") if other_user else None
+        
+        formatted_threads.append({
+            "id": thread["id"],
+            "participants": thread["participants"],
+            "participant_usernames": thread["participant_usernames"],
+            "other_user_id": other_user_id,
+            "other_username": other_username,
+            "other_user_avatar": other_user_avatar,
+            "last_message": thread.get("last_message"),
+            "last_message_at": thread.get("last_message_at"),
+            "unread_count": thread.get("unread_count", {}).get(current_user["id"], 0),
+            "created_at": thread["created_at"]
+        })
     
     return {
         "threads": formatted_threads,
@@ -162,7 +171,7 @@ async def get_threads(
         "pages": (total + limit - 1) // limit
     }
 
-@router.get("/threads/{thread_id}", response_model=ThreadWithMessages)
+@router.get("/threads/{thread_id}")
 async def get_thread(
     thread_id: str,
     page: int = Query(1, ge=1),
@@ -190,10 +199,10 @@ async def get_thread(
     cursor = db.messages.find({"thread_id": thread_id}).skip(skip).limit(limit).sort("created_at", 1)
     messages = await cursor.to_list(length=limit)
     
-    # Mark messages as read
+    # Mark messages as read and set read_at timestamp
     await db.messages.update_many(
         {"thread_id": thread_id, "sender_id": {"$ne": current_user["id"]}, "is_read": False},
-        {"$set": {"is_read": True}}
+        {"$set": {"is_read": True, "read_at": datetime.utcnow()}}
     )
     
     # Reset unread count
@@ -204,30 +213,34 @@ async def get_thread(
         {"$set": {"unread_count": unread_count}}
     )
     
-    # Format thread
-    other_user_id = [p for p in thread["participants"] if p != current_user["id"]][0]
-    other_username = None
-    for i, p in enumerate(thread["participants"]):
-        if p == other_user_id:
-            other_username = thread["participant_usernames"][i] if i < len(thread["participant_usernames"]) else None
+    # Find the other user and fetch their profile
+    other_user_id = None
+    for p in thread["participants"]:
+        if p != current_user["id"]:
+            other_user_id = p
             break
     
-    thread_response = MessageThreadResponse(
-        id=thread["id"],
-        participants=thread["participants"],
-        participant_usernames=thread["participant_usernames"],
-        other_user_id=other_user_id,
-        other_username=other_username,
-        last_message=thread.get("last_message"),
-        last_message_at=thread.get("last_message_at"),
-        unread_count=0,
-        created_at=thread["created_at"]
-    )
+    other_user = await db.users.find_one({"id": other_user_id}) if other_user_id else None
+    other_username = other_user.get("username") if other_user else "Unknown"
+    other_user_avatar = other_user.get("profile_image") if other_user else None
     
-    return ThreadWithMessages(
-        thread=thread_response,
-        messages=[MessageResponse(**msg) for msg in messages]
-    )
+    thread_response = {
+        "id": thread["id"],
+        "participants": thread["participants"],
+        "participant_usernames": thread["participant_usernames"],
+        "other_user_id": other_user_id,
+        "other_username": other_username,
+        "other_user_avatar": other_user_avatar,
+        "last_message": thread.get("last_message"),
+        "last_message_at": thread.get("last_message_at"),
+        "unread_count": 0,
+        "created_at": thread["created_at"]
+    }
+    
+    return {
+        "thread": thread_response,
+        "messages": [MessageResponse(**msg).model_dump() for msg in messages]
+    }
 
 @router.get("/unread-count")
 async def get_unread_count(current_user: dict = Depends(get_current_user)):
@@ -261,10 +274,10 @@ async def mark_thread_read(
             detail="Thread not found"
         )
     
-    # Mark messages as read
+    # Mark messages as read and set read_at timestamp
     await db.messages.update_many(
         {"thread_id": thread_id, "sender_id": {"$ne": current_user["id"]}},
-        {"$set": {"is_read": True}}
+        {"$set": {"is_read": True, "read_at": datetime.utcnow()}}
     )
     
     # Reset unread count

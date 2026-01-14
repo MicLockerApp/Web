@@ -39,9 +39,13 @@ class ReviewResponse(BaseModel):
 # Admin Analytics Models
 class AdminAnalytics(BaseModel):
     total_gmv: float  # Gross Merchandise Value
-    total_fees_collected: float
+    total_fees_collected: float  # Platform fees (3%)
+    total_processing_fees_collected: float  # Payment processing fees (3.19% + $0.49)
     active_listings: int
     total_users: int
     orders_by_status: dict
     recent_orders: int
     recent_signups: int
+    platform_fee_percent: float = 3.0
+    payment_processing_percent: float = 3.19
+    payment_processing_fixed: float = 0.49

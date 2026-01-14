@@ -21,13 +21,21 @@ async def get_analytics(admin_user: dict = Depends(get_admin_user)):
     gmv_result = await db.orders.aggregate(gmv_pipeline).to_list(length=1)
     total_gmv = gmv_result[0]["total"] if gmv_result else 0
     
-    # Total fees collected
+    # Total platform fees collected (3%)
     fees_pipeline = [
         {"$match": {"status": {"$in": ["paid", "shipped", "delivered", "completed"]}}},
         {"$group": {"_id": None, "total": {"$sum": "$platform_fee"}}}
     ]
     fees_result = await db.orders.aggregate(fees_pipeline).to_list(length=1)
     total_fees = fees_result[0]["total"] if fees_result else 0
+    
+    # Total payment processing fees collected (3.19% + $0.49)
+    processing_fees_pipeline = [
+        {"$match": {"status": {"$in": ["paid", "shipped", "delivered", "completed"]}}},
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$payment_processing_fee", 0]}}}}
+    ]
+    processing_fees_result = await db.orders.aggregate(processing_fees_pipeline).to_list(length=1)
+    total_processing_fees = processing_fees_result[0]["total"] if processing_fees_result else 0
     
     # Active listings count
     active_listings = await db.listings.count_documents({"status": "active"})
@@ -52,11 +60,15 @@ async def get_analytics(admin_user: dict = Depends(get_admin_user)):
     return AdminAnalytics(
         total_gmv=round(total_gmv, 2),
         total_fees_collected=round(total_fees, 2),
+        total_processing_fees_collected=round(total_processing_fees, 2),
         active_listings=active_listings,
         total_users=total_users,
         orders_by_status=orders_by_status,
         recent_orders=recent_orders,
-        recent_signups=recent_signups
+        recent_signups=recent_signups,
+        platform_fee_percent=settings.platform_fee_percent,
+        payment_processing_percent=settings.payment_processing_percent,
+        payment_processing_fixed=settings.payment_processing_fixed
     )
 
 @router.get("/users")

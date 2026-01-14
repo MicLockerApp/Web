@@ -131,6 +131,19 @@ async def get_recent_listings(limit: int = Query(12, ge=1, le=50)):
     listings = await cursor.to_list(length=limit)
     return {"listings": serialize_docs(listings)}
 
+@router.get("/stats/count")
+async def get_listing_count():
+    """Get total count of active listings"""
+    db = get_database()
+    
+    active_count = await db.listings.count_documents({"status": "active"})
+    total_count = await db.listings.count_documents({})
+    
+    return {
+        "active_listings": active_count,
+        "total_listings": total_count
+    }
+
 @router.get("/{listing_id}")
 async def get_listing(
     listing_id: str,
