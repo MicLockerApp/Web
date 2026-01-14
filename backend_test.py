@@ -277,6 +277,20 @@ class MicLockerAPITester:
         if not self.test_order_id:
             print("   ⚠️  No test order available, skipping review creation")
             return True
+        
+        # First update order to completed status so we can review it
+        status_data = {"status": "completed"}
+        status_success, _ = self.run_test(
+            "Update Order to Completed for Review",
+            "PUT",
+            f"orders/{self.test_order_id}/status",
+            200,
+            data=status_data
+        )
+        
+        if not status_success:
+            print("   ⚠️  Could not update order status for review test")
+            return True
             
         review_data = {
             "order_id": self.test_order_id,
