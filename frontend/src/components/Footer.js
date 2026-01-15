@@ -54,7 +54,7 @@ const Footer = () => {
               <li><Link to="/help" className={`text-sm hover:text-primary ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Help Center</Link></li>
               <li><Link to="/shipping" className={`text-sm hover:text-primary ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Shipping</Link></li>
               <li><Link to="/returns" className={`text-sm hover:text-primary ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Returns</Link></li>
-              <li><Link to="/contact" className={`text-sm hover:text-primary ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Contact Us</Link></li>
+              <li><Link to="/contact-support" className={`text-sm hover:text-primary ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Contact Support</Link></li>
             </ul>
           </div>
 
