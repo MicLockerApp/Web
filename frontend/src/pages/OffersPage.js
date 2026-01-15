@@ -42,8 +42,15 @@ const OffersPage = () => {
   const handleAccept = async (offerId) => {
     setActionLoading(offerId);
     try {
+      const offer = offers.find(o => o.id === offerId);
       await offersAPI.accept(offerId);
       setMessage({ type: 'success', text: 'Offer accepted! The buyer can now complete the purchase.' });
+      
+      // Track offer accepted
+      if (offer) {
+        analytics.offerAccepted(offerId, offer.final_price || offer.counter_price || offer.offer_price);
+      }
+      
       fetchOffers();
     } catch (error) {
       setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to accept offer' });
