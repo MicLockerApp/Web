@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import VinylLogo from '../components/VinylLogo';
+import analytics from '../services/analytics';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -25,6 +26,10 @@ const LoginPage = () => {
 
     try {
       await login(username, password);
+      
+      // Track successful login
+      analytics.userLoggedIn();
+      
       navigate('/');
     } catch (err) {
       const errorMessage = err.response?.data?.detail || 'Login failed. Please check your credentials and try again.';
