@@ -75,10 +75,9 @@ class AnalyticsTestSuite:
     def test_login(self) -> bool:
         """Test user login and get token"""
         try:
-            response = self.make_request('POST', '/auth/login', {
-                'username': self.test_username,
-                'password': self.test_password
-            })
+            # Login endpoint expects query parameters
+            url = f"{self.base_url}/api/auth/login?username={self.test_username}&password={self.test_password}"
+            response = requests.post(url, headers={'Content-Type': 'application/json'}, timeout=30)
             
             if response.status_code == 200:
                 data = response.json()
