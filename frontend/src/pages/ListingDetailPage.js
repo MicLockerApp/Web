@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import StarRating from '../components/StarRating';
+import analytics from '../services/analytics';
 
 const ListingDetailPage = () => {
   const { id } = useParams();
