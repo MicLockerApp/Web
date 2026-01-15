@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, status, Depends, Query
 from models.cart import CartItem, CartItemCreate, CartItemUpdate, CartResponse
 from services.auth import get_current_user
 from database import get_database
+from analytics.services.event_emitter import emit_event, EventTypes, ActorType
 from datetime import datetime
 from typing import List
 
