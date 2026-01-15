@@ -330,6 +330,16 @@ async def remove_from_favorites(
         {"$pull": {"favorites": listing_id}}
     )
     
+    # Emit analytics event for unfavoriting
+    emit_event(
+        EventTypes.LISTING_UNFAVORITED,
+        actor_type=ActorType.BUYER,
+        actor_id=current_user["id"],
+        actor_username=current_user["username"],
+        listing_id=listing_id,
+        metadata={}
+    )
+    
     return {"message": "Removed from favorites", "listing_id": listing_id}
 
 @router.get("/favorites/check/{listing_id}")
