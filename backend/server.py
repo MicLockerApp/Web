@@ -18,6 +18,9 @@ from routes.search import router as search_router
 from analytics.routes import analytics_router, events_router
 from analytics.tasks import start_scheduler, stop_scheduler, run_initial_aggregation
 
+# Chatbot imports
+from chatbot.routes import chatbot_router
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
