@@ -32,6 +32,15 @@ const ListingDetailPage = () => {
         const response = await listingsAPI.getById(id);
         setListing(response.data);
         
+        // Track listing view in analytics
+        analytics.listingViewed(
+          response.data.id,
+          response.data.price,
+          response.data.category,
+          response.data.seller_id,
+          'direct'
+        );
+        
         // Check if listing is favorited
         if (isAuthenticated) {
           try {
