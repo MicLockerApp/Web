@@ -98,6 +98,7 @@ function AppContent() {
               <Route path="/careers" element={<CareersPage />} />
               <Route path="/careers/jobs" element={<JobSearchPage />} />
               <Route path="/about" element={<AboutPage />} />
+              <Route path="/contact-support" element={<ContactSupportPage />} />
               {/* Fallback */}
               <Route path="*" element={
                 <div className="min-h-screen flex items-center justify-center">
