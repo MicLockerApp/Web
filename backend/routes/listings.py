@@ -50,6 +50,23 @@ async def create_listing(
     
     await db.listings.insert_one(listing.model_dump())
     
+    # Emit analytics event for listing creation
+    emit_event(
+        EventTypes.LISTING_CREATED,
+        actor_type=ActorType.SELLER,
+        actor_id=current_user["id"],
+        actor_username=current_user["username"],
+        listing_id=listing.id,
+        metadata={
+            "listing_price": listing.price,
+            "category": listing.category,
+            "condition": listing.condition,
+            "brand": listing_data.brand,
+            "quantity": listing.quantity,
+            "accepts_offers": listing_data.accepts_offers
+        }
+    )
+    
     result = listing.model_dump()
     result["seller_rating"] = current_user.get("rating", 0)
     return serialize_doc(result)
