@@ -47,6 +47,21 @@ async def global_search(
     ).limit(limit).sort("created_at", -1)
     listings = await listings_cursor.to_list(length=limit)
     
+    # Emit analytics event for search
+    total_results = len(listings)
+    event_type = EventTypes.SEARCH_ZERO_RESULTS if total_results == 0 else EventTypes.SEARCH_PERFORMED
+    emit_event(
+        event_type,
+        actor_type=ActorType.BUYER if current_user else ActorType.ANONYMOUS,
+        actor_id=current_user["id"] if current_user else None,
+        actor_username=current_user.get("username") if current_user else None,
+        metadata={
+            "query": search_term,
+            "result_count": total_results,
+            "includes_users": current_user is not None
+        }
+    )
+    
     # Search users - ONLY if authenticated
     formatted_users = []
     if current_user is not None:
