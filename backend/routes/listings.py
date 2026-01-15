@@ -195,6 +195,23 @@ async def get_listing(
             {"id": listing_id},
             {"$inc": {"view_count": 1}}
         )
+        
+        # Emit analytics event for listing view
+        emit_event(
+            EventTypes.LISTING_VIEWED,
+            actor_type=ActorType.BUYER if current_user else ActorType.ANONYMOUS,
+            actor_id=current_user["id"] if current_user else None,
+            actor_username=current_user.get("username") if current_user else None,
+            listing_id=listing_id,
+            target_user_id=listing["seller_id"],
+            metadata={
+                "listing_price": listing["price"],
+                "category": listing.get("category"),
+                "condition": listing.get("condition"),
+                "seller_username": listing["seller_username"],
+                "view_count": listing.get("view_count", 0) + 1
+            }
+        )
     
     # Get seller rating
     seller = await db.users.find_one({"id": listing["seller_id"]})
