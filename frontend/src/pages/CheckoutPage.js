@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { ordersAPI, offersAPI, listingsAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { Check, CreditCard, Lock, Tag, ArrowLeft, Truck, Shield } from 'lucide-react';
+import analytics from '../services/analytics';
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
