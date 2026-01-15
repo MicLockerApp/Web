@@ -176,6 +176,15 @@ async def remove_from_cart(
             detail="Cart item not found"
         )
     
+    # Emit analytics event for removing from cart
+    emit_event(
+        EventTypes.CART_ITEM_REMOVED,
+        actor_type=ActorType.BUYER,
+        actor_id=current_user["id"],
+        actor_username=current_user["username"],
+        metadata={"cart_item_id": item_id}
+    )
+    
     return {"message": "Item removed from cart"}
 
 @router.delete("")
