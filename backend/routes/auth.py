@@ -65,6 +65,20 @@ async def register(user_data: UserCreate):
     
     await db.users.insert_one(user.model_dump())
     
+    # Emit analytics event for user registration
+    emit_event(
+        EventTypes.USER_REGISTERED,
+        actor_type=ActorType.BUYER,
+        actor_id=user.id,
+        actor_username=user.username,
+        metadata={
+            "category": None,  # Will be set in complete-profile
+            "has_lifetime_free_fees": has_lifetime_free_fees,
+            "user_number": user_count + 1,
+            "is_first_user": is_first_user
+        }
+    )
+    
     return UserResponse(**user.model_dump())
 
 @router.post("/login", response_model=Token)
