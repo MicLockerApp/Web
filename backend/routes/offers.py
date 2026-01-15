@@ -87,6 +87,24 @@ async def create_offer(
     
     await db.offers.insert_one(offer.model_dump())
     
+    # Emit analytics event for offer creation
+    discount_percent = round((1 - (offer_data.offer_price / listing["price"])) * 100, 1) if listing["price"] > 0 else 0
+    emit_event(
+        EventTypes.OFFER_CREATED,
+        actor_type=ActorType.BUYER,
+        actor_id=current_user["id"],
+        actor_username=current_user["username"],
+        offer_id=offer.id,
+        listing_id=listing["id"],
+        target_user_id=listing["seller_id"],
+        metadata={
+            "offer_price": offer_data.offer_price,
+            "listing_price": listing["price"],
+            "discount_percent": discount_percent,
+            "category": listing.get("category")
+        }
+    )
+    
     return OfferResponse(**offer.model_dump())
 
 @router.get("", response_model=dict)
