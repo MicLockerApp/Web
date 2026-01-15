@@ -329,6 +329,26 @@ async def accept_offer(
         }
     )
     
+    # Emit analytics event for offer acceptance
+    negotiation_rounds = len(offer.get("negotiation_history", [])) if offer.get("negotiation_history") else 1
+    emit_event(
+        EventTypes.OFFER_ACCEPTED,
+        actor_type=ActorType.SELLER if is_seller else ActorType.BUYER,
+        actor_id=current_user["id"],
+        actor_username=current_user["username"],
+        offer_id=offer_id,
+        listing_id=offer["listing_id"],
+        target_user_id=offer["buyer_id"] if is_seller else offer["seller_id"],
+        metadata={
+            "final_price": final_price,
+            "original_offer_price": offer["offer_price"],
+            "listing_price": offer["listing_price"],
+            "negotiation_rounds": negotiation_rounds,
+            "accepted_by": role,
+            "discount_percent": round((1 - (final_price / offer["listing_price"])) * 100, 1) if offer["listing_price"] > 0 else 0
+        }
+    )
+    
     return {"message": "Offer accepted", "final_price": final_price}
 
 @router.post("/{offer_id}/decline")
