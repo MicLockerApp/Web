@@ -72,10 +72,12 @@ const ListingDetailPage = () => {
         await usersAPI.removeFavorite(listing.id);
         setIsFavorited(false);
         setMessage({ type: 'success', text: 'Removed from favorites' });
+        analytics.listingUnfavorited(listing.id);
       } else {
         await usersAPI.addFavorite(listing.id);
         setIsFavorited(true);
         setMessage({ type: 'success', text: 'Added to favorites!' });
+        analytics.listingFavorited(listing.id);
       }
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     } catch (error) {
