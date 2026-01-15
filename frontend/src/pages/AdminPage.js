@@ -168,6 +168,15 @@ const AdminPage = () => {
               {tab.label}
             </button>
           ))}
+          
+          {/* Link to Analytics Dashboard */}
+          <Link
+            to="/admin/analytics"
+            className="px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors whitespace-nowrap bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-500 hover:to-blue-500 ml-auto"
+          >
+            <TrendingUp className="w-4 h-4" />
+            Advanced Analytics
+          </Link>
         </div>
 
         {/* Overview Tab */}
