@@ -3,6 +3,7 @@ from models.offer import OfferCreate, OfferCounter, OfferInDB, OfferResponse, Ne
 from services.auth import get_current_user
 from database import get_database
 from utils.helpers import get_offer_expiration
+from analytics.services.event_emitter import emit_event, EventTypes, ActorType
 from datetime import datetime
 from typing import Optional
 
@@ -85,6 +86,24 @@ async def create_offer(
     )
     
     await db.offers.insert_one(offer.model_dump())
+    
+    # Emit analytics event for offer creation
+    discount_percent = round((1 - (offer_data.offer_price / listing["price"])) * 100, 1) if listing["price"] > 0 else 0
+    emit_event(
+        EventTypes.OFFER_CREATED,
+        actor_type=ActorType.BUYER,
+        actor_id=current_user["id"],
+        actor_username=current_user["username"],
+        offer_id=offer.id,
+        listing_id=listing["id"],
+        target_user_id=listing["seller_id"],
+        metadata={
+            "offer_price": offer_data.offer_price,
+            "listing_price": listing["price"],
+            "discount_percent": discount_percent,
+            "category": listing.get("category")
+        }
+    )
     
     return OfferResponse(**offer.model_dump())
 
@@ -216,6 +235,24 @@ async def counter_offer(
         }
     )
     
+    # Emit analytics event for counter offer
+    emit_event(
+        EventTypes.OFFER_COUNTERED,
+        actor_type=ActorType.SELLER if is_seller else ActorType.BUYER,
+        actor_id=current_user["id"],
+        actor_username=current_user["username"],
+        offer_id=offer_id,
+        listing_id=offer["listing_id"],
+        target_user_id=offer["buyer_id"] if is_seller else offer["seller_id"],
+        metadata={
+            "counter_price": counter_data.counter_price,
+            "original_offer_price": offer["offer_price"],
+            "listing_price": offer["listing_price"],
+            "negotiation_round": len(negotiation_history),
+            "role": role
+        }
+    )
+    
     return {
         "message": "Counter offer sent",
         "counter_price": counter_data.counter_price,
@@ -292,6 +329,26 @@ async def accept_offer(
         }
     )
     
+    # Emit analytics event for offer acceptance
+    negotiation_rounds = len(offer.get("negotiation_history", [])) if offer.get("negotiation_history") else 1
+    emit_event(
+        EventTypes.OFFER_ACCEPTED,
+        actor_type=ActorType.SELLER if is_seller else ActorType.BUYER,
+        actor_id=current_user["id"],
+        actor_username=current_user["username"],
+        offer_id=offer_id,
+        listing_id=offer["listing_id"],
+        target_user_id=offer["buyer_id"] if is_seller else offer["seller_id"],
+        metadata={
+            "final_price": final_price,
+            "original_offer_price": offer["offer_price"],
+            "listing_price": offer["listing_price"],
+            "negotiation_rounds": negotiation_rounds,
+            "accepted_by": role,
+            "discount_percent": round((1 - (final_price / offer["listing_price"])) * 100, 1) if offer["listing_price"] > 0 else 0
+        }
+    )
+    
     return {"message": "Offer accepted", "final_price": final_price}
 
 @router.post("/{offer_id}/decline")
@@ -334,6 +391,22 @@ async def decline_offer(
         }
     )
     
+    # Emit analytics event for offer decline
+    emit_event(
+        EventTypes.OFFER_DECLINED,
+        actor_type=ActorType.SELLER if is_seller else ActorType.BUYER,
+        actor_id=current_user["id"],
+        actor_username=current_user["username"],
+        offer_id=offer_id,
+        listing_id=offer["listing_id"],
+        target_user_id=offer["buyer_id"] if is_seller else offer["seller_id"],
+        metadata={
+            "offer_price": offer["offer_price"],
+            "listing_price": offer["listing_price"],
+            "declined_by": "seller" if is_seller else "buyer"
+        }
+    )
+    
     return {"message": "Offer declined"}
 
 @router.post("/{offer_id}/withdraw")
@@ -370,6 +443,21 @@ async def withdraw_offer(
                 "status": "withdrawn",
                 "updated_at": datetime.utcnow()
             }
+        }
+    )
+    
+    # Emit analytics event for offer withdrawal
+    emit_event(
+        EventTypes.OFFER_WITHDRAWN,
+        actor_type=ActorType.BUYER,
+        actor_id=current_user["id"],
+        actor_username=current_user["username"],
+        offer_id=offer_id,
+        listing_id=offer["listing_id"],
+        target_user_id=offer["seller_id"],
+        metadata={
+            "offer_price": offer["offer_price"],
+            "listing_price": offer["listing_price"]
         }
     )
     

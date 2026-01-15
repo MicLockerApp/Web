@@ -52,9 +52,8 @@ const Footer = () => {
             <h3 className={`font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Help</h3>
             <ul className="space-y-2">
               <li><Link to="/help" className={`text-sm hover:text-primary ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Help Center</Link></li>
-              <li><Link to="/shipping" className={`text-sm hover:text-primary ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Shipping</Link></li>
               <li><Link to="/returns" className={`text-sm hover:text-primary ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Returns</Link></li>
-              <li><Link to="/contact" className={`text-sm hover:text-primary ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Contact Us</Link></li>
+              <li><Link to="/contact-support" className={`text-sm hover:text-primary ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Contact Support</Link></li>
             </ul>
           </div>
 
@@ -64,7 +63,6 @@ const Footer = () => {
             <ul className="space-y-2">
               <li><Link to="/about" className={`text-sm hover:text-primary ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>About MicLocker</Link></li>
               <li><Link to="/careers" className={`text-sm hover:text-primary ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Careers</Link></li>
-              <li><Link to="/press" className={`text-sm hover:text-primary ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Press</Link></li>
               <li><Link to="/terms" className={`text-sm hover:text-primary ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Terms of Service</Link></li>
               <li><Link to="/privacy" className={`text-sm hover:text-primary ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Privacy Policy</Link></li>
             </ul>

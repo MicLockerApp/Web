@@ -5,6 +5,7 @@ from models.message import (
 )
 from services.auth import get_current_user
 from database import get_database
+from analytics.services.event_emitter import emit_event, EventTypes, ActorType
 from datetime import datetime
 from typing import Optional
 
@@ -113,6 +114,38 @@ async def send_message(
     )
     
     record_message(current_user["id"])
+    
+    # Emit analytics event for message sent
+    is_first_message = not thread.get("last_message")
+    emit_event(
+        EventTypes.MESSAGE_SENT,
+        actor_type=ActorType.BUYER,
+        actor_id=current_user["id"],
+        actor_username=current_user["username"],
+        message_thread_id=thread["id"],
+        target_user_id=recipient["id"],
+        listing_id=message_data.listing_id,
+        metadata={
+            "is_first_message": is_first_message,
+            "has_listing_context": message_data.listing_id is not None,
+            "listing_title": listing_title
+        }
+    )
+    
+    # Emit conversation started event if this is a new thread
+    if is_first_message:
+        emit_event(
+            EventTypes.CONVERSATION_STARTED,
+            actor_type=ActorType.BUYER,
+            actor_id=current_user["id"],
+            actor_username=current_user["username"],
+            message_thread_id=thread["id"],
+            target_user_id=recipient["id"],
+            listing_id=message_data.listing_id,
+            metadata={
+                "has_listing_context": message_data.listing_id is not None
+            }
+        )
     
     return MessageResponse(**message.model_dump())
 

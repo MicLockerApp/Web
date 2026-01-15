@@ -185,3 +185,186 @@ async def send_password_reset_email(to_email: str, reset_code: str) -> bool:
         True if email sent successfully, False otherwise
     """
     return email_service.send_password_reset_email(to_email, reset_code)
+
+
+async def send_ticket_notification(ticket) -> bool:
+    """
+    Send email notification to staff when a new support ticket is created
+    
+    Args:
+        ticket: TicketInDB object
+        
+    Returns:
+        True if email sent successfully
+    """
+    if not email_service.client:
+        logger.warning("SES client not available - ticket notification not sent")
+        return False
+    
+    staff_email = "info@miclockerapp.com"
+    subject = f"[MicLocker Support] New Ticket #{ticket.ticket_number}: {ticket.subject}"
+    
+    html_body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+    </head>
+    <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #2d2d2d; border-radius: 12px; padding: 30px;">
+            <h1 style="color: #FFD700; margin-bottom: 20px;">🎫 New Support Ticket</h1>
+            
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #444; color: #888;">Ticket Number:</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #444; color: #FFD700; font-weight: bold;">{ticket.ticket_number}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #444; color: #888;">Category:</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #444;">{ticket.category}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #444; color: #888;">Priority:</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #444; color: {'#ff4444' if ticket.priority in ['urgent', 'high'] else '#ffffff'};">{ticket.priority.upper()}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #444; color: #888;">Customer:</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #444;">{ticket.customer_name} ({ticket.customer_email})</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #444; color: #888;">Subject:</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #444;">{ticket.subject}</td>
+                </tr>
+            </table>
+            
+            <h3 style="color: #888; margin-bottom: 10px;">Message:</h3>
+            <div style="background-color: #1a1a1a; padding: 15px; border-radius: 8px; white-space: pre-wrap;">
+                {ticket.message}
+            </div>
+            
+            <p style="margin-top: 30px; color: #888; font-size: 12px;">
+                This is an automated notification from MicLocker Support System.
+            </p>
+        </div>
+    </body>
+    </html>
+    """
+    
+    text_body = f"""
+New Support Ticket - {ticket.ticket_number}
+
+Category: {ticket.category}
+Priority: {ticket.priority}
+Customer: {ticket.customer_name} ({ticket.customer_email})
+Subject: {ticket.subject}
+
+Message:
+{ticket.message}
+
+---
+MicLocker Support System
+    """
+    
+    try:
+        response = email_service.client.send_email(
+            Source=email_service.sender_email,
+            Destination={'ToAddresses': [staff_email]},
+            Message={
+                'Subject': {'Data': subject, 'Charset': 'UTF-8'},
+                'Body': {
+                    'Text': {'Data': text_body, 'Charset': 'UTF-8'},
+                    'Html': {'Data': html_body, 'Charset': 'UTF-8'}
+                }
+            }
+        )
+        logger.info(f"Ticket notification sent for {ticket.ticket_number}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send ticket notification: {e}")
+        return False
+
+
+async def send_ticket_reply_notification(ticket, reply, is_staff_reply: bool) -> bool:
+    """
+    Send email notification when a reply is added to a ticket
+    
+    Args:
+        ticket: Ticket dict
+        reply: TicketReply object
+        is_staff_reply: True if staff replied, False if customer
+        
+    Returns:
+        True if email sent successfully
+    """
+    if not email_service.client:
+        return False
+    
+    # Notify customer if staff replied, notify staff if customer replied
+    if is_staff_reply:
+        to_email = ticket["customer_email"]
+        subject = f"[MicLocker Support] Reply to Ticket #{ticket['ticket_number']}"
+        intro = "Our support team has replied to your ticket."
+    else:
+        to_email = "info@miclockerapp.com"
+        subject = f"[MicLocker Support] Customer Reply - Ticket #{ticket['ticket_number']}"
+        intro = f"Customer {ticket['customer_name']} has replied to their ticket."
+    
+    html_body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+    </head>
+    <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #2d2d2d; border-radius: 12px; padding: 30px;">
+            <h1 style="color: #FFD700; margin-bottom: 20px;">💬 Ticket Reply</h1>
+            
+            <p style="margin-bottom: 20px;">{intro}</p>
+            
+            <p style="color: #888;">Ticket: <strong style="color: #FFD700;">{ticket['ticket_number']}</strong></p>
+            <p style="color: #888;">Subject: {ticket['subject']}</p>
+            
+            <h3 style="color: #888; margin: 20px 0 10px;">Reply from {reply.sender_name}:</h3>
+            <div style="background-color: #1a1a1a; padding: 15px; border-radius: 8px; white-space: pre-wrap;">
+                {reply.message}
+            </div>
+            
+            <p style="margin-top: 30px; color: #888; font-size: 12px;">
+                MicLocker Support System
+            </p>
+        </div>
+    </body>
+    </html>
+    """
+    
+    text_body = f"""
+Ticket Reply - {ticket['ticket_number']}
+
+{intro}
+
+Subject: {ticket['subject']}
+
+Reply from {reply.sender_name}:
+{reply.message}
+
+---
+MicLocker Support System
+    """
+    
+    try:
+        response = email_service.client.send_email(
+            Source=email_service.sender_email,
+            Destination={'ToAddresses': [to_email]},
+            Message={
+                'Subject': {'Data': subject, 'Charset': 'UTF-8'},
+                'Body': {
+                    'Text': {'Data': text_body, 'Charset': 'UTF-8'},
+                    'Html': {'Data': html_body, 'Charset': 'UTF-8'}
+                }
+            }
+        )
+        logger.info(f"Ticket reply notification sent for {ticket['ticket_number']}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send ticket reply notification: {e}")
+        return False

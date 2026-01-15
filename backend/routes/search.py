@@ -2,6 +2,7 @@ from fastapi import APIRouter, Query, Depends
 from database import get_database
 from services.auth import get_current_user_optional
 from utils.helpers import serialize_docs
+from analytics.services.event_emitter import emit_event, EventTypes, ActorType
 from typing import Optional
 
 router = APIRouter(prefix="/search", tags=["Search"])
@@ -45,6 +46,21 @@ async def global_search(
         {"id": 1, "title": 1, "price": 1, "images": 1, "brand": 1, "model": 1, "seller_username": 1}
     ).limit(limit).sort("created_at", -1)
     listings = await listings_cursor.to_list(length=limit)
+    
+    # Emit analytics event for search
+    total_results = len(listings)
+    event_type = EventTypes.SEARCH_ZERO_RESULTS if total_results == 0 else EventTypes.SEARCH_PERFORMED
+    emit_event(
+        event_type,
+        actor_type=ActorType.BUYER if current_user else ActorType.ANONYMOUS,
+        actor_id=current_user["id"] if current_user else None,
+        actor_username=current_user.get("username") if current_user else None,
+        metadata={
+            "query": search_term,
+            "result_count": total_results,
+            "includes_users": current_user is not None
+        }
+    )
     
     # Search users - ONLY if authenticated
     formatted_users = []

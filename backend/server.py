@@ -13,10 +13,14 @@ from routes import (
     admin_router, files_router
 )
 from routes.search import router as search_router
+from routes.tickets import router as tickets_router
 
 # Analytics imports
 from analytics.routes import analytics_router, events_router
 from analytics.tasks import start_scheduler, stop_scheduler, run_initial_aggregation
+
+# Chatbot imports
+from chatbot.routes import chatbot_router
 
 # Configure logging
 logging.basicConfig(
@@ -136,10 +140,14 @@ app.include_router(reviews_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
 app.include_router(files_router, prefix="/api")
 app.include_router(search_router, prefix="/api")
+app.include_router(tickets_router, prefix="/api")
 
 # Analytics routes
 app.include_router(analytics_router, prefix="/api")
 app.include_router(events_router, prefix="/api")
+
+# Chatbot routes
+app.include_router(chatbot_router, prefix="/api")
 
 # Health check
 @app.get("/api/health")

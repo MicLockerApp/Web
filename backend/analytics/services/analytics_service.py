@@ -258,7 +258,14 @@ class AnalyticsService:
                 "inventory_turnover_rate": 0
             }
         
-        return rollup
+        # Extract only the health metrics fields
+        return {
+            "active_listings": rollup.get("active_listings", 0),
+            "active_buyers": rollup.get("active_buyers", 0),
+            "active_sellers": rollup.get("active_sellers", 0),
+            "buyer_to_seller_ratio": rollup.get("buyer_to_seller_ratio", 0),
+            "inventory_turnover_rate": rollup.get("inventory_turnover_rate", 0)
+        }
     
     @staticmethod
     async def get_trust_safety(

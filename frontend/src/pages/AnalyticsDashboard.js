@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import {
   BarChart3, TrendingUp, DollarSign, Package, Users, Search, MessageSquare,
   ShoppingCart, Tag, AlertTriangle, RefreshCw, Calendar, Clock, ArrowUp, ArrowDown,
-  Activity, Target, Percent, Shield, Eye
+  Activity, Target, Percent, Shield, Eye, Ticket, ChevronRight
 } from 'lucide-react';
 
 const AnalyticsDashboard = () => {
@@ -21,6 +21,8 @@ const AnalyticsDashboard = () => {
   const [marketplaceHealth, setMarketplaceHealth] = useState(null);
   const [trustSafety, setTrustSafety] = useState(null);
   const [topSearchTerms, setTopSearchTerms] = useState([]);
+  const [ticketStats, setTicketStats] = useState(null);
+  const [recentTickets, setRecentTickets] = useState([]);
   const [lastRefresh, setLastRefresh] = useState(new Date());
 
   const getDateParams = useCallback(() => {
@@ -54,14 +56,16 @@ const AnalyticsDashboard = () => {
     const { start_date, end_date } = getDateParams();
     
     try {
-      const [realtime, revenue, offers, search, health, safety, terms] = await Promise.all([
-        api.get('/api/analytics/realtime'),
-        api.get(`/api/analytics/revenue?start_date=${start_date}&end_date=${end_date}`),
-        api.get(`/api/analytics/offer-funnel?start_date=${start_date}&end_date=${end_date}`),
-        api.get(`/api/analytics/search-funnel?start_date=${start_date}&end_date=${end_date}`),
-        api.get(`/api/analytics/marketplace-health?start_date=${start_date}&end_date=${end_date}`),
-        api.get(`/api/analytics/trust-safety?start_date=${start_date}&end_date=${end_date}`),
-        api.get(`/api/analytics/search-terms?start_date=${start_date}&end_date=${end_date}&limit=10`)
+      const [realtime, revenue, offers, search, health, safety, terms, tickets, ticketList] = await Promise.all([
+        api.get('/analytics/realtime'),
+        api.get(`/analytics/revenue?start_date=${start_date}&end_date=${end_date}`),
+        api.get(`/analytics/offer-funnel?start_date=${start_date}&end_date=${end_date}`),
+        api.get(`/analytics/search-funnel?start_date=${start_date}&end_date=${end_date}`),
+        api.get(`/analytics/marketplace-health?start_date=${start_date}&end_date=${end_date}`),
+        api.get(`/analytics/trust-safety?start_date=${start_date}&end_date=${end_date}`),
+        api.get(`/analytics/search-terms?start_date=${start_date}&end_date=${end_date}&limit=10`),
+        api.get('/tickets/admin/stats').catch(() => ({ data: null })),
+        api.get('/tickets/admin/all?limit=5').catch(() => ({ data: { tickets: [] } }))
       ]);
       
       setRealtimeMetrics(realtime.data);
@@ -71,6 +75,8 @@ const AnalyticsDashboard = () => {
       setMarketplaceHealth(health.data);
       setTrustSafety(safety.data);
       setTopSearchTerms(terms.data.terms || []);
+      setTicketStats(tickets.data);
+      setRecentTickets(ticketList.data?.tickets || []);
       setLastRefresh(new Date());
     } catch (error) {
       console.error('Error fetching analytics:', error);
@@ -422,6 +428,114 @@ const AnalyticsDashboard = () => {
               </div>
             ) : (
               <p className="text-gray-500 text-sm">No search data available</p>
+            )}
+          </div>
+        </div>
+
+        {/* Support Tickets Section */}
+        <div className="mt-6">
+          <div className="bg-dark-400 rounded-xl p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Ticket className="w-5 h-5 text-orange-400" />
+                Pending Customer Tickets
+              </h2>
+              <Link 
+                to="/admin/tickets" 
+                className="text-primary hover:text-yellow-400 text-sm flex items-center gap-1"
+              >
+                View All <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+
+            {/* Ticket Stats */}
+            {ticketStats && (
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+                <div className="bg-dark-500 rounded-lg p-4 text-center">
+                  <p className="text-3xl font-bold text-orange-400">{ticketStats.pending_total || 0}</p>
+                  <p className="text-gray-500 text-sm">Pending</p>
+                </div>
+                <div className="bg-dark-500 rounded-lg p-4 text-center">
+                  <p className="text-3xl font-bold text-red-400">{ticketStats.urgent_tickets || 0}</p>
+                  <p className="text-gray-500 text-sm">Urgent</p>
+                </div>
+                <div className="bg-dark-500 rounded-lg p-4 text-center">
+                  <p className="text-3xl font-bold text-yellow-400">{ticketStats.high_priority || 0}</p>
+                  <p className="text-gray-500 text-sm">High Priority</p>
+                </div>
+                <div className="bg-dark-500 rounded-lg p-4 text-center">
+                  <p className="text-3xl font-bold text-blue-400">{ticketStats.tickets_today || 0}</p>
+                  <p className="text-gray-500 text-sm">Today</p>
+                </div>
+                <div className="bg-dark-500 rounded-lg p-4 text-center">
+                  <p className="text-3xl font-bold text-green-400">{ticketStats.resolved || 0}</p>
+                  <p className="text-gray-500 text-sm">Resolved</p>
+                </div>
+              </div>
+            )}
+
+            {/* Recent Tickets */}
+            <h3 className="text-white font-medium mb-3">Recent Tickets</h3>
+            {recentTickets.length > 0 ? (
+              <div className="space-y-2">
+                {recentTickets.map((ticket) => (
+                  <div 
+                    key={ticket.id} 
+                    className="bg-dark-500 rounded-lg p-4 flex items-center justify-between hover:bg-dark-300 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/admin/tickets/${ticket.id}`)}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-primary font-mono text-sm">{ticket.ticket_number}</span>
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                          ticket.priority === 'urgent' ? 'bg-red-500/20 text-red-400' :
+                          ticket.priority === 'high' ? 'bg-orange-500/20 text-orange-400' :
+                          ticket.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                          'bg-gray-500/20 text-gray-400'
+                        }`}>
+                          {ticket.priority}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                          ticket.status === 'open' ? 'bg-blue-500/20 text-blue-400' :
+                          ticket.status === 'in_progress' ? 'bg-purple-500/20 text-purple-400' :
+                          ticket.status === 'waiting_on_customer' ? 'bg-yellow-500/20 text-yellow-400' :
+                          'bg-green-500/20 text-green-400'
+                        }`}>
+                          {ticket.status.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                      <p className="text-white font-medium">{ticket.subject}</p>
+                      <p className="text-gray-500 text-sm">{ticket.category} • {ticket.customer_name}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-gray-500 text-sm">
+                        {new Date(ticket.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-dark-500 rounded-lg p-8 text-center">
+                <Ticket className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-500">No support tickets yet</p>
+                <p className="text-gray-600 text-sm">Customer tickets will appear here</p>
+              </div>
+            )}
+
+            {/* Category Breakdown */}
+            {ticketStats?.top_categories?.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-dark-300">
+                <h3 className="text-white font-medium mb-3">Top Categories (Open Tickets)</h3>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                  {ticketStats.top_categories.map((cat, index) => (
+                    <div key={index} className="bg-dark-500 rounded-lg p-3 text-center">
+                      <p className="text-white font-bold">{cat.count}</p>
+                      <p className="text-gray-500 text-xs truncate">{cat.category}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         </div>
