@@ -62,6 +62,7 @@ class ListingUpdate(BaseModel):
     payment_plan: Optional[PaymentPlan] = None
     tags: Optional[List[str]] = None
     status: Optional[str] = None
+    media: Optional[List[dict]] = None  # Allow updating media array
 
 class ListingInDB(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))

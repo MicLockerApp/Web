@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Query
-from models.offer import OfferCreate, OfferCounter, OfferInDB, OfferResponse
+from models.offer import OfferCreate, OfferCounter, OfferInDB, OfferResponse, NegotiationEntry
 from services.auth import get_current_user
 from database import get_database
 from utils.helpers import get_offer_expiration
@@ -58,6 +58,15 @@ async def create_offer(
     if not listing_image and listing.get("media"):
         listing_image = listing["media"][0].get("url")
     
+    # Create initial negotiation entry
+    initial_entry = NegotiationEntry(
+        user_id=current_user["id"],
+        username=current_user["username"],
+        role="buyer",
+        price=offer_data.offer_price,
+        message=offer_data.message
+    )
+    
     # Create offer
     offer = OfferInDB(
         listing_id=listing["id"],
@@ -70,6 +79,8 @@ async def create_offer(
         seller_username=listing["seller_username"],
         offer_price=offer_data.offer_price,
         message=offer_data.message,
+        negotiation_history=[initial_entry.model_dump()],
+        pending_action_from="seller",  # Seller needs to respond
         expires_at=get_offer_expiration()
     )
     
@@ -98,7 +109,7 @@ async def get_offers(
     
     skip = (page - 1) * limit
     total = await db.offers.count_documents(filter_query)
-    cursor = db.offers.find(filter_query).skip(skip).limit(limit).sort("created_at", -1)
+    cursor = db.offers.find(filter_query).skip(skip).limit(limit).sort("updated_at", -1)
     offers = await cursor.to_list(length=limit)
     
     return {
@@ -138,7 +149,7 @@ async def counter_offer(
     counter_data: OfferCounter,
     current_user: dict = Depends(get_current_user)
 ):
-    """Counter an offer (seller only)"""
+    """Counter an offer - both buyer and seller can counter back and forth"""
     db = get_database()
     
     offer = await db.offers.find_one({"id": offer_id})
@@ -148,17 +159,47 @@ async def counter_offer(
             detail="Offer not found"
         )
     
-    if offer["seller_id"] != current_user["id"]:
+    is_seller = offer["seller_id"] == current_user["id"]
+    is_buyer = offer["buyer_id"] == current_user["id"]
+    
+    if not (is_seller or is_buyer):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the seller can counter this offer"
+            detail="Not authorized to counter this offer"
         )
     
     if offer["status"] not in ["pending", "countered"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot counter this offer"
+            detail="Cannot counter this offer - it's no longer active"
         )
+    
+    # Determine role and check if it's this user's turn
+    role = "seller" if is_seller else "buyer"
+    pending_from = offer.get("pending_action_from", "seller")
+    
+    if pending_from != role:
+        other_party = "buyer" if role == "seller" else "seller"
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Waiting for the {other_party} to respond"
+        )
+    
+    # Create negotiation entry
+    counter_entry = NegotiationEntry(
+        user_id=current_user["id"],
+        username=current_user["username"],
+        role=role,
+        price=counter_data.counter_price,
+        message=counter_data.message
+    )
+    
+    # Get existing history or create new list
+    negotiation_history = offer.get("negotiation_history", [])
+    negotiation_history.append(counter_entry.model_dump())
+    
+    # Switch turn to the other party
+    next_action_from = "buyer" if is_seller else "seller"
     
     await db.offers.update_one(
         {"id": offer_id},
@@ -166,6 +207,8 @@ async def counter_offer(
             "$set": {
                 "counter_price": counter_data.counter_price,
                 "counter_message": counter_data.message,
+                "negotiation_history": negotiation_history,
+                "pending_action_from": next_action_from,
                 "status": "countered",
                 "expires_at": get_offer_expiration(),
                 "updated_at": datetime.utcnow()
@@ -173,14 +216,18 @@ async def counter_offer(
         }
     )
     
-    return {"message": "Counter offer sent", "counter_price": counter_data.counter_price}
+    return {
+        "message": "Counter offer sent",
+        "counter_price": counter_data.counter_price,
+        "pending_action_from": next_action_from
+    }
 
 @router.post("/{offer_id}/accept")
 async def accept_offer(
     offer_id: str,
     current_user: dict = Depends(get_current_user)
 ):
-    """Accept an offer (seller accepts buyer's offer, or buyer accepts counter)"""
+    """Accept an offer - either party can accept the latest price"""
     db = get_database()
     
     offer = await db.offers.find_one({"id": offer_id})
@@ -199,20 +246,40 @@ async def accept_offer(
             detail="Not authorized"
         )
     
-    if offer["status"] == "pending" and is_seller:
-        # Seller accepting buyer's original offer
-        final_price = offer["offer_price"]
-    elif offer["status"] == "countered" and is_buyer:
-        # Buyer accepting seller's counter offer
-        final_price = offer["counter_price"]
-    elif offer["status"] == "countered" and is_seller:
-        # Seller accepting (this means they're confirming the counter)
-        final_price = offer["counter_price"]
-    else:
+    if offer["status"] not in ["pending", "countered"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot accept this offer in its current state"
+            detail="Cannot accept this offer - it's no longer active"
         )
+    
+    role = "seller" if is_seller else "buyer"
+    pending_from = offer.get("pending_action_from", "seller")
+    
+    # User can only accept if it's their turn to respond
+    if pending_from != role:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You can only accept when it's your turn to respond"
+        )
+    
+    # Determine the final price - it's the latest offer from the OTHER party
+    negotiation_history = offer.get("negotiation_history", [])
+    
+    if negotiation_history:
+        # Find the most recent offer from the other party
+        for entry in reversed(negotiation_history):
+            if entry.get("role") != role:
+                final_price = entry.get("price")
+                break
+        else:
+            # If no counter from other party, use original offer price
+            final_price = offer["offer_price"]
+    else:
+        # Backwards compatibility - use counter_price or offer_price
+        if offer["status"] == "countered" and offer.get("counter_price"):
+            final_price = offer["counter_price"]
+        else:
+            final_price = offer["offer_price"]
     
     await db.offers.update_one(
         {"id": offer_id},
@@ -232,7 +299,7 @@ async def decline_offer(
     offer_id: str,
     current_user: dict = Depends(get_current_user)
 ):
-    """Decline an offer"""
+    """Decline an offer - either party can decline"""
     db = get_database()
     
     offer = await db.offers.find_one({"id": offer_id})
@@ -242,16 +309,19 @@ async def decline_offer(
             detail="Offer not found"
         )
     
-    if offer["seller_id"] != current_user["id"]:
+    is_seller = offer["seller_id"] == current_user["id"]
+    is_buyer = offer["buyer_id"] == current_user["id"]
+    
+    if not (is_seller or is_buyer):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the seller can decline offers"
+            detail="Not authorized"
         )
     
     if offer["status"] not in ["pending", "countered"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot decline this offer"
+            detail="Cannot decline this offer - it's no longer active"
         )
     
     await db.offers.update_one(

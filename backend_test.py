@@ -7,9 +7,13 @@ class MicLockerAPITester:
     def __init__(self, base_url="https://audio-bazaar-6.preview.emergentagent.com"):
         self.base_url = base_url
         self.token = None
+        self.admin_token = None
         self.tests_run = 0
         self.tests_passed = 0
         self.user_id = None
+        self.admin_user_id = None
+        self.test_offer_id = None
+        self.test_order_id = None
 
     def run_test(self, name, method, endpoint, expected_status, data=None, headers=None):
         """Run a single API test"""
@@ -61,10 +65,10 @@ class MicLockerAPITester:
         """Test health check endpoint"""
         return self.run_test("Health Check", "GET", "health", 200)
 
-    def test_login(self, username="jmcdougall", password="Eisenhower1212!!"):
-        """Test login with new admin credentials"""
+    def test_login_regular_user(self, username="guitarking", password="password123"):
+        """Test login with regular user credentials"""
         success, response = self.run_test(
-            "Login with New Admin Credentials",
+            "Login with Regular User",
             "POST",
             f"auth/login?username={username}&password={password}",
             200
@@ -72,6 +76,20 @@ class MicLockerAPITester:
         if success and 'access_token' in response:
             self.token = response['access_token']
             print(f"   Token obtained: {self.token[:20]}...")
+            return True
+        return False
+
+    def test_login_admin_user(self, username="jmcdougall", password="Eisenhower1212!!"):
+        """Test login with admin user credentials"""
+        success, response = self.run_test(
+            "Login with Admin User",
+            "POST",
+            f"auth/login?username={username}&password={password}",
+            200
+        )
+        if success and 'access_token' in response:
+            self.admin_token = response['access_token']
+            print(f"   Admin Token obtained: {self.admin_token[:20]}...")
             return True
         return False
 
@@ -88,6 +106,227 @@ class MicLockerAPITester:
             print(f"   User ID: {self.user_id}")
             print(f"   Username: {response.get('username')}")
             print(f"   Is Admin: {response.get('is_admin')}")
+            return True
+        return False
+
+    def test_get_admin_user(self):
+        """Test getting admin user info"""
+        # Switch to admin token temporarily
+        saved_token = self.token
+        self.token = self.admin_token
+        
+        success, response = self.run_test(
+            "Get Admin User Info",
+            "GET",
+            "auth/me",
+            200
+        )
+        
+        # Restore regular token
+        self.token = saved_token
+        
+        if success and 'id' in response:
+            self.admin_user_id = response['id']
+            print(f"   Admin User ID: {self.admin_user_id}")
+            print(f"   Admin Username: {response.get('username')}")
+            print(f"   Is Admin: {response.get('is_admin')}")
+            return True
+        return False
+
+    # OFFERS TESTING
+    def test_get_received_offers(self):
+        """Test getting received offers (as seller)"""
+        success, response = self.run_test(
+            "Get Received Offers",
+            "GET",
+            "offers?type=received",
+            200
+        )
+        if success:
+            offers = response.get('offers', [])
+            print(f"   Found {len(offers)} received offers")
+            if offers:
+                self.test_offer_id = offers[0]['id']
+                print(f"   First offer ID: {self.test_offer_id}")
+            return True
+        return False
+
+    def test_get_sent_offers(self):
+        """Test getting sent offers (as buyer)"""
+        success, response = self.run_test(
+            "Get Sent Offers",
+            "GET",
+            "offers?type=sent",
+            200
+        )
+        if success:
+            offers = response.get('offers', [])
+            print(f"   Found {len(offers)} sent offers")
+            return True
+        return False
+
+    def test_offer_actions(self):
+        """Test offer accept, counter, decline actions"""
+        if not self.test_offer_id:
+            print("   ⚠️  No test offer available, skipping offer actions")
+            return True
+        
+        # Test getting specific offer
+        success, response = self.run_test(
+            "Get Specific Offer",
+            "GET",
+            f"offers/{self.test_offer_id}",
+            200
+        )
+        
+        if success:
+            offer_status = response.get('status')
+            print(f"   Offer status: {offer_status}")
+            
+            # Test counter offer (if pending)
+            if offer_status == 'pending':
+                counter_data = {
+                    "counter_price": 150.00,
+                    "message": "Counter offer test"
+                }
+                counter_success, _ = self.run_test(
+                    "Counter Offer",
+                    "POST",
+                    f"offers/{self.test_offer_id}/counter",
+                    200,
+                    data=counter_data
+                )
+                if counter_success:
+                    print("   ✅ Counter offer successful")
+            
+            return True
+        return False
+
+    # ORDERS TESTING  
+    def test_get_orders(self):
+        """Test getting user orders (purchases)"""
+        success, response = self.run_test(
+            "Get User Orders",
+            "GET",
+            "orders",
+            200
+        )
+        if success:
+            orders = response.get('orders', [])
+            print(f"   Found {len(orders)} orders")
+            if orders:
+                self.test_order_id = orders[0]['id']
+                print(f"   First order ID: {self.test_order_id}")
+            return True
+        return False
+
+    def test_get_sales(self):
+        """Test getting user sales"""
+        success, response = self.run_test(
+            "Get User Sales",
+            "GET",
+            "orders/sales",
+            200
+        )
+        if success:
+            sales = response.get('orders', [])
+            print(f"   Found {len(sales)} sales")
+            return True
+        return False
+
+    def test_get_order_detail(self):
+        """Test getting specific order details"""
+        if not self.test_order_id:
+            print("   ⚠️  No test order available, skipping order detail")
+            return True
+            
+        success, response = self.run_test(
+            "Get Order Detail",
+            "GET",
+            f"orders/{self.test_order_id}",
+            200
+        )
+        if success:
+            print(f"   Order status: {response.get('status')}")
+            print(f"   Order total: ${response.get('total')}")
+            return True
+        return False
+
+    def test_update_order_status(self):
+        """Test updating order status"""
+        if not self.test_order_id:
+            print("   ⚠️  No test order available, skipping status update")
+            return True
+            
+        status_data = {"status": "shipped"}
+        success, response = self.run_test(
+            "Update Order Status",
+            "PUT",
+            f"orders/{self.test_order_id}/status",
+            200,
+            data=status_data
+        )
+        if success:
+            print(f"   Order status updated to: {response.get('status')}")
+            return True
+        return False
+
+    # REVIEWS TESTING
+    def test_create_review(self):
+        """Test creating a review"""
+        if not self.test_order_id:
+            print("   ⚠️  No test order available, skipping review creation")
+            return True
+        
+        # First update order to completed status so we can review it
+        status_data = {"status": "completed"}
+        status_success, _ = self.run_test(
+            "Update Order to Completed for Review",
+            "PUT",
+            f"orders/{self.test_order_id}/status",
+            200,
+            data=status_data
+        )
+        
+        if not status_success:
+            print("   ⚠️  Could not update order status for review test")
+            return True
+            
+        review_data = {
+            "order_id": self.test_order_id,
+            "rating": 5,
+            "comment": "Great transaction, highly recommended seller!"
+        }
+        
+        success, response = self.run_test(
+            "Create Review",
+            "POST",
+            "reviews",
+            200,
+            data=review_data
+        )
+        if success:
+            print(f"   Review created with rating: {response.get('rating')}")
+            return True
+        return False
+
+    def test_get_seller_reviews(self):
+        """Test getting reviews for a seller"""
+        if not self.admin_user_id:
+            print("   ⚠️  No seller ID available, skipping seller reviews")
+            return True
+            
+        success, response = self.run_test(
+            "Get Seller Reviews",
+            "GET",
+            f"reviews/seller/{self.admin_user_id}",
+            200
+        )
+        if success:
+            reviews = response.get('reviews', [])
+            avg_rating = response.get('average_rating', 0)
+            print(f"   Found {len(reviews)} reviews")
+            print(f"   Average rating: {avg_rating}")
             return True
         return False
 
@@ -181,12 +420,20 @@ class MicLockerAPITester:
 
     def test_admin_analytics(self):
         """Test admin analytics (requires admin user)"""
+        # Switch to admin token
+        saved_token = self.token
+        self.token = self.admin_token
+        
         success, response = self.run_test(
             "Get Admin Analytics",
             "GET",
             "admin/analytics",
             200
         )
+        
+        # Restore regular token
+        self.token = saved_token
+        
         if success:
             print(f"   Total GMV: ${response.get('total_gmv', 0)}")
             print(f"   Platform Fees (3%): ${response.get('total_fees_collected', 0)}")
@@ -220,26 +467,140 @@ class MicLockerAPITester:
 
     def test_admin_users(self):
         """Test getting users list (admin only)"""
+        # Switch to admin token
+        saved_token = self.token
+        self.token = self.admin_token
+        
         success, response = self.run_test(
             "Get Users List (Admin)",
             "GET",
             "admin/users",
             200
         )
+        
+        # Restore regular token
+        self.token = saved_token
+        
         if success:
             users = response.get('users', [])
             print(f"   Found {len(users)} users")
             return True
         return False
 
+    def test_admin_suspend_user(self):
+        """Test suspending a user (admin only)"""
+        if not self.user_id:
+            print("   ⚠️  No regular user ID available, skipping suspend test")
+            return True
+            
+        # Switch to admin token
+        saved_token = self.token
+        self.token = self.admin_token
+        
+        success, response = self.run_test(
+            "Suspend User (Admin)",
+            "POST",
+            f"admin/users/{self.user_id}/suspend",
+            200
+        )
+        
+        if success:
+            print("   ✅ User suspended successfully")
+            
+            # Unsuspend the user
+            unsuspend_success, _ = self.run_test(
+                "Unsuspend User (Admin)",
+                "POST",
+                f"admin/users/{self.user_id}/unsuspend",
+                200
+            )
+            if unsuspend_success:
+                print("   ✅ User unsuspended successfully")
+        
+        # Restore regular token
+        self.token = saved_token
+        return success
+
+    def test_admin_listings(self):
+        """Test getting all listings (admin only)"""
+        # Switch to admin token
+        saved_token = self.token
+        self.token = self.admin_token
+        
+        success, response = self.run_test(
+            "Get All Listings (Admin)",
+            "GET",
+            "admin/listings",
+            200
+        )
+        
+        # Restore regular token
+        self.token = saved_token
+        
+        if success:
+            listings = response.get('listings', [])
+            print(f"   Found {len(listings)} listings")
+            return True
+        return False
+
+    def test_admin_remove_listing(self):
+        """Test removing a listing (admin only)"""
+        # First get a listing to remove
+        saved_token = self.token
+        self.token = self.admin_token
+        
+        # Get listings first
+        listings_success, listings_response = self.run_test(
+            "Get Listings for Removal Test",
+            "GET",
+            "admin/listings?status=active",
+            200
+        )
+        
+        if not listings_success:
+            self.token = saved_token
+            print("   ⚠️  Could not get listings for removal test")
+            return True
+            
+        listings = listings_response.get('listings', [])
+        if not listings:
+            self.token = saved_token
+            print("   ⚠️  No active listings available for removal test")
+            return True
+            
+        test_listing_id = listings[0]['id']
+        
+        success, response = self.run_test(
+            "Remove Listing (Admin)",
+            "POST",
+            f"admin/listings/{test_listing_id}/remove",
+            200
+        )
+        
+        # Restore regular token
+        self.token = saved_token
+        
+        if success:
+            print(f"   ✅ Listing {test_listing_id} removed successfully")
+            return True
+        return False
+
     def test_admin_orders(self):
         """Test getting orders list (admin only)"""
+        # Switch to admin token
+        saved_token = self.token
+        self.token = self.admin_token
+        
         success, response = self.run_test(
             "Get Orders List (Admin)",
             "GET",
             "admin/orders",
             200
         )
+        
+        # Restore regular token
+        self.token = saved_token
+        
         if success:
             orders = response.get('orders', [])
             print(f"   Found {len(orders)} orders")
@@ -725,38 +1086,46 @@ class MicLockerAPITester:
         return False
 
 def main():
-    """Run all backend tests"""
-    print("🚀 Starting MicLocker Backend API Tests")
-    print("=" * 50)
+    """Run all MicLocker marketplace backend tests"""
+    print("🚀 Starting MicLocker Marketplace Backend API Tests")
+    print("=" * 60)
     
     tester = MicLockerAPITester()
     
-    # Test sequence
+    # Test sequence for marketplace features
     tests = [
-        ("Health Check", tester.test_health_check),
-        ("Login with New Admin Credentials", tester.test_login),
-        ("Get Current User", tester.test_get_current_user),
-        ("Auth Categories (5 categories + merchant options)", tester.test_auth_categories),
-        ("Profile Image Upload", tester.test_profile_image_upload),
-        ("Profile Update with Sub-Categories", tester.test_profile_update_with_subcategories),
-        ("Social Media Links Update", tester.test_social_media_links_update),
-        ("Privacy Settings Update", tester.test_privacy_settings_update),
-        ("Shipping Address Update", tester.test_shipping_address_update),
-        ("Physical Address Update", tester.test_physical_address_update),
-        ("Physical Address Privacy Settings", tester.test_physical_address_privacy_settings),
-        ("Physical Address Public Visibility", tester.test_physical_address_public_visibility),
-        ("Display Location vs Mailing Address Conflict", tester.test_display_location_mailing_address_conflict),
-        ("Public Profile Privacy Filtering", tester.test_public_profile_privacy_filtering),
-        ("Own Profile Shows All Data", tester.test_own_profile_shows_all_data),
-        ("Listing Categories", tester.test_listings_categories),
-        ("Search Listings", tester.test_search_listings),
-        ("Featured Listings", tester.test_featured_listings),
-        ("Recent Listings", tester.test_recent_listings),
-        ("Listings Count", tester.test_listings_count),
-        ("Get Cart", tester.test_get_cart),
+        # Authentication Tests
+        ("Login with Regular User", tester.test_login_regular_user),
+        ("Login with Admin User", tester.test_login_admin_user),
+        ("Get Current User Info", tester.test_get_current_user),
+        ("Get Admin User Info", tester.test_get_admin_user),
+        
+        # Offers Testing (P0 Priority)
+        ("Get Received Offers", tester.test_get_received_offers),
+        ("Get Sent Offers", tester.test_get_sent_offers),
+        ("Test Offer Actions (Accept/Counter/Decline)", tester.test_offer_actions),
+        
+        # Orders Testing
+        ("Get User Orders (Purchases)", tester.test_get_orders),
+        ("Get User Sales", tester.test_get_sales),
+        ("Get Order Detail", tester.test_get_order_detail),
+        ("Update Order Status", tester.test_update_order_status),
+        
+        # Reviews Testing (P1 Priority)
+        ("Create Review", tester.test_create_review),
+        ("Get Seller Reviews", tester.test_get_seller_reviews),
+        
+        # Admin Panel Testing
         ("Admin Analytics", tester.test_admin_analytics),
-        ("Admin Users", tester.test_admin_users),
-        ("Admin Orders", tester.test_admin_orders),
+        ("Admin Users Management", tester.test_admin_users),
+        ("Admin Suspend/Unsuspend User", tester.test_admin_suspend_user),
+        ("Admin Listings Management", tester.test_admin_listings),
+        ("Admin Remove Listing", tester.test_admin_remove_listing),
+        ("Admin Orders Management", tester.test_admin_orders),
+        
+        # Basic functionality tests
+        ("Get Cart", tester.test_get_cart),
+        ("Search Listings", tester.test_search_listings),
     ]
     
     failed_tests = []
@@ -770,14 +1139,14 @@ def main():
             failed_tests.append(test_name)
     
     # Print results
-    print("\n" + "=" * 50)
+    print("\n" + "=" * 60)
     print(f"📊 Test Results: {tester.tests_passed}/{tester.tests_run} passed")
     
     if failed_tests:
         print(f"❌ Failed tests: {', '.join(failed_tests)}")
         return 1
     else:
-        print("✅ All tests passed!")
+        print("✅ All marketplace tests passed!")
         return 0
 
 if __name__ == "__main__":

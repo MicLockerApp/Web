@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, User, Menu, X, MessageSquare, LogOut, Package, Edit, Heart, Sun, Moon } from 'lucide-react';
+import { Search, ShoppingCart, User, Menu, X, MessageSquare, LogOut, Package, Edit, Heart, Sun, Moon, Tag, ShoppingBag, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useTheme } from '../context/ThemeContext';
@@ -330,12 +330,28 @@ const Navbar = () => {
                         Edit Profile
                       </Link>
                       <Link
-                        to="/my-listings"
+                        to="/dashboard"
                         className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-gray-300 hover:bg-dark-300' : 'text-gray-700 hover:bg-gray-50'}`}
                         onClick={() => setUserMenuOpen(false)}
                       >
-                        <Package className="w-4 h-4" />
-                        My Listings
+                        <LayoutDashboard className="w-4 h-4" />
+                        Dashboard
+                      </Link>
+                      <Link
+                        to="/orders"
+                        className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-gray-300 hover:bg-dark-300' : 'text-gray-700 hover:bg-gray-50'}`}
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <ShoppingBag className="w-4 h-4" />
+                        Orders
+                      </Link>
+                      <Link
+                        to="/offers"
+                        className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-gray-300 hover:bg-dark-300' : 'text-gray-700 hover:bg-gray-50'}`}
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <Tag className="w-4 h-4" />
+                        Offers
                       </Link>
                       <Link
                         to="/favorites"
