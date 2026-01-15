@@ -301,6 +301,20 @@ async def add_to_favorites(
         {"$addToSet": {"favorites": listing_id}}
     )
     
+    # Emit analytics event for favoriting
+    emit_event(
+        EventTypes.LISTING_FAVORITED,
+        actor_type=ActorType.BUYER,
+        actor_id=current_user["id"],
+        actor_username=current_user["username"],
+        listing_id=listing_id,
+        target_user_id=listing["seller_id"],
+        metadata={
+            "listing_price": listing.get("price"),
+            "category": listing.get("category")
+        }
+    )
+    
     return {"message": "Added to favorites", "listing_id": listing_id}
 
 @router.delete("/favorites/{listing_id}")
