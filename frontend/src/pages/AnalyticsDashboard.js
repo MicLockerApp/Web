@@ -55,13 +55,13 @@ const AnalyticsDashboard = () => {
     
     try {
       const [realtime, revenue, offers, search, health, safety, terms] = await Promise.all([
-        api.get('/api/analytics/realtime'),
-        api.get(`/api/analytics/revenue?start_date=${start_date}&end_date=${end_date}`),
-        api.get(`/api/analytics/offer-funnel?start_date=${start_date}&end_date=${end_date}`),
-        api.get(`/api/analytics/search-funnel?start_date=${start_date}&end_date=${end_date}`),
-        api.get(`/api/analytics/marketplace-health?start_date=${start_date}&end_date=${end_date}`),
-        api.get(`/api/analytics/trust-safety?start_date=${start_date}&end_date=${end_date}`),
-        api.get(`/api/analytics/search-terms?start_date=${start_date}&end_date=${end_date}&limit=10`)
+        api.get('/analytics/realtime'),
+        api.get(`/analytics/revenue?start_date=${start_date}&end_date=${end_date}`),
+        api.get(`/analytics/offer-funnel?start_date=${start_date}&end_date=${end_date}`),
+        api.get(`/analytics/search-funnel?start_date=${start_date}&end_date=${end_date}`),
+        api.get(`/analytics/marketplace-health?start_date=${start_date}&end_date=${end_date}`),
+        api.get(`/analytics/trust-safety?start_date=${start_date}&end_date=${end_date}`),
+        api.get(`/analytics/search-terms?start_date=${start_date}&end_date=${end_date}&limit=10`)
       ]);
       
       setRealtimeMetrics(realtime.data);
