@@ -111,6 +111,8 @@ function AppContent() {
               } />
             </Routes>
           </Layout>
+          {/* AI Chat Widget - Stateless UI, can be replaced with Crisp */}
+          <ChatWidget />
         </CartProvider>
       </AuthProvider>
     </Router>
