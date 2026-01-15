@@ -4,6 +4,7 @@ import { Tag, Clock, Check, X, MessageSquare, DollarSign, ArrowRight, Send, Refr
 import { useAuth } from '../context/AuthContext';
 import { offersAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
+import analytics from '../services/analytics';
 
 const OffersPage = () => {
   const navigate = useNavigate();
