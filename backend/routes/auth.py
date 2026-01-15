@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Request
 from datetime import timedelta, datetime
 from models.user import (
     UserCreate, UserResponse, UserInDB, Token,
@@ -10,6 +10,7 @@ from services.auth import (
 )
 from database import get_database
 from config import settings
+from analytics.services.event_emitter import emit_event, EventTypes, ActorType
 import random
 import string
 import logging
