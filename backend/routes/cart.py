@@ -102,6 +102,22 @@ async def add_to_cart(
     
     await db.cart_items.insert_one(cart_item.model_dump())
     
+    # Emit analytics event for adding to cart
+    emit_event(
+        EventTypes.CART_ITEM_ADDED,
+        actor_type=ActorType.BUYER,
+        actor_id=current_user["id"],
+        actor_username=current_user["username"],
+        listing_id=listing["id"],
+        target_user_id=listing["seller_id"],
+        metadata={
+            "listing_price": listing["price"],
+            "quantity": item_data.quantity,
+            "category": listing.get("category"),
+            "listing_title": listing["title"]
+        }
+    )
+    
     return {"message": "Item added to cart", "item": cart_item.model_dump()}
 
 @router.put("/items/{item_id}")
