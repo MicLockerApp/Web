@@ -446,4 +446,19 @@ async def withdraw_offer(
         }
     )
     
+    # Emit analytics event for offer withdrawal
+    emit_event(
+        EventTypes.OFFER_WITHDRAWN,
+        actor_type=ActorType.BUYER,
+        actor_id=current_user["id"],
+        actor_username=current_user["username"],
+        offer_id=offer_id,
+        listing_id=offer["listing_id"],
+        target_user_id=offer["seller_id"],
+        metadata={
+            "offer_price": offer["offer_price"],
+            "listing_price": offer["listing_price"]
+        }
+    )
+    
     return {"message": "Offer withdrawn"}
