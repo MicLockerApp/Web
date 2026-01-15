@@ -43,6 +43,11 @@ const Layout = ({ children }) => {
   const { isDark } = useTheme();
   const isJobsPage = location.pathname === '/careers/jobs';
 
+  // Track page views
+  useEffect(() => {
+    analytics.pageView(location.pathname, { search: location.search });
+  }, [location.pathname, location.search]);
+
   if (isJobsPage) {
     // Jobs page has its own layout
     return <>{children}</>;
