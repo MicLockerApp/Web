@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     payment_processing_percent: float = float(os.getenv("PAYMENT_PROCESSING_PERCENT", "3.19"))
     payment_processing_fixed: float = float(os.getenv("PAYMENT_PROCESSING_FIXED", "0.49"))
     
+    # AI Chatbot (Emergent LLM Key)
+    emergent_llm_key: Optional[str] = os.getenv("EMERGENT_LLM_KEY") or None
+    
     # File Upload Restrictions
     max_image_size_mb: int = 10
     max_video_size_mb: int = 100
