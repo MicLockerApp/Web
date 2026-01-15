@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import ChatWidget from './components/ChatWidget';
+import analytics from './services/analytics';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -24,6 +26,7 @@ import CreateListingPage from './pages/CreateListingPage';
 import EditListingPage from './pages/EditListingPage';
 import MessagesPage from './pages/MessagesPage';
 import AdminPage from './pages/AdminPage';
+import AnalyticsDashboard from './pages/AnalyticsDashboard';
 import ReturnPolicyPage from './pages/ReturnPolicyPage';
 import CareersPage from './pages/CareersPage';
 import JobSearchPage from './pages/JobSearchPage';
@@ -31,12 +34,21 @@ import AboutPage from './pages/AboutPage';
 import OffersPage from './pages/OffersPage';
 import OrdersPage from './pages/OrdersPage';
 import OrderDetailPage from './pages/OrderDetailPage';
+import ContactSupportPage from './pages/ContactSupportPage';
+
+// Initialize analytics on app load
+analytics.init();
 
 // Layout component that conditionally shows navbar/footer
 const Layout = ({ children }) => {
   const location = useLocation();
   const { isDark } = useTheme();
   const isJobsPage = location.pathname === '/careers/jobs';
+
+  // Track page views
+  useEffect(() => {
+    analytics.pageView(location.pathname, { search: location.search });
+  }, [location.pathname, location.search]);
 
   if (isJobsPage) {
     // Jobs page has its own layout
@@ -82,10 +94,12 @@ function AppContent() {
               <Route path="/orders/:id" element={<OrderDetailPage />} />
               <Route path="/messages" element={<MessagesPage />} />
               <Route path="/admin" element={<AdminPage />} />
+              <Route path="/admin/analytics" element={<AnalyticsDashboard />} />
               <Route path="/returns" element={<ReturnPolicyPage />} />
               <Route path="/careers" element={<CareersPage />} />
               <Route path="/careers/jobs" element={<JobSearchPage />} />
               <Route path="/about" element={<AboutPage />} />
+              <Route path="/contact-support" element={<ContactSupportPage />} />
               {/* Fallback */}
               <Route path="*" element={
                 <div className="min-h-screen flex items-center justify-center">
@@ -97,6 +111,8 @@ function AppContent() {
               } />
             </Routes>
           </Layout>
+          {/* AI Chat Widget - Stateless UI, can be replaced with Crisp */}
+          <ChatWidget />
         </CartProvider>
       </AuthProvider>
     </Router>

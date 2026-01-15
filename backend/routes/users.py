@@ -4,6 +4,7 @@ from services.auth import get_current_user, get_current_user_optional
 from services.storage import storage_service
 from database import get_database
 from utils.helpers import serialize_docs, serialize_doc
+from analytics.services.event_emitter import emit_event, EventTypes, ActorType
 from datetime import datetime
 from typing import Optional
 
@@ -300,6 +301,20 @@ async def add_to_favorites(
         {"$addToSet": {"favorites": listing_id}}
     )
     
+    # Emit analytics event for favoriting
+    emit_event(
+        EventTypes.LISTING_FAVORITED,
+        actor_type=ActorType.BUYER,
+        actor_id=current_user["id"],
+        actor_username=current_user["username"],
+        listing_id=listing_id,
+        target_user_id=listing["seller_id"],
+        metadata={
+            "listing_price": listing.get("price"),
+            "category": listing.get("category")
+        }
+    )
+    
     return {"message": "Added to favorites", "listing_id": listing_id}
 
 @router.delete("/favorites/{listing_id}")
@@ -313,6 +328,16 @@ async def remove_from_favorites(
     await db.users.update_one(
         {"id": current_user["id"]},
         {"$pull": {"favorites": listing_id}}
+    )
+    
+    # Emit analytics event for unfavoriting
+    emit_event(
+        EventTypes.LISTING_UNFAVORITED,
+        actor_type=ActorType.BUYER,
+        actor_id=current_user["id"],
+        actor_username=current_user["username"],
+        listing_id=listing_id,
+        metadata={}
     )
     
     return {"message": "Removed from favorites", "listing_id": listing_id}

@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { messagesAPI, usersAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
+import analytics from '../services/analytics';
 
 const MessagesPage = () => {
   const navigate = useNavigate();
@@ -100,6 +101,9 @@ const MessagesPage = () => {
       const recipientId = selectedThread?.other_user_id || toUserId;
       await messagesAPI.send(recipientId, newMessage.trim());
       setNewMessage('');
+      
+      // Track message sent
+      analytics.messageSent(selectedThread?.id || 'new', recipientId);
       
       if (selectedThread) {
         const response = await messagesAPI.getThread(selectedThread.id);

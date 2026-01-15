@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { ordersAPI, offersAPI, listingsAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { Check, CreditCard, Lock, Tag, ArrowLeft, Truck, Shield } from 'lucide-react';
+import analytics from '../services/analytics';
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
@@ -69,6 +70,10 @@ const CheckoutPage = () => {
     setLoading(true);
     setError('');
 
+    // Track checkout started
+    const totals = getCheckoutTotals();
+    analytics.checkoutStarted(totals.total, offerId ? 1 : cart.items?.length || 0, !!offerId);
+
     try {
       const orderData = {
         shipping_address: {
@@ -98,6 +103,12 @@ const CheckoutPage = () => {
       
       setOrderId(response.data.id);
       setSuccess(true);
+      
+      // Track purchase completed
+      const items = offerId 
+        ? [{ id: offerData.listing_id, price: offerData.final_price }]
+        : (cart.items || []).map(item => ({ id: item.listing_id, price: item.listing_price }));
+      analytics.purchaseCompleted(response.data.id, totals.total, items);
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to place order');
     } finally {

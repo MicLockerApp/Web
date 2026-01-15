@@ -14,6 +14,13 @@ from routes import (
 )
 from routes.search import router as search_router
 
+# Analytics imports
+from analytics.routes import analytics_router, events_router
+from analytics.tasks import start_scheduler, stop_scheduler, run_initial_aggregation
+
+# Chatbot imports
+from chatbot.routes import chatbot_router
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -31,16 +38,78 @@ async def lifespan(app: FastAPI):
     
     await connect_to_mongo()
     
+    # Create analytics indexes
+    await create_analytics_indexes()
+    
     # Run seed data if in development
     if settings.environment == "development":
         from seed_data import seed_database
         await seed_database()
     
+    # Start analytics background scheduler
+    start_scheduler()
+    logger.info("Analytics scheduler started")
+    
+    # Run initial aggregation if needed (in background)
+    try:
+        await run_initial_aggregation()
+    except Exception as e:
+        logger.warning(f"Initial aggregation skipped: {e}")
+    
     yield
     
     # Shutdown
+    stop_scheduler()
     await close_mongo_connection()
     logger.info("Application shutdown complete")
+
+
+async def create_analytics_indexes():
+    """Create indexes for analytics collections"""
+    from database import get_database
+    db = get_database()
+    
+    try:
+        # Raw events collection indexes
+        await db.analytics_events.create_index("event_type")
+        await db.analytics_events.create_index("actor_id")
+        await db.analytics_events.create_index("listing_id")
+        await db.analytics_events.create_index("order_id")
+        await db.analytics_events.create_index("session_id")
+        await db.analytics_events.create_index([("event_type", 1), ("timestamp", -1)])
+        
+        # Try to create TTL index, drop existing timestamp index if needed
+        try:
+            await db.analytics_events.drop_index("timestamp_1")
+        except:
+            pass
+        
+        try:
+            await db.analytics_events.create_index(
+                "timestamp",
+                expireAfterSeconds=90 * 24 * 60 * 60,  # 90 days
+                name="ttl_cleanup"
+            )
+        except Exception as e:
+            logger.warning(f"Could not create TTL index: {e}")
+        
+        # Rollups collection indexes
+        await db.analytics_rollups.create_index("rollup_type")
+        await db.analytics_rollups.create_index("period")
+        await db.analytics_rollups.create_index("period_start")
+        
+        try:
+            await db.analytics_rollups.create_index(
+                [("rollup_type", 1), ("period", 1), ("period_start", 1)], 
+                unique=True
+            )
+        except:
+            pass
+        
+        logger.info("Analytics indexes created")
+    except Exception as e:
+        logger.warning(f"Error creating analytics indexes: {e}")
+
 
 app = FastAPI(
     title="MicLocker API",
@@ -71,6 +140,13 @@ app.include_router(admin_router, prefix="/api")
 app.include_router(files_router, prefix="/api")
 app.include_router(search_router, prefix="/api")
 
+# Analytics routes
+app.include_router(analytics_router, prefix="/api")
+app.include_router(events_router, prefix="/api")
+
+# Chatbot routes
+app.include_router(chatbot_router, prefix="/api")
+
 # Health check
 @app.get("/api/health")
 async def health_check():
@@ -78,7 +154,8 @@ async def health_check():
         "status": "healthy",
         "app": settings.app_name,
         "environment": settings.environment,
-        "storage": "S3" if settings.use_s3 else "Local"
+        "storage": "S3" if settings.use_s3 else "Local",
+        "analytics": "enabled"
     }
 
 @app.get("/")

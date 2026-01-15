@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Request
 from datetime import timedelta, datetime
 from models.user import (
     UserCreate, UserResponse, UserInDB, Token,
@@ -10,6 +10,7 @@ from services.auth import (
 )
 from database import get_database
 from config import settings
+from analytics.services.event_emitter import emit_event, EventTypes, ActorType
 import random
 import string
 import logging
@@ -64,6 +65,20 @@ async def register(user_data: UserCreate):
     
     await db.users.insert_one(user.model_dump())
     
+    # Emit analytics event for user registration
+    emit_event(
+        EventTypes.USER_REGISTERED,
+        actor_type=ActorType.BUYER,
+        actor_id=user.id,
+        actor_username=user.username,
+        metadata={
+            "category": None,  # Will be set in complete-profile
+            "has_lifetime_free_fees": has_lifetime_free_fees,
+            "user_number": user_count + 1,
+            "is_first_user": is_first_user
+        }
+    )
+    
     return UserResponse(**user.model_dump())
 
 @router.post("/login", response_model=Token)
@@ -92,6 +107,18 @@ async def login(username: str, password: str):
     access_token = create_access_token(
         data={"sub": user["id"]},
         expires_delta=timedelta(minutes=settings.access_token_expire_minutes)
+    )
+    
+    # Emit analytics event for user login
+    emit_event(
+        EventTypes.USER_LOGGED_IN,
+        actor_type=ActorType.BUYER if not user.get("is_admin") else ActorType.ADMIN,
+        actor_id=user["id"],
+        actor_username=user.get("username"),
+        metadata={
+            "category": user.get("category"),
+            "has_lifetime_free_fees": user.get("has_lifetime_free_fees", False)
+        }
     )
     
     return Token(access_token=access_token, token_type="bearer")

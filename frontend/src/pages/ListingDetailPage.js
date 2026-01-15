@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import StarRating from '../components/StarRating';
+import analytics from '../services/analytics';
 
 const ListingDetailPage = () => {
   const { id } = useParams();
@@ -30,6 +31,15 @@ const ListingDetailPage = () => {
       try {
         const response = await listingsAPI.getById(id);
         setListing(response.data);
+        
+        // Track listing view in analytics
+        analytics.listingViewed(
+          response.data.id,
+          response.data.price,
+          response.data.category,
+          response.data.seller_id,
+          'direct'
+        );
         
         // Check if listing is favorited
         if (isAuthenticated) {
@@ -62,10 +72,12 @@ const ListingDetailPage = () => {
         await usersAPI.removeFavorite(listing.id);
         setIsFavorited(false);
         setMessage({ type: 'success', text: 'Removed from favorites' });
+        analytics.listingUnfavorited(listing.id);
       } else {
         await usersAPI.addFavorite(listing.id);
         setIsFavorited(true);
         setMessage({ type: 'success', text: 'Added to favorites!' });
+        analytics.listingFavorited(listing.id);
       }
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     } catch (error) {
@@ -79,6 +91,9 @@ const ListingDetailPage = () => {
     const url = window.location.href;
     const title = listing?.title || 'Check out this listing on MicLocker';
     const text = `${title} - $${listing?.price?.toLocaleString()} on MicLocker`;
+    
+    // Track share event
+    analytics.listingShared(listing.id, platform);
     
     switch (platform) {
       case 'copy':
@@ -113,6 +128,9 @@ const ListingDetailPage = () => {
       await addItem(listing.id);
       setMessage({ type: 'success', text: 'Added to cart!' });
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+      
+      // Track add to cart event
+      analytics.addToCart(listing.id, listing.price, 1, listing.category, false);
     } catch (error) {
       setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to add to cart' });
     }

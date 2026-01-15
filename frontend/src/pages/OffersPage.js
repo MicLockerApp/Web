@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Tag, Clock, Check, X, MessageSquare, DollarSign, ArrowRight, Send, RefreshCw } from 'lucide-react';
+import { Tag, Clock, Check, X, MessageSquare, DollarSign, ArrowRight, Send, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { offersAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
+import analytics from '../services/analytics';
 
 const OffersPage = () => {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ const OffersPage = () => {
   const [counterModal, setCounterModal] = useState(null);
   const [counterPrice, setCounterPrice] = useState('');
   const [counterMessage, setCounterMessage] = useState('');
+  const [expandedOffer, setExpandedOffer] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
 
   useEffect(() => {
@@ -40,8 +42,15 @@ const OffersPage = () => {
   const handleAccept = async (offerId) => {
     setActionLoading(offerId);
     try {
+      const offer = offers.find(o => o.id === offerId);
       await offersAPI.accept(offerId);
       setMessage({ type: 'success', text: 'Offer accepted! The buyer can now complete the purchase.' });
+      
+      // Track offer accepted
+      if (offer) {
+        analytics.offerAccepted(offerId, offer.final_price || offer.counter_price || offer.offer_price);
+      }
+      
       fetchOffers();
     } catch (error) {
       setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to accept offer' });
@@ -100,6 +109,14 @@ const OffersPage = () => {
     navigate(`/checkout?offer=${offerId}`);
   };
 
+  const openCounterModal = (offer) => {
+    // Get the latest price to suggest
+    const latestPrice = offer.counter_price || offer.offer_price;
+    setCounterModal(offer);
+    setCounterPrice(latestPrice.toString());
+    setCounterMessage('');
+  };
+
   const getStatusBadge = (status) => {
     const styles = {
       pending: 'bg-yellow-500/20 text-yellow-400',
@@ -133,6 +150,18 @@ const OffersPage = () => {
     return `${Math.floor(diff / 86400)}d ago`;
   };
 
+  const isMyTurn = (offer) => {
+    const myRole = offer.seller_id === user?.id ? 'seller' : 'buyer';
+    return offer.pending_action_from === myRole;
+  };
+
+  const getLatestPrice = (offer) => {
+    if (offer.negotiation_history?.length > 0) {
+      return offer.negotiation_history[offer.negotiation_history.length - 1].price;
+    }
+    return offer.counter_price || offer.offer_price;
+  };
+
   return (
     <div className="min-h-screen" data-testid="offers-page">
       <div className="max-w-4xl mx-auto px-4 py-8">
@@ -159,7 +188,7 @@ const OffersPage = () => {
             }`}
           >
             <DollarSign className="w-4 h-4" />
-            Received ({offers.filter(o => o.seller_id === user?.id).length || 0})
+            Received
           </button>
           <button
             onClick={() => setActiveTab('sent')}
@@ -178,145 +207,183 @@ const OffersPage = () => {
         ) : offers.length > 0 ? (
           <div className="space-y-4">
             {offers.map(offer => (
-              <div key={offer.id} className="bg-dark-400 rounded-xl p-4 md:p-6" data-testid={`offer-${offer.id}`}>
-                <div className="flex flex-col md:flex-row gap-4">
-                  {/* Image */}
-                  <Link to={`/listing/${offer.listing_id}`} className="flex-shrink-0">
-                    <img
-                      src={offer.listing_image || 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=200'}
-                      alt={offer.listing_title}
-                      className="w-full md:w-32 h-32 object-cover rounded-lg"
-                    />
-                  </Link>
+              <div key={offer.id} className="bg-dark-400 rounded-xl overflow-hidden" data-testid={`offer-${offer.id}`}>
+                <div className="p-4 md:p-6">
+                  <div className="flex flex-col md:flex-row gap-4">
+                    {/* Image */}
+                    <Link to={`/listing/${offer.listing_id}`} className="flex-shrink-0">
+                      <img
+                        src={offer.listing_image || 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=200'}
+                        alt={offer.listing_title}
+                        className="w-full md:w-32 h-32 object-cover rounded-lg"
+                      />
+                    </Link>
 
-                  {/* Details */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <Link to={`/listing/${offer.listing_id}`} className="text-white font-medium hover:text-primary truncate">
-                        {offer.listing_title}
-                      </Link>
-                      <span className={`badge flex items-center gap-1 ${getStatusBadge(offer.status)}`}>
-                        {getStatusIcon(offer.status)}
-                        {offer.status}
-                      </span>
-                    </div>
-
-                    <div className="flex flex-wrap gap-4 text-sm mb-3">
-                      <span className="text-gray-400">List price: <span className="text-white">${offer.listing_price?.toLocaleString()}</span></span>
-                      <span className="text-gray-400">Offer: <span className="text-primary font-bold">${offer.offer_price?.toLocaleString()}</span></span>
-                      {offer.counter_price && (
-                        <span className="text-gray-400">Counter: <span className="text-yellow-400 font-bold">${offer.counter_price?.toLocaleString()}</span></span>
-                      )}
-                      {offer.final_price && (
-                        <span className="text-gray-400">Final: <span className="text-green-400 font-bold">${offer.final_price?.toLocaleString()}</span></span>
-                      )}
-                    </div>
-
-                    <p className="text-gray-500 text-sm mb-3">
-                      {activeTab === 'received' ? `From: ${offer.buyer_username}` : `To: ${offer.seller_username}`} · {formatTimeAgo(offer.created_at)}
-                    </p>
-
-                    {offer.message && (
-                      <div className="bg-dark-300 rounded-lg p-3 mb-3">
-                        <p className="text-gray-300 text-sm">&quot;{offer.message}&quot;</p>
+                    {/* Details */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <Link to={`/listing/${offer.listing_id}`} className="text-white font-medium hover:text-primary truncate">
+                          {offer.listing_title}
+                        </Link>
+                        <div className="flex items-center gap-2">
+                          {isMyTurn(offer) && offer.status !== 'accepted' && (
+                            <span className="badge bg-primary/20 text-primary text-xs animate-pulse">
+                              Your turn
+                            </span>
+                          )}
+                          <span className={`badge flex items-center gap-1 ${getStatusBadge(offer.status)}`}>
+                            {getStatusIcon(offer.status)}
+                            {offer.status}
+                          </span>
+                        </div>
                       </div>
-                    )}
 
-                    {offer.counter_message && offer.status === 'countered' && (
-                      <div className="bg-dark-300 rounded-lg p-3 mb-3 border-l-2 border-yellow-400">
-                        <p className="text-yellow-400 text-xs mb-1">Counter message:</p>
-                        <p className="text-gray-300 text-sm">&quot;{offer.counter_message}&quot;</p>
+                      <div className="flex flex-wrap gap-4 text-sm mb-3">
+                        <span className="text-gray-400">List price: <span className="text-white">${offer.listing_price?.toLocaleString()}</span></span>
+                        <span className="text-gray-400">Initial offer: <span className="text-primary font-bold">${offer.offer_price?.toLocaleString()}</span></span>
+                        {offer.counter_price && (
+                          <span className="text-gray-400">Latest: <span className="text-yellow-400 font-bold">${getLatestPrice(offer)?.toLocaleString()}</span></span>
+                        )}
+                        {offer.final_price && (
+                          <span className="text-gray-400">Agreed: <span className="text-green-400 font-bold">${offer.final_price?.toLocaleString()}</span></span>
+                        )}
                       </div>
-                    )}
 
-                    {/* Actions */}
-                    <div className="flex flex-wrap gap-2 mt-4">
-                      {/* Seller actions for received offers */}
-                      {activeTab === 'received' && offer.status === 'pending' && (
-                        <>
-                          <button
-                            onClick={() => handleAccept(offer.id)}
-                            disabled={actionLoading === offer.id}
-                            className="btn btn-primary text-sm py-2 px-4"
-                            data-testid={`accept-offer-${offer.id}`}
-                          >
-                            <Check className="w-4 h-4" />
-                            Accept
-                          </button>
-                          <button
-                            onClick={() => {
-                              setCounterModal(offer);
-                              setCounterPrice(offer.offer_price.toString());
-                            }}
-                            disabled={actionLoading === offer.id}
-                            className="btn btn-secondary text-sm py-2 px-4"
-                            data-testid={`counter-offer-${offer.id}`}
-                          >
-                            <RefreshCw className="w-4 h-4" />
-                            Counter
-                          </button>
-                          <button
-                            onClick={() => handleDecline(offer.id)}
-                            disabled={actionLoading === offer.id}
-                            className="btn btn-outline text-sm py-2 px-4 text-red-400 border-red-400 hover:bg-red-400/10"
-                            data-testid={`decline-offer-${offer.id}`}
-                          >
-                            <X className="w-4 h-4" />
-                            Decline
-                          </button>
-                        </>
-                      )}
+                      <p className="text-gray-500 text-sm mb-3">
+                        {activeTab === 'received' ? `From: ${offer.buyer_username}` : `To: ${offer.seller_username}`} · {formatTimeAgo(offer.updated_at || offer.created_at)}
+                      </p>
 
-                      {/* Buyer actions for sent offers */}
-                      {activeTab === 'sent' && offer.status === 'pending' && (
+                      {/* Negotiation History Toggle */}
+                      {offer.negotiation_history?.length > 1 && (
                         <button
-                          onClick={() => handleWithdraw(offer.id)}
-                          disabled={actionLoading === offer.id}
-                          className="btn btn-outline text-sm py-2 px-4"
-                          data-testid={`withdraw-offer-${offer.id}`}
+                          onClick={() => setExpandedOffer(expandedOffer === offer.id ? null : offer.id)}
+                          className="flex items-center gap-1 text-sm text-gray-400 hover:text-white mb-3"
                         >
-                          <X className="w-4 h-4" />
-                          Withdraw Offer
+                          {expandedOffer === offer.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          View negotiation history ({offer.negotiation_history.length} messages)
                         </button>
                       )}
 
-                      {/* Buyer can accept counter */}
-                      {activeTab === 'sent' && offer.status === 'countered' && (
-                        <>
-                          <button
-                            onClick={() => handleAccept(offer.id)}
-                            disabled={actionLoading === offer.id}
-                            className="btn btn-primary text-sm py-2 px-4"
-                            data-testid={`accept-counter-${offer.id}`}
-                          >
-                            <Check className="w-4 h-4" />
-                            Accept Counter (${offer.counter_price?.toLocaleString()})
-                          </button>
+                      {/* Latest message preview */}
+                      {!expandedOffer && offer.negotiation_history?.length > 0 && (
+                        <div className="bg-dark-300 rounded-lg p-3 mb-3">
+                          <p className="text-gray-500 text-xs mb-1">
+                            {offer.negotiation_history[offer.negotiation_history.length - 1].username}:
+                          </p>
+                          <p className="text-gray-300 text-sm">
+                            ${offer.negotiation_history[offer.negotiation_history.length - 1].price?.toLocaleString()}
+                            {offer.negotiation_history[offer.negotiation_history.length - 1].message && (
+                              <span className="text-gray-400"> - &quot;{offer.negotiation_history[offer.negotiation_history.length - 1].message}&quot;</span>
+                            )}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Actions */}
+                      <div className="flex flex-wrap gap-2 mt-4">
+                        {/* When it's my turn and offer is active */}
+                        {isMyTurn(offer) && ['pending', 'countered'].includes(offer.status) && (
+                          <>
+                            <button
+                              onClick={() => handleAccept(offer.id)}
+                              disabled={actionLoading === offer.id}
+                              className="btn btn-primary text-sm py-2 px-4"
+                              data-testid={`accept-offer-${offer.id}`}
+                            >
+                              <Check className="w-4 h-4" />
+                              Accept ${getLatestPrice(offer)?.toLocaleString()}
+                            </button>
+                            <button
+                              onClick={() => openCounterModal(offer)}
+                              disabled={actionLoading === offer.id}
+                              className="btn btn-secondary text-sm py-2 px-4"
+                              data-testid={`counter-offer-${offer.id}`}
+                            >
+                              <RefreshCw className="w-4 h-4" />
+                              Counter
+                            </button>
+                            <button
+                              onClick={() => handleDecline(offer.id)}
+                              disabled={actionLoading === offer.id}
+                              className="btn btn-outline text-sm py-2 px-4 text-red-400 border-red-400 hover:bg-red-400/10"
+                              data-testid={`decline-offer-${offer.id}`}
+                            >
+                              <X className="w-4 h-4" />
+                              Decline
+                            </button>
+                          </>
+                        )}
+
+                        {/* Waiting for other party */}
+                        {!isMyTurn(offer) && ['pending', 'countered'].includes(offer.status) && (
+                          <div className="flex items-center gap-2 text-gray-400">
+                            <Clock className="w-4 h-4 animate-pulse" />
+                            <span className="text-sm">Waiting for {offer.pending_action_from === 'seller' ? offer.seller_username : offer.buyer_username} to respond...</span>
+                          </div>
+                        )}
+
+                        {/* Buyer can withdraw anytime while active */}
+                        {activeTab === 'sent' && ['pending', 'countered'].includes(offer.status) && (
                           <button
                             onClick={() => handleWithdraw(offer.id)}
                             disabled={actionLoading === offer.id}
-                            className="btn btn-outline text-sm py-2 px-4"
+                            className="btn btn-outline text-sm py-2 px-4 ml-auto"
+                            data-testid={`withdraw-offer-${offer.id}`}
                           >
                             <X className="w-4 h-4" />
-                            Decline
+                            Withdraw
                           </button>
-                        </>
-                      )}
+                        )}
 
-                      {/* Checkout button for accepted offers */}
-                      {activeTab === 'sent' && offer.status === 'accepted' && (
-                        <button
-                          onClick={() => handleCheckoutOffer(offer.id)}
-                          className="btn btn-primary text-sm py-2 px-4"
-                          data-testid={`checkout-offer-${offer.id}`}
-                        >
-                          <ArrowRight className="w-4 h-4" />
-                          Complete Purchase (${offer.final_price?.toLocaleString()})
-                        </button>
-                      )}
+                        {/* Checkout button for accepted offers (buyer only) */}
+                        {activeTab === 'sent' && offer.status === 'accepted' && (
+                          <button
+                            onClick={() => handleCheckoutOffer(offer.id)}
+                            className="btn btn-primary text-sm py-2 px-4"
+                            data-testid={`checkout-offer-${offer.id}`}
+                          >
+                            <ArrowRight className="w-4 h-4" />
+                            Complete Purchase (${offer.final_price?.toLocaleString()})
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
+
+                {/* Expanded Negotiation History */}
+                {expandedOffer === offer.id && offer.negotiation_history?.length > 0 && (
+                  <div className="border-t border-dark-300 bg-dark-500 p-4">
+                    <h4 className="text-white font-medium mb-3 flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4" />
+                      Negotiation History
+                    </h4>
+                    <div className="space-y-3">
+                      {offer.negotiation_history.map((entry, index) => {
+                        const isMe = entry.user_id === user?.id;
+                        return (
+                          <div
+                            key={entry.id || index}
+                            className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
+                          >
+                            <div className={`max-w-xs md:max-w-md rounded-lg p-3 ${
+                              isMe ? 'bg-primary/20 text-primary' : 'bg-dark-300 text-gray-300'
+                            }`}>
+                              <div className="flex items-center justify-between gap-4 mb-1">
+                                <span className="font-medium text-sm">{entry.username}</span>
+                                <span className="text-xs opacity-70">{formatTimeAgo(entry.created_at)}</span>
+                              </div>
+                              <p className="font-bold">${entry.price?.toLocaleString()}</p>
+                              {entry.message && (
+                                <p className="text-sm mt-1 opacity-80">&quot;{entry.message}&quot;</p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -342,9 +409,12 @@ const OffersPage = () => {
               </button>
             </div>
 
-            <div className="mb-4">
-              <p className="text-gray-400 text-sm">Original offer: <span className="text-primary">${counterModal.offer_price?.toLocaleString()}</span></p>
+            <div className="mb-4 space-y-1">
               <p className="text-gray-400 text-sm">List price: <span className="text-white">${counterModal.listing_price?.toLocaleString()}</span></p>
+              <p className="text-gray-400 text-sm">Current offer: <span className="text-primary">${getLatestPrice(counterModal)?.toLocaleString()}</span></p>
+              {counterModal.negotiation_history?.length > 1 && (
+                <p className="text-gray-500 text-xs">{counterModal.negotiation_history.length} offers exchanged</p>
+              )}
             </div>
 
             <form onSubmit={handleCounter}>
@@ -371,7 +441,7 @@ const OffersPage = () => {
                   value={counterMessage}
                   onChange={(e) => setCounterMessage(e.target.value)}
                   rows={3}
-                  placeholder="Add a message to the buyer..."
+                  placeholder="Add a message explaining your counter offer..."
                   data-testid="counter-message-input"
                 />
               </div>

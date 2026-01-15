@@ -6,6 +6,7 @@ from models.order import (
 from services.auth import get_current_user
 from database import get_database
 from config import settings
+from analytics.services.event_emitter import emit_event, EventTypes, ActorType
 from datetime import datetime
 from typing import Optional
 import uuid
@@ -143,6 +144,28 @@ async def create_order(
     )
     
     await db.orders.insert_one(order.model_dump())
+    
+    # Emit analytics event for purchase completion
+    emit_event(
+        EventTypes.PURCHASE_COMPLETED,
+        actor_type=ActorType.BUYER,
+        actor_id=current_user["id"],
+        actor_username=current_user["username"],
+        order_id=order.id,
+        offer_id=order_data.offer_id,
+        metadata={
+            "subtotal": subtotal,
+            "shipping_total": shipping_total,
+            "platform_fee": platform_fee,
+            "payment_processing_fee": payment_processing_fee,
+            "total": total,
+            "item_count": len(items),
+            "items": [{"listing_id": item.listing_id, "price": item.listing_price, "quantity": item.quantity} for item in items],
+            "payment_method": order_data.payment_method,
+            "from_offer": order_data.offer_id is not None,
+            "has_free_fees": has_free_fees
+        }
+    )
     
     # Update listing quantities and seller stats
     for item in items:

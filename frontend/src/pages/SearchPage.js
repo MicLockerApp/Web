@@ -6,6 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import ListingCard from '../components/ListingCard';
 import LoadingSpinner from '../components/LoadingSpinner';
+import analytics from '../services/analytics';
 
 const CATEGORIES = [
   'Guitars', 'Bass', 'Keyboards & Synths', 'Drums & Percussion',
@@ -105,6 +106,16 @@ const SearchPage = () => {
         setListings(listingsResponse.data.listings || []);
         setTotalResults(listingsResponse.data.total || 0);
         setTotalPages(listingsResponse.data.pages || 1);
+        
+        // Track search performed
+        if (filters.q && filters.q.trim().length > 0) {
+          analytics.searchPerformed(filters.q, listingsResponse.data.total || 0, {
+            category: filters.category,
+            condition: filters.condition,
+            min_price: filters.minPrice,
+            max_price: filters.maxPrice
+          });
+        }
 
         // Only fetch users if authenticated AND there's a search query
         if (isAuthenticated && filters.q && filters.q.trim().length > 0) {

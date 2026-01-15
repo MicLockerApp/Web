@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, status, Depends, Query
 from models.cart import CartItem, CartItemCreate, CartItemUpdate, CartResponse
 from services.auth import get_current_user
 from database import get_database
+from analytics.services.event_emitter import emit_event, EventTypes, ActorType
 from datetime import datetime
 from typing import List
 
@@ -101,6 +102,22 @@ async def add_to_cart(
     
     await db.cart_items.insert_one(cart_item.model_dump())
     
+    # Emit analytics event for adding to cart
+    emit_event(
+        EventTypes.CART_ITEM_ADDED,
+        actor_type=ActorType.BUYER,
+        actor_id=current_user["id"],
+        actor_username=current_user["username"],
+        listing_id=listing["id"],
+        target_user_id=listing["seller_id"],
+        metadata={
+            "listing_price": listing["price"],
+            "quantity": item_data.quantity,
+            "category": listing.get("category"),
+            "listing_title": listing["title"]
+        }
+    )
+    
     return {"message": "Item added to cart", "item": cart_item.model_dump()}
 
 @router.put("/items/{item_id}")
@@ -158,6 +175,15 @@ async def remove_from_cart(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Cart item not found"
         )
+    
+    # Emit analytics event for removing from cart
+    emit_event(
+        EventTypes.CART_ITEM_REMOVED,
+        actor_type=ActorType.BUYER,
+        actor_id=current_user["id"],
+        actor_username=current_user["username"],
+        metadata={"cart_item_id": item_id}
+    )
     
     return {"message": "Item removed from cart"}
 

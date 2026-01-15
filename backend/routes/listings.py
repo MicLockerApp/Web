@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Query, UploadFile, File
+from fastapi import APIRouter, HTTPException, status, Depends, Query, UploadFile, File, Request
 from models.listing import (
     ListingCreate, ListingUpdate, ListingInDB, ListingResponse,
     ListingMedia, LISTING_CATEGORIES, LISTING_CONDITIONS
@@ -7,6 +7,7 @@ from services.auth import get_current_user, get_current_user_optional
 from services.storage import storage_service
 from database import get_database
 from utils.helpers import build_listing_search_filter, build_sort_options, serialize_doc, serialize_docs
+from analytics.services.event_emitter import emit_event, EventTypes, ActorType
 from datetime import datetime
 from typing import Optional, List
 import uuid
@@ -48,6 +49,23 @@ async def create_listing(
     )
     
     await db.listings.insert_one(listing.model_dump())
+    
+    # Emit analytics event for listing creation
+    emit_event(
+        EventTypes.LISTING_CREATED,
+        actor_type=ActorType.SELLER,
+        actor_id=current_user["id"],
+        actor_username=current_user["username"],
+        listing_id=listing.id,
+        metadata={
+            "listing_price": listing.price,
+            "category": listing.category,
+            "condition": listing.condition,
+            "brand": listing_data.brand,
+            "quantity": listing.quantity,
+            "accepts_offers": listing_data.accepts_offers
+        }
+    )
     
     result = listing.model_dump()
     result["seller_rating"] = current_user.get("rating", 0)
@@ -176,6 +194,23 @@ async def get_listing(
         await db.listings.update_one(
             {"id": listing_id},
             {"$inc": {"view_count": 1}}
+        )
+        
+        # Emit analytics event for listing view
+        emit_event(
+            EventTypes.LISTING_VIEWED,
+            actor_type=ActorType.BUYER if current_user else ActorType.ANONYMOUS,
+            actor_id=current_user["id"] if current_user else None,
+            actor_username=current_user.get("username") if current_user else None,
+            listing_id=listing_id,
+            target_user_id=listing["seller_id"],
+            metadata={
+                "listing_price": listing["price"],
+                "category": listing.get("category"),
+                "condition": listing.get("condition"),
+                "seller_username": listing["seller_username"],
+                "view_count": listing.get("view_count", 0) + 1
+            }
         )
     
     # Get seller rating
