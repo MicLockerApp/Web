@@ -6,6 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import ListingCard from '../components/ListingCard';
 import LoadingSpinner from '../components/LoadingSpinner';
+import analytics from '../services/analytics';
 
 const CATEGORIES = [
   'Guitars', 'Bass', 'Keyboards & Synths', 'Drums & Percussion',
