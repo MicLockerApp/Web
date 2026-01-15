@@ -109,6 +109,18 @@ async def login(username: str, password: str):
         expires_delta=timedelta(minutes=settings.access_token_expire_minutes)
     )
     
+    # Emit analytics event for user login
+    emit_event(
+        EventTypes.USER_LOGGED_IN,
+        actor_type=ActorType.BUYER if not user.get("is_admin") else ActorType.ADMIN,
+        actor_id=user["id"],
+        actor_username=user.get("username"),
+        metadata={
+            "category": user.get("category"),
+            "has_lifetime_free_fees": user.get("has_lifetime_free_fees", False)
+        }
+    )
+    
     return Token(access_token=access_token, token_type="bearer")
 
 @router.post("/login/form", response_model=Token)
