@@ -2,6 +2,7 @@ from fastapi import APIRouter, Query, Depends
 from database import get_database
 from services.auth import get_current_user_optional
 from utils.helpers import serialize_docs
+from analytics.services.event_emitter import emit_event, EventTypes, ActorType
 from typing import Optional
 
 router = APIRouter(prefix="/search", tags=["Search"])
