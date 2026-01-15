@@ -3,6 +3,7 @@ from models.offer import OfferCreate, OfferCounter, OfferInDB, OfferResponse, Ne
 from services.auth import get_current_user
 from database import get_database
 from utils.helpers import get_offer_expiration
+from analytics.services.event_emitter import emit_event, EventTypes, ActorType
 from datetime import datetime
 from typing import Optional
 
