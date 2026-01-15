@@ -284,7 +284,7 @@ MicLocker Support System
         return False
 
 
-async def send_ticket_reply_notification(ticket, reply, is_staff_reply: bool) -> bool:
+async def send_ticket_reply_notification(ticket, reply, is_staff_reply: bool, frontend_url: str = "https://audio-bazaar-6.preview.emergentagent.com") -> bool:
     """
     Send email notification when a reply is added to a ticket
     
@@ -292,6 +292,7 @@ async def send_ticket_reply_notification(ticket, reply, is_staff_reply: bool) ->
         ticket: Ticket dict
         reply: TicketReply object
         is_staff_reply: True if staff replied, False if customer
+        frontend_url: Base URL for the frontend app
         
     Returns:
         True if email sent successfully
@@ -304,48 +305,110 @@ async def send_ticket_reply_notification(ticket, reply, is_staff_reply: bool) ->
         to_email = ticket["customer_email"]
         subject = f"[MicLocker Support] Reply to Ticket #{ticket['ticket_number']}"
         intro = "Our support team has replied to your ticket."
+        # Link to messages inbox for the user
+        cta_url = f"{frontend_url}/messages"
+        cta_text = "View Message in Your Inbox"
+        show_cta = True
     else:
         to_email = "info@miclockerapp.com"
         subject = f"[MicLocker Support] Customer Reply - Ticket #{ticket['ticket_number']}"
         intro = f"Customer {ticket['customer_name']} has replied to their ticket."
+        cta_url = ""
+        cta_text = ""
+        show_cta = False
+    
+    # CTA button HTML
+    cta_button = ""
+    if show_cta:
+        cta_button = f"""
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{cta_url}" style="display: inline-block; background-color: #FFD700; color: #000000; text-decoration: none; padding: 16px 32px; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                    📬 {cta_text}
+                </a>
+            </div>
+            <p style="text-align: center; color: #888; font-size: 12px; margin-top: 10px;">
+                Or copy this link: <a href="{cta_url}" style="color: #FFD700;">{cta_url}</a>
+            </p>
+        """
     
     html_body = f"""
     <!DOCTYPE html>
     <html>
     <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head>
-    <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff;">
-        <div style="max-width: 600px; margin: 0 auto; background-color: #2d2d2d; border-radius: 12px; padding: 30px;">
-            <h1 style="color: #FFD700; margin-bottom: 20px;">💬 Ticket Reply</h1>
-            
-            <p style="margin-bottom: 20px;">{intro}</p>
-            
-            <p style="color: #888;">Ticket: <strong style="color: #FFD700;">{ticket['ticket_number']}</strong></p>
-            <p style="color: #888;">Subject: {ticket['subject']}</p>
-            
-            <h3 style="color: #888; margin: 20px 0 10px;">Reply from {reply.sender_name}:</h3>
-            <div style="background-color: #1a1a1a; padding: 15px; border-radius: 8px; white-space: pre-wrap;">
-                {reply.message}
-            </div>
-            
-            <p style="margin-top: 30px; color: #888; font-size: 12px;">
-                MicLocker Support System
-            </p>
-        </div>
+    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #1a1a1a;">
+        <table role="presentation" style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td align="center" style="padding: 40px 0;">
+                    <table role="presentation" style="width: 600px; max-width: 100%; border-collapse: collapse; background-color: #2d2d2d; border-radius: 12px; overflow: hidden;">
+                        <!-- Header -->
+                        <tr>
+                            <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);">
+                                <h1 style="margin: 0; color: #FFD700; font-size: 32px; font-weight: bold;">🎵 MicLocker</h1>
+                                <p style="margin: 10px 0 0; color: #888; font-size: 14px;">The Marketplace for Music Pros</p>
+                            </td>
+                        </tr>
+                        
+                        <!-- Main Content -->
+                        <tr>
+                            <td style="padding: 30px 40px;">
+                                <h2 style="margin: 0 0 20px; color: #ffffff; font-size: 24px;">💬 New Message from Support</h2>
+                                <p style="margin: 0 0 20px; color: #cccccc; font-size: 16px; line-height: 1.6;">
+                                    {intro}
+                                </p>
+                                
+                                <!-- Ticket Info Box -->
+                                <div style="background-color: #1a1a1a; border-left: 4px solid #FFD700; padding: 15px 20px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+                                    <p style="margin: 0 0 8px; color: #888; font-size: 14px;">
+                                        <strong style="color: #FFD700;">Ticket:</strong> {ticket['ticket_number']}
+                                    </p>
+                                    <p style="margin: 0; color: #888; font-size: 14px;">
+                                        <strong style="color: #FFD700;">Subject:</strong> {ticket['subject']}
+                                    </p>
+                                </div>
+                                
+                                <h3 style="color: #888; margin: 25px 0 10px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Reply from {reply.sender_name}:</h3>
+                                <div style="background-color: #1a1a1a; padding: 20px; border-radius: 8px; border: 1px solid #3d3d3d;">
+                                    <p style="margin: 0; color: #ffffff; font-size: 15px; line-height: 1.7; white-space: pre-wrap;">{reply.message}</p>
+                                </div>
+                                
+                                {cta_button}
+                            </td>
+                        </tr>
+                        
+                        <!-- Footer -->
+                        <tr>
+                            <td style="padding: 30px 40px; background-color: #1a1a1a; border-top: 1px solid #3d3d3d;">
+                                <p style="margin: 0 0 10px; color: #666; font-size: 12px; text-align: center;">
+                                    This is an automated message from MicLocker Support.
+                                </p>
+                                <p style="margin: 0; color: #666; font-size: 12px; text-align: center;">
+                                    © 2024 MicLocker. All rights reserved.
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
     </body>
     </html>
     """
     
     text_body = f"""
-Ticket Reply - {ticket['ticket_number']}
+MicLocker Support - Ticket Reply
 
 {intro}
 
+Ticket: {ticket['ticket_number']}
 Subject: {ticket['subject']}
 
 Reply from {reply.sender_name}:
 {reply.message}
+
+{"View message in your inbox: " + cta_url if show_cta else ""}
 
 ---
 MicLocker Support System
@@ -363,7 +426,7 @@ MicLocker Support System
                 }
             }
         )
-        logger.info(f"Ticket reply notification sent for {ticket['ticket_number']}")
+        logger.info(f"Ticket reply notification sent for {ticket['ticket_number']} to {to_email}")
         return True
     except Exception as e:
         logger.error(f"Failed to send ticket reply notification: {e}")

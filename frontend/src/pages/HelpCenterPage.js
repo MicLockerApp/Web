@@ -139,7 +139,7 @@ const HelpCenterPage = () => {
             <HelpCircle className="w-8 h-8 text-primary" />
           </div>
           <h1 className={`text-4xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Help Center
+            Contact Support
           </h1>
           <p className={`text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             Submit a support ticket and our team will get back to you

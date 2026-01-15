@@ -12,6 +12,7 @@ from models.ticket import (
 )
 from services.auth import get_current_user, get_current_user_optional
 from services.email import send_ticket_notification, send_ticket_reply_notification
+from services.message_service import send_support_message_to_user
 from database import get_database
 from analytics.services.event_emitter import emit_event, EventTypes, ActorType
 import logging
@@ -185,7 +186,8 @@ async def get_ticket(
             detail="Not authorized to view this ticket"
         )
     
-    return ticket
+    # Clean up MongoDB ObjectId
+    return {k: v for k, v in ticket.items() if k != '_id'}
 
 
 @router.post("/{ticket_id}/reply")
@@ -239,7 +241,25 @@ async def add_ticket_reply(
         }
     )
     
-    # Send email notification
+    # If staff is replying, send both in-app message and email to the customer
+    if is_admin:
+        # Send in-app message to user's inbox
+        try:
+            # Get the ticket owner's username
+            ticket_owner = await db.users.find_one({"id": ticket["user_id"]})
+            owner_username = ticket_owner.get("username", "User") if ticket_owner else "User"
+            
+            await send_support_message_to_user(
+                user_id=ticket["user_id"],
+                user_username=owner_username,
+                content=reply_data.message,
+                ticket_number=ticket["ticket_number"]
+            )
+            logger.info(f"In-app support message sent to user {ticket['user_id']} for ticket {ticket['ticket_number']}")
+        except Exception as e:
+            logger.error(f"Failed to send in-app message: {e}")
+    
+    # Send email notification (enhanced with CTA button for customers)
     try:
         await send_ticket_reply_notification(ticket, reply, is_admin)
     except Exception as e:
@@ -294,8 +314,14 @@ async def get_all_tickets(
     tickets = await cursor.to_list(length=limit)
     total = await db.support_tickets.count_documents(query)
     
+    # Clean up MongoDB ObjectId before returning
+    cleaned_tickets = []
+    for t in tickets:
+        ticket = {k: v for k, v in t.items() if k != '_id'}
+        cleaned_tickets.append(ticket)
+    
     return {
-        "tickets": tickets,
+        "tickets": cleaned_tickets,
         "total": total
     }
 

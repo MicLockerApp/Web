@@ -66,7 +66,7 @@ class UserBase(BaseModel):
     email: EmailStr
 
 class UserCreate(UserBase):
-    password: str = Field(..., min_length=6)
+    password: str = Field(..., min_length=8, description="Password must be at least 8 characters")
 
 class UserCategoryUpdate(BaseModel):
     category: str
@@ -305,7 +305,7 @@ class PasswordResetRequest(BaseModel):
 class PasswordResetVerify(BaseModel):
     email: EmailStr
     code: str
-    new_password: str = Field(..., min_length=6)
+    new_password: str = Field(..., min_length=8, description="Password must be at least 8 characters")
 
 class PasswordResetCode(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))

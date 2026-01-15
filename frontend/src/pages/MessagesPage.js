@@ -356,7 +356,7 @@ const MessagesPage = () => {
                                 ? 'bg-dark-300 text-white' 
                                 : 'bg-white text-gray-900 border border-gray-200'
                           }`}>
-                            <p>{msg.content}</p>
+                            <p className="whitespace-pre-wrap">{msg.content}</p>
                           </div>
                           <div className={`flex items-center gap-2 mt-1 text-xs ${
                             isOwnMessage ? 'justify-end' : 'justify-start'

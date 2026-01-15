@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-MicLocker Analytics Instrumentation Test Suite
+MicLocker Support Ticketing System Test Suite
 
-Tests backend analytics instrumentation, API endpoints, and event emission.
+Tests backend support ticket APIs and functionality.
 """
 import requests
 import json
@@ -11,7 +11,7 @@ import time
 from datetime import datetime
 from typing import Dict, Any, Optional
 
-class AnalyticsTestSuite:
+class TicketingTestSuite:
     def __init__(self, base_url: str = "https://audio-bazaar-6.preview.emergentagent.com"):
         self.base_url = base_url
         self.token = None
@@ -20,6 +20,10 @@ class AnalyticsTestSuite:
         self.tests_run = 0
         self.tests_passed = 0
         self.test_results = []
+        
+        # Test ticket system
+        self.test_ticket_id = None
+        self.test_ticket_number = None
         
         # Test credentials
         self.test_username = "jmcdougall"
@@ -100,197 +104,176 @@ class AnalyticsTestSuite:
             self.log_result("User Login", False, str(e))
             return False
 
-    def test_analytics_api_endpoints(self):
-        """Test all analytics API endpoints"""
-        if not self.admin_token:
-            self.log_result("Analytics API Access", False, "No admin token available")
-            return
-
-        endpoints = [
-            ('/analytics/realtime', 'Realtime Metrics'),
-            ('/analytics/revenue', 'Revenue Analytics'),
-            ('/analytics/offer-funnel', 'Offer Funnel'),
-            ('/analytics/search-funnel', 'Search Funnel'),
-            ('/analytics/marketplace-health', 'Marketplace Health'),
-            ('/analytics/trust-safety', 'Trust & Safety'),
-            ('/analytics/search-terms', 'Search Terms')
-        ]
-
-        for endpoint, name in endpoints:
-            try:
-                response = self.make_request('GET', endpoint, use_admin=True)
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    # Verify it's valid JSON and has expected structure
-                    if isinstance(data, dict):
-                        self.log_result(f"Analytics API - {name}", True, f"Valid JSON response")
-                    else:
-                        self.log_result(f"Analytics API - {name}", False, "Invalid JSON structure")
-                else:
-                    self.log_result(f"Analytics API - {name}", False, f"Status: {response.status_code}")
-            except Exception as e:
-                self.log_result(f"Analytics API - {name}", False, str(e))
-
-    def test_event_emission_via_actions(self):
-        """Test that backend actions emit analytics events"""
+    def test_ticket_creation(self):
+        """Test ticket creation API"""
         if not self.token:
-            self.log_result("Event Emission Test", False, "No authentication token")
+            self.log_result("Ticket Creation", False, "No authentication token")
             return
 
-        # Get initial event count
         try:
-            initial_response = self.make_request('GET', '/analytics/realtime', use_admin=True)
-            if initial_response.status_code != 200:
-                self.log_result("Event Emission - Initial Count", False, "Cannot get initial metrics")
-                return
-        except:
-            self.log_result("Event Emission - Initial Count", False, "Cannot access analytics")
-            return
-
-        # Test 1: Search (should emit search event)
-        try:
-            search_response = self.make_request('GET', '/search/global?q=guitar&limit=5')
-            if search_response.status_code == 200:
-                self.log_result("Event Emission - Search", True, "Search performed successfully")
-            else:
-                self.log_result("Event Emission - Search", False, f"Search failed: {search_response.status_code}")
-        except Exception as e:
-            self.log_result("Event Emission - Search", False, str(e))
-
-        # Test 2: View listings (should emit listing view events)
-        try:
-            listings_response = self.make_request('GET', '/listings?limit=5')
-            if listings_response.status_code == 200:
-                listings_data = listings_response.json()
-                listings = listings_data.get('listings', [])
-                
-                if listings:
-                    # View first listing
-                    listing_id = listings[0]['id']
-                    view_response = self.make_request('GET', f'/listings/{listing_id}')
-                    if view_response.status_code == 200:
-                        self.log_result("Event Emission - Listing View", True, f"Viewed listing {listing_id}")
-                    else:
-                        self.log_result("Event Emission - Listing View", False, f"Failed to view listing")
-                else:
-                    self.log_result("Event Emission - Listing View", False, "No listings available")
-            else:
-                self.log_result("Event Emission - Listing View", False, f"Cannot get listings: {listings_response.status_code}")
-        except Exception as e:
-            self.log_result("Event Emission - Listing View", False, str(e))
-
-        # Test 3: Add to favorites (should emit favorite event)
-        try:
-            listings_response = self.make_request('GET', '/listings?limit=1')
-            if listings_response.status_code == 200:
-                listings_data = listings_response.json()
-                listings = listings_data.get('listings', [])
-                
-                if listings:
-                    listing_id = listings[0]['id']
-                    fav_response = self.make_request('POST', f'/users/favorites/{listing_id}')
-                    if fav_response.status_code == 200:
-                        self.log_result("Event Emission - Add Favorite", True, f"Added listing {listing_id} to favorites")
-                        
-                        # Remove from favorites
-                        unfav_response = self.make_request('DELETE', f'/users/favorites/{listing_id}')
-                        if unfav_response.status_code == 200:
-                            self.log_result("Event Emission - Remove Favorite", True, f"Removed listing {listing_id} from favorites")
-                        else:
-                            self.log_result("Event Emission - Remove Favorite", False, f"Failed to remove favorite")
-                    else:
-                        self.log_result("Event Emission - Add Favorite", False, f"Failed to add favorite: {fav_response.status_code}")
-                else:
-                    self.log_result("Event Emission - Add Favorite", False, "No listings available for favoriting")
-        except Exception as e:
-            self.log_result("Event Emission - Add Favorite", False, str(e))
-
-        # Wait a moment for events to be processed
-        time.sleep(2)
-
-    def test_frontend_analytics_endpoint(self):
-        """Test frontend analytics batch endpoint"""
-        try:
-            # Test the batch endpoint that frontend uses
-            test_events = {
-                "events": [
-                    {
-                        "event_type": "page.view",
-                        "session_id": "test_session_123",
-                        "device_type": "desktop",
-                        "metadata": {
-                            "page_name": "test_page"
-                        },
-                        "timestamp": datetime.utcnow().isoformat()
-                    }
-                ],
-                "session_id": "test_session_123"
+            ticket_data = {
+                "category": "Technical Issue",
+                "subject": "Test ticket from automated test",
+                "message": "This is a test ticket created by the automated test suite to verify the ticketing system is working correctly.",
+                "order_id": None
             }
             
-            response = self.make_request('POST', '/events/batch', test_events)
+            response = self.make_request('POST', '/tickets', ticket_data)
+            
+            if response.status_code == 201:
+                data = response.json()
+                if 'ticket_number' in data and 'ticket_id' in data:
+                    self.test_ticket_id = data['ticket_id']
+                    self.test_ticket_number = data['ticket_number']
+                    self.log_result("Ticket Creation", True, f"Created ticket {data['ticket_number']}")
+                    return True
+                else:
+                    self.log_result("Ticket Creation", False, "Missing ticket_number or ticket_id in response")
+            else:
+                self.log_result("Ticket Creation", False, f"Status: {response.status_code}, Response: {response.text}")
+        except Exception as e:
+            self.log_result("Ticket Creation", False, str(e))
+        return False
+
+    def test_ticket_categories(self):
+        """Test getting ticket categories"""
+        try:
+            response = self.make_request('GET', '/tickets/categories')
             
             if response.status_code == 200:
-                self.log_result("Frontend Analytics Endpoint", True, "Batch endpoint accepts events")
+                data = response.json()
+                if 'categories' in data and 'statuses' in data and 'priorities' in data:
+                    categories = data['categories']
+                    if len(categories) > 0:
+                        self.log_result("Ticket Categories", True, f"Found {len(categories)} categories")
+                    else:
+                        self.log_result("Ticket Categories", False, "No categories returned")
+                else:
+                    self.log_result("Ticket Categories", False, "Missing required fields in response")
             else:
-                self.log_result("Frontend Analytics Endpoint", False, f"Status: {response.status_code}")
+                self.log_result("Ticket Categories", False, f"Status: {response.status_code}")
         except Exception as e:
-            self.log_result("Frontend Analytics Endpoint", False, str(e))
+            self.log_result("Ticket Categories", False, str(e))
 
-    def test_cart_analytics_events(self):
-        """Test cart-related analytics events"""
-        if not self.token:
+    def test_admin_ticket_stats(self):
+        """Test admin ticket statistics API"""
+        if not self.admin_token:
+            self.log_result("Admin Ticket Stats", False, "No admin token available")
             return
 
         try:
-            # Get a listing to add to cart
-            listings_response = self.make_request('GET', '/listings?limit=1')
-            if listings_response.status_code == 200:
-                listings_data = listings_response.json()
-                listings = listings_data.get('listings', [])
+            response = self.make_request('GET', '/tickets/admin/stats', use_admin=True)
+            
+            if response.status_code == 200:
+                data = response.json()
+                required_fields = ['total_tickets', 'open', 'in_progress', 'resolved', 'pending_total']
+                missing_fields = [field for field in required_fields if field not in data]
                 
-                if listings:
-                    listing_id = listings[0]['id']
-                    seller_id = listings[0]['seller_id']
-                    
-                    # Skip if it's our own listing
-                    if seller_id == self.user_id:
-                        self.log_result("Cart Analytics - Add to Cart", True, "Skipped (own listing)")
-                        return
-                    
-                    # Add to cart
-                    cart_response = self.make_request('POST', '/cart/items', {
-                        'listing_id': listing_id,
-                        'quantity': 1
-                    })
-                    
-                    if cart_response.status_code == 200:
-                        self.log_result("Cart Analytics - Add to Cart", True, f"Added listing {listing_id} to cart")
-                        
-                        # Get cart to find item ID
-                        get_cart_response = self.make_request('GET', '/cart')
-                        if get_cart_response.status_code == 200:
-                            cart_data = get_cart_response.json()
-                            items = cart_data.get('items', [])
-                            if items:
-                                item_id = items[0]['id']
-                                
-                                # Remove from cart
-                                remove_response = self.make_request('DELETE', f'/cart/items/{item_id}')
-                                if remove_response.status_code == 200:
-                                    self.log_result("Cart Analytics - Remove from Cart", True, f"Removed item from cart")
-                                else:
-                                    self.log_result("Cart Analytics - Remove from Cart", False, f"Failed to remove: {remove_response.status_code}")
-                    else:
-                        self.log_result("Cart Analytics - Add to Cart", False, f"Failed to add to cart: {cart_response.status_code}")
+                if not missing_fields:
+                    self.log_result("Admin Ticket Stats", True, f"Stats: {data['pending_total']} pending, {data['total_tickets']} total")
                 else:
-                    self.log_result("Cart Analytics - Add to Cart", False, "No listings available")
+                    self.log_result("Admin Ticket Stats", False, f"Missing fields: {missing_fields}")
+            else:
+                self.log_result("Admin Ticket Stats", False, f"Status: {response.status_code}")
         except Exception as e:
-            self.log_result("Cart Analytics - Add to Cart", False, str(e))
+            self.log_result("Admin Ticket Stats", False, str(e))
+
+    def test_admin_ticket_list(self):
+        """Test admin ticket list API"""
+        if not self.admin_token:
+            self.log_result("Admin Ticket List", False, "No admin token available")
+            return
+
+        try:
+            response = self.make_request('GET', '/tickets/admin/all?limit=10', use_admin=True)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'tickets' in data and 'total' in data:
+                    tickets = data['tickets']
+                    self.log_result("Admin Ticket List", True, f"Retrieved {len(tickets)} tickets, total: {data['total']}")
+                else:
+                    self.log_result("Admin Ticket List", False, "Missing tickets or total in response")
+            else:
+                self.log_result("Admin Ticket List", False, f"Status: {response.status_code}")
+        except Exception as e:
+            self.log_result("Admin Ticket List", False, str(e))
+
+    def test_ticket_detail(self):
+        """Test getting ticket details"""
+        if not hasattr(self, 'test_ticket_id') or not self.test_ticket_id:
+            self.log_result("Ticket Detail", False, "No test ticket ID available")
+            return
+
+        try:
+            response = self.make_request('GET', f'/tickets/{self.test_ticket_id}')
+            
+            if response.status_code == 200:
+                data = response.json()
+                required_fields = ['id', 'ticket_number', 'subject', 'message', 'status', 'category']
+                missing_fields = [field for field in required_fields if field not in data]
+                
+                if not missing_fields:
+                    self.log_result("Ticket Detail", True, f"Retrieved ticket {data['ticket_number']}")
+                else:
+                    self.log_result("Ticket Detail", False, f"Missing fields: {missing_fields}")
+            else:
+                self.log_result("Ticket Detail", False, f"Status: {response.status_code}")
+        except Exception as e:
+            self.log_result("Ticket Detail", False, str(e))
+
+    def test_ticket_reply(self):
+        """Test adding a reply to a ticket"""
+        if not hasattr(self, 'test_ticket_id') or not self.test_ticket_id:
+            self.log_result("Ticket Reply", False, "No test ticket ID available")
+            return
+
+        try:
+            reply_data = {
+                "message": "This is a test reply from the automated test suite."
+            }
+            
+            response = self.make_request('POST', f'/tickets/{self.test_ticket_id}/reply', reply_data)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'message' in data:
+                    self.log_result("Ticket Reply", True, "Reply added successfully")
+                else:
+                    self.log_result("Ticket Reply", False, "Unexpected response format")
+            else:
+                self.log_result("Ticket Reply", False, f"Status: {response.status_code}, Response: {response.text}")
+        except Exception as e:
+            self.log_result("Ticket Reply", False, str(e))
+
+    def test_admin_ticket_status_update(self):
+        """Test updating ticket status (admin only)"""
+        if not self.admin_token or not hasattr(self, 'test_ticket_id') or not self.test_ticket_id:
+            self.log_result("Admin Status Update", False, "No admin token or test ticket ID")
+            return
+
+        try:
+            update_data = {
+                "status": "in_progress",
+                "priority": "high"
+            }
+            
+            response = self.make_request('PUT', f'/tickets/admin/{self.test_ticket_id}/status', update_data, use_admin=True)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'message' in data:
+                    self.log_result("Admin Status Update", True, "Status updated successfully")
+                else:
+                    self.log_result("Admin Status Update", False, "Unexpected response format")
+            else:
+                self.log_result("Admin Status Update", False, f"Status: {response.status_code}, Response: {response.text}")
+        except Exception as e:
+            self.log_result("Admin Status Update", False, str(e))
 
     def run_all_tests(self):
-        """Run all analytics tests"""
-        print("🔍 Starting MicLocker Analytics Instrumentation Tests...")
+        """Run all ticket system tests"""
+        print("🎫 Starting MicLocker Support Ticketing System Tests...")
         print(f"📡 Testing against: {self.base_url}")
         print("=" * 60)
 
@@ -299,28 +282,37 @@ class AnalyticsTestSuite:
             print("❌ Cannot proceed without authentication")
             return False
 
-        # Test analytics API endpoints
-        print("\n📊 Testing Analytics API Endpoints...")
-        self.test_analytics_api_endpoints()
+        # Test ticket categories
+        print("\n📋 Testing Ticket Categories...")
+        self.test_ticket_categories()
 
-        # Test event emission through user actions
-        print("\n🎯 Testing Event Emission via User Actions...")
-        self.test_event_emission_via_actions()
+        # Test ticket creation
+        print("\n🎫 Testing Ticket Creation...")
+        if self.test_ticket_creation():
+            # Test ticket detail retrieval
+            print("\n🔍 Testing Ticket Detail...")
+            self.test_ticket_detail()
+            
+            # Test ticket reply
+            print("\n💬 Testing Ticket Reply...")
+            self.test_ticket_reply()
 
-        # Test frontend analytics endpoint
-        print("\n🌐 Testing Frontend Analytics Integration...")
-        self.test_frontend_analytics_endpoint()
-
-        # Test cart analytics
-        print("\n🛒 Testing Cart Analytics Events...")
-        self.test_cart_analytics_events()
+        # Test admin endpoints
+        if self.admin_token:
+            print("\n👑 Testing Admin Endpoints...")
+            self.test_admin_ticket_stats()
+            self.test_admin_ticket_list()
+            
+            if hasattr(self, 'test_ticket_id') and self.test_ticket_id:
+                print("\n⚙️ Testing Admin Status Update...")
+                self.test_admin_ticket_status_update()
 
         # Summary
         print("\n" + "=" * 60)
         print(f"📈 Test Results: {self.tests_passed}/{self.tests_run} passed")
         
         if self.tests_passed == self.tests_run:
-            print("🎉 All analytics tests passed!")
+            print("🎉 All ticketing tests passed!")
             return True
         else:
             print(f"⚠️  {self.tests_run - self.tests_passed} tests failed")
@@ -328,7 +320,7 @@ class AnalyticsTestSuite:
 
 def main():
     """Main test runner"""
-    tester = AnalyticsTestSuite()
+    tester = TicketingTestSuite()
     success = tester.run_all_tests()
     
     # Save detailed results
@@ -340,7 +332,7 @@ def main():
         "test_details": tester.test_results
     }
     
-    with open('/tmp/analytics_test_results.json', 'w') as f:
+    with open('/tmp/ticketing_test_results.json', 'w') as f:
         json.dump(results, f, indent=2)
     
     return 0 if success else 1

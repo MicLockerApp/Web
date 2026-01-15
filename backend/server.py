@@ -42,6 +42,10 @@ async def lifespan(app: FastAPI):
     # Create analytics indexes
     await create_analytics_indexes()
     
+    # Ensure support system user exists for in-app messaging
+    from services.message_service import ensure_support_user_exists
+    await ensure_support_user_exists()
+    
     # Run seed data if in development
     if settings.environment == "development":
         from seed_data import seed_database
@@ -122,7 +126,7 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

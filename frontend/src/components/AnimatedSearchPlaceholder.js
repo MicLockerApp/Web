@@ -192,7 +192,7 @@ const AnimatedSearchPlaceholder = ({ isDark = true }) => {
           </span>
         ))}
       </span>
-      <span>...</span>
+      <span>&nbsp;</span>
 
       {/* CSS Keyframe Animations for Rolodex Effect - Letters flip DOWN */}
       <style>{`

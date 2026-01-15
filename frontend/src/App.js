@@ -36,6 +36,12 @@ import OrdersPage from './pages/OrdersPage';
 import OrderDetailPage from './pages/OrderDetailPage';
 import ContactSupportPage from './pages/ContactSupportPage';
 import HelpCenterPage from './pages/HelpCenterPage';
+import AdminTicketsPage from './pages/AdminTicketsPage';
+import LegalPage from './pages/LegalPage';
+import TermsOfUsePage from './pages/TermsOfUsePage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import BillingPolicyPage from './pages/BillingPolicyPage';
+import PurchaseProtectionPage from './pages/PurchaseProtectionPage';
 
 // Initialize analytics on app load
 analytics.init();
@@ -102,6 +108,13 @@ function AppContent() {
               <Route path="/about" element={<AboutPage />} />
               <Route path="/contact-support" element={<ContactSupportPage />} />
               <Route path="/help" element={<HelpCenterPage />} />
+              <Route path="/admin/tickets" element={<AdminTicketsPage />} />
+              <Route path="/admin/tickets/:id" element={<AdminTicketsPage />} />
+              <Route path="/legal" element={<LegalPage />} />
+              <Route path="/legal/terms-of-use" element={<TermsOfUsePage />} />
+              <Route path="/legal/privacy-policy" element={<PrivacyPolicyPage />} />
+              <Route path="/legal/billing-policy" element={<BillingPolicyPage />} />
+              <Route path="/legal/purchase-protection" element={<PurchaseProtectionPage />} />
               {/* Fallback */}
               <Route path="*" element={
                 <div className="min-h-screen flex items-center justify-center">

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, User, Menu, X, MessageSquare, LogOut, Package, Edit, Heart, Sun, Moon, Tag, ShoppingBag, LayoutDashboard } from 'lucide-react';
+import { Search, ShoppingCart, User, Menu, X, MessageSquare, LogOut, Package, Edit, Heart, Sun, Moon, Tag, ShoppingBag, LayoutDashboard, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useTheme } from '../context/ThemeContext';
@@ -306,12 +306,12 @@ const Navbar = () => {
                     <User className="w-5 h-5" />
                   </button>
                   {userMenuOpen && (
-                    <div className={`absolute right-0 mt-2 w-48 rounded-lg shadow-lg overflow-hidden ${
+                    <div className={`absolute right-0 mt-2 w-64 rounded-lg shadow-lg overflow-hidden ${
                       isDark ? 'bg-dark-400 border border-dark-300' : 'bg-white border border-gray-200'
                     }`}>
                       <div className={`px-4 py-3 border-b ${isDark ? 'border-dark-300' : 'border-gray-200'}`}>
                         <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{user?.username}</p>
-                        <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{user?.email}</p>
+                        <p className={`text-sm break-all ${isDark ? 'text-gray-400' : 'text-gray-500'}`} title={user?.email}>{user?.email}</p>
                       </div>
                       <Link
                         to={`/profile/${user?.id}`}
@@ -501,6 +501,16 @@ const Navbar = () => {
                     <Package className="w-5 h-5" />
                     My Listings
                   </Link>
+                  {user?.is_admin && (
+                    <Link
+                      to="/admin"
+                      className="flex items-center gap-2 py-2 text-primary font-medium"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <Shield className="w-5 h-5" />
+                      Admin Panel
+                    </Link>
+                  )}
                   <button
                     onClick={() => {
                       toggleTheme();

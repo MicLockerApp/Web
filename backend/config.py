@@ -1,6 +1,6 @@
 import os
 from pydantic_settings import BaseSettings
-from typing import Optional
+from typing import Optional, List
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,6 +12,13 @@ class Settings(BaseSettings):
     secret_key: str = os.getenv("SECRET_KEY", "miclocker-secret-key")
     algorithm: str = os.getenv("ALGORITHM", "HS256")
     access_token_expire_minutes: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "10080"))
+    
+    # CORS Settings
+    cors_origins: List[str] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://audio-bazaar-6.preview.emergentagent.com",
+    ]
     
     # MongoDB
     mongo_url: str = os.getenv("MONGO_URL", "mongodb://localhost:27017")
