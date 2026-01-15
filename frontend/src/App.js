@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import analytics from './services/analytics';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -32,6 +33,9 @@ import AboutPage from './pages/AboutPage';
 import OffersPage from './pages/OffersPage';
 import OrdersPage from './pages/OrdersPage';
 import OrderDetailPage from './pages/OrderDetailPage';
+
+// Initialize analytics on app load
+analytics.init();
 
 // Layout component that conditionally shows navbar/footer
 const Layout = ({ children }) => {
