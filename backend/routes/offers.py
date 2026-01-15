@@ -391,6 +391,22 @@ async def decline_offer(
         }
     )
     
+    # Emit analytics event for offer decline
+    emit_event(
+        EventTypes.OFFER_DECLINED,
+        actor_type=ActorType.SELLER if is_seller else ActorType.BUYER,
+        actor_id=current_user["id"],
+        actor_username=current_user["username"],
+        offer_id=offer_id,
+        listing_id=offer["listing_id"],
+        target_user_id=offer["buyer_id"] if is_seller else offer["seller_id"],
+        metadata={
+            "offer_price": offer["offer_price"],
+            "listing_price": offer["listing_price"],
+            "declined_by": "seller" if is_seller else "buyer"
+        }
+    )
+    
     return {"message": "Offer declined"}
 
 @router.post("/{offer_id}/withdraw")
