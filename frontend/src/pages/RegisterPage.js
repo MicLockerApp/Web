@@ -5,6 +5,7 @@ import { authAPI } from '../services/api';
 import VinylLogo from '../components/VinylLogo';
 import { Check, ChevronRight, ChevronLeft, Info } from 'lucide-react';
 import { COUNTRIES, getStatesForCountry, countryHasStates } from '../data/countries';
+import analytics from '../services/analytics';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
