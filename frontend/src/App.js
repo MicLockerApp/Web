@@ -33,6 +33,7 @@ import AboutPage from './pages/AboutPage';
 import OffersPage from './pages/OffersPage';
 import OrdersPage from './pages/OrdersPage';
 import OrderDetailPage from './pages/OrderDetailPage';
+import ContactSupportPage from './pages/ContactSupportPage';
 
 // Initialize analytics on app load
 analytics.init();
