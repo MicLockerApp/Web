@@ -102,6 +102,9 @@ const MessagesPage = () => {
       await messagesAPI.send(recipientId, newMessage.trim());
       setNewMessage('');
       
+      // Track message sent
+      analytics.messageSent(selectedThread?.id || 'new', recipientId);
+      
       if (selectedThread) {
         const response = await messagesAPI.getThread(selectedThread.id);
         setMessages(response.data.messages || []);
