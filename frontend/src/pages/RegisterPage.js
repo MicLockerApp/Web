@@ -191,6 +191,10 @@ const RegisterPage = () => {
       }
 
       await authAPI.completeProfile(profileData);
+      
+      // Track user registered event
+      analytics.userRegistered(formData.category);
+      
       navigate('/');
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to complete profile');
