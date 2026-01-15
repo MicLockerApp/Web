@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Query, UploadFile, File
+from fastapi import APIRouter, HTTPException, status, Depends, Query, UploadFile, File, Request
 from models.listing import (
     ListingCreate, ListingUpdate, ListingInDB, ListingResponse,
     ListingMedia, LISTING_CATEGORIES, LISTING_CONDITIONS
@@ -7,6 +7,7 @@ from services.auth import get_current_user, get_current_user_optional
 from services.storage import storage_service
 from database import get_database
 from utils.helpers import build_listing_search_filter, build_sort_options, serialize_doc, serialize_docs
+from analytics.services.event_emitter import emit_event, EventTypes, ActorType
 from datetime import datetime
 from typing import Optional, List
 import uuid
