@@ -144,6 +144,9 @@ app.include_router(search_router, prefix="/api")
 app.include_router(analytics_router, prefix="/api")
 app.include_router(events_router, prefix="/api")
 
+# Chatbot routes
+app.include_router(chatbot_router, prefix="/api")
+
 # Health check
 @app.get("/api/health")
 async def health_check():
