@@ -92,6 +92,9 @@ const ListingDetailPage = () => {
     const title = listing?.title || 'Check out this listing on MicLocker';
     const text = `${title} - $${listing?.price?.toLocaleString()} on MicLocker`;
     
+    // Track share event
+    analytics.listingShared(listing.id, platform);
+    
     switch (platform) {
       case 'copy':
         navigator.clipboard.writeText(url);
@@ -125,6 +128,9 @@ const ListingDetailPage = () => {
       await addItem(listing.id);
       setMessage({ type: 'success', text: 'Added to cart!' });
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+      
+      // Track add to cart event
+      analytics.addToCart(listing.id, listing.price, 1, listing.category, false);
     } catch (error) {
       setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to add to cart' });
     }
