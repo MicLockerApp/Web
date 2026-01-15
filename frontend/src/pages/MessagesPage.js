@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { messagesAPI, usersAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
+import analytics from '../services/analytics';
 
 const MessagesPage = () => {
   const navigate = useNavigate();
