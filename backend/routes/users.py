@@ -4,6 +4,7 @@ from services.auth import get_current_user, get_current_user_optional
 from services.storage import storage_service
 from database import get_database
 from utils.helpers import serialize_docs, serialize_doc
+from analytics.services.event_emitter import emit_event, EventTypes, ActorType
 from datetime import datetime
 from typing import Optional
 
