@@ -157,11 +157,11 @@ async def get_listing_count():
     active_count = await db.listings.count_documents({"status": "active"})
     total_count = await db.listings.count_documents({})
     
-    # Get total user count for display and promo eligibility
-    total_users = await db.users.count_documents({})
+    # Get total user count for display and promo eligibility (excluding employees)
+    total_users = await db.users.count_documents({"is_employee": {"$ne": True}})
     
-    # Promo: First 100 users get 0% platform fees for life
-    promo_limit = 100
+    # Promo: First 300 users get 0% platform fees for life
+    promo_limit = 300
     promo_eligible = total_users < promo_limit
     promo_spots_remaining = max(0, promo_limit - total_users)
     

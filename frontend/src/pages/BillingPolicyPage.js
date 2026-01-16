@@ -123,7 +123,7 @@ const BillingPolicyPage = () => {
             </h3>
             <p className="leading-relaxed">
               MicLocker occasionally offers promotional fee rates. Early adopters who joined as one of our 
-              first 100 users enjoy <strong>0% platform fees for life</strong>. Other promotional rates may 
+              first 300 users enjoy <strong>0% Platform Fees For Life</strong>. Other promotional rates may 
               be offered during special events or for qualifying sellers.
             </p>
           </section>

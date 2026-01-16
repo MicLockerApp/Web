@@ -42,6 +42,12 @@ import TermsOfUsePage from './pages/TermsOfUsePage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import BillingPolicyPage from './pages/BillingPolicyPage';
 import PurchaseProtectionPage from './pages/PurchaseProtectionPage';
+import CommunityRulesBuyersPage from './pages/CommunityRulesBuyersPage';
+import CommunityRulesSellersPage from './pages/CommunityRulesSellersPage';
+import PayoutsAndCreditsPage from './pages/PayoutsAndCreditsPage';
+import IntellectualPropertyPage from './pages/IntellectualPropertyPage';
+import SearchAndAdRankingPage from './pages/SearchAndAdRankingPage';
+import EUDataPolicyPage from './pages/EUDataPolicyPage';
 
 // Initialize analytics on app load
 analytics.init();
@@ -115,6 +121,12 @@ function AppContent() {
               <Route path="/legal/privacy-policy" element={<PrivacyPolicyPage />} />
               <Route path="/legal/billing-policy" element={<BillingPolicyPage />} />
               <Route path="/legal/purchase-protection" element={<PurchaseProtectionPage />} />
+              <Route path="/legal/buyers" element={<CommunityRulesBuyersPage />} />
+              <Route path="/legal/sellers" element={<CommunityRulesSellersPage />} />
+              <Route path="/legal/payouts" element={<PayoutsAndCreditsPage />} />
+              <Route path="/legal/intellectual-property" element={<IntellectualPropertyPage />} />
+              <Route path="/legal/search-ranking" element={<SearchAndAdRankingPage />} />
+              <Route path="/legal/eu-policy" element={<EUDataPolicyPage />} />
               {/* Fallback */}
               <Route path="*" element={
                 <div className="min-h-screen flex items-center justify-center">

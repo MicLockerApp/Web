@@ -418,7 +418,7 @@ const CheckoutPage = () => {
                     <div className="text-right">
                       <span className="text-green-400 font-medium">$0.00</span>
                       <span className="ml-2 text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">
-                        LIFETIME FREE
+                        0% PLATFORM FEES FOR LIFE
                       </span>
                     </div>
                   </div>

@@ -73,7 +73,7 @@ const GiftBox = ({ isOpening, onAnimationComplete }) => {
   );
 };
 
-const PromoModal = ({ isOpen, onClose, spotsRemaining = 100 }) => {
+const PromoModal = ({ isOpen, onClose, spotsRemaining = 300 }) => {
   const [showConfetti, setShowConfetti] = useState(false);
   const [confettiParticles, setConfettiParticles] = useState([]);
   const [giftOpening, setGiftOpening] = useState(false);
@@ -203,7 +203,7 @@ const PromoModal = ({ isOpen, onClose, spotsRemaining = 100 }) => {
             
             {/* Subtext */}
             <p className="text-gray-300 mb-6">
-              Be one of the first <span className="text-primary font-bold">100 users</span> to sign up and never pay platform fees!
+              Be one of the first <span className="text-primary font-bold">300 users</span> to sign up and never pay platform fees!
             </p>
             
             {/* Spots remaining counter */}
@@ -216,7 +216,7 @@ const PromoModal = ({ isOpen, onClose, spotsRemaining = 100 }) => {
                 {spotsRemaining}
               </div>
               <div className="text-sm text-gray-500 mt-1">
-                out of 100
+                out of 300
               </div>
             </div>
             
@@ -232,7 +232,7 @@ const PromoModal = ({ isOpen, onClose, spotsRemaining = 100 }) => {
             
             {/* Fine print */}
             <p className="text-xs text-gray-500 mt-4">
-              Limited time offer. 0% platform fees applies to all future transactions for qualifying accounts.
+              Limited time offer. 0% Platform Fees For Life applies to all future transactions for qualifying accounts.
             </p>
           </div>
         </div>

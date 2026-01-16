@@ -5,8 +5,8 @@ import { adminAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { 
   DollarSign, Package, Users, ShoppingCart, TrendingUp, AlertCircle, CreditCard, Percent,
-  Search, ChevronLeft, ChevronRight, Eye, Ban, CheckCircle, Trash2, Flag, RefreshCw,
-  BarChart3, Calendar, UserCheck, UserX, Package2, MessageSquare, Settings
+  Search, ChevronLeft, ChevronRight, Eye, Ban, CheckCircle, Trash2, RefreshCw,
+  BarChart3, Calendar, UserCheck, Package2, UserPlus, Shield, Briefcase, X, Edit, Mail
 } from 'lucide-react';
 
 const AdminPage = () => {
@@ -19,17 +19,35 @@ const AdminPage = () => {
   const [listingsPagination, setListingsPagination] = useState({ page: 1, pages: 1, total: 0 });
   const [orders, setOrders] = useState([]);
   const [ordersPagination, setOrdersPagination] = useState({ page: 1, pages: 1, total: 0 });
+  const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [userSearch, setUserSearch] = useState('');
   const [listingStatus, setListingStatus] = useState('');
   const [orderStatus, setOrderStatus] = useState('');
   const [actionLoading, setActionLoading] = useState(null);
+  const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
+  const [showEditEmployeeModal, setShowEditEmployeeModal] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState(null);
+  const [newEmployee, setNewEmployee] = useState({ username: '', email: '', role: 'employee' });
+  const [employeeError, setEmployeeError] = useState('');
+
+  // Determine user role permissions
+  const userRole = analytics?.user_role || (user?.is_admin ? 'admin' : null);
+  const isOwner = analytics?.is_owner || (user?.is_admin && !user?.employee_role);
+  const isManager = userRole === 'manager';
+  const isEmployee = userRole === 'employee';
+
+  // Permission checks
+  const canSeeFinancials = isOwner; // Only owner sees GMV, fees, etc.
+  const canSeeAllStats = isOwner || isManager; // Owner and manager see activity stats
+  const canManageEmployees = isOwner || isManager; // Owner and manager can manage employees
 
   useEffect(() => {
     if (authLoading) return;
     
-    if (!isAuthenticated || !user?.is_admin) {
+    // Allow access for admins and employees
+    if (!isAuthenticated || (!user?.is_admin && !user?.is_employee)) {
       navigate('/');
       return;
     }
@@ -78,10 +96,20 @@ const AdminPage = () => {
     }
   };
 
+  const fetchEmployees = async () => {
+    try {
+      const res = await adminAPI.getEmployees();
+      setEmployees(res.data.employees || []);
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'users') fetchUsers();
     else if (activeTab === 'listings') fetchListings();
     else if (activeTab === 'orders') fetchOrders();
+    else if (activeTab === 'employees' && canManageEmployees) fetchEmployees();
   }, [activeTab]);
 
   const handleSuspendUser = async (userId, isSuspended) => {
@@ -114,6 +142,70 @@ const AdminPage = () => {
     }
   };
 
+  const handleAddEmployee = async (e) => {
+    e.preventDefault();
+    setEmployeeError('');
+    try {
+      await adminAPI.createEmployee(newEmployee);
+      setShowAddEmployeeModal(false);
+      setNewEmployee({ username: '', email: '', role: 'employee' });
+      fetchEmployees();
+    } catch (error) {
+      setEmployeeError(error.response?.data?.detail || 'Failed to create employee');
+    }
+  };
+
+  const handleEditEmployee = async (e) => {
+    e.preventDefault();
+    setEmployeeError('');
+    try {
+      await adminAPI.updateEmployeeDetails(editingEmployee.id, {
+        username: editingEmployee.username,
+        email: editingEmployee.email
+      });
+      setShowEditEmployeeModal(false);
+      setEditingEmployee(null);
+      fetchEmployees();
+    } catch (error) {
+      setEmployeeError(error.response?.data?.detail || 'Failed to update employee');
+    }
+  };
+
+  const handleResendSetupEmail = async (employeeId) => {
+    try {
+      await adminAPI.resendSetupEmail(employeeId);
+      alert('Password setup email sent successfully!');
+    } catch (error) {
+      alert(error.response?.data?.detail || 'Failed to send email');
+    }
+  };
+
+  const openEditModal = (employee) => {
+    setEditingEmployee({ ...employee });
+    setEmployeeError('');
+    setShowEditEmployeeModal(true);
+  };
+
+  const handleUpdateEmployeeRole = async (employeeId, newRole) => {
+    try {
+      await adminAPI.updateEmployeeRole(employeeId, newRole);
+      fetchEmployees();
+    } catch (error) {
+      console.error('Error updating employee role:', error);
+    }
+  };
+
+  const handleDeleteEmployee = async (employeeId) => {
+    if (!window.confirm('Are you sure you want to delete this employee?')) return;
+    try {
+      await adminAPI.deleteEmployee(employeeId);
+      fetchEmployees();
+    } catch (error) {
+      console.error('Error deleting employee:', error);
+      alert(error.response?.data?.detail || 'Failed to delete employee');
+    }
+  };
+
   const getStatusBadge = (status) => {
     const styles = {
       active: 'bg-green-500/20 text-green-400',
@@ -131,7 +223,42 @@ const AdminPage = () => {
     return styles[status] || 'bg-gray-500/20 text-gray-400';
   };
 
+  const getRoleBadge = (role) => {
+    const styles = {
+      admin: 'bg-red-500/20 text-red-400',
+      manager: 'bg-blue-500/20 text-blue-400',
+      employee: 'bg-green-500/20 text-green-400',
+    };
+    return styles[role] || 'bg-gray-500/20 text-gray-400';
+  };
+
+  // Define tabs based on role
+  const getTabs = () => {
+    const baseTabs = [
+      { id: 'users', label: 'Users', icon: Users },
+      { id: 'listings', label: 'Listings', icon: Package },
+      { id: 'orders', label: 'Orders', icon: ShoppingCart },
+    ];
+
+    // Overview tab only for owner and manager
+    if (canSeeAllStats) {
+      baseTabs.unshift({ id: 'overview', label: 'Overview', icon: BarChart3 });
+    }
+
+    // Employees tab only for owner
+    if (canManageEmployees) {
+      baseTabs.push({ id: 'employees', label: 'Team', icon: Briefcase });
+    }
+
+    return baseTabs;
+  };
+
   if (authLoading || loading) return <LoadingSpinner />;
+
+  // Set default tab based on role
+  if (isEmployee && activeTab === 'overview') {
+    setActiveTab('users');
+  }
 
   return (
     <div className="min-h-screen" data-testid="admin-page">
@@ -139,7 +266,12 @@ const AdminPage = () => {
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
             <AlertCircle className="w-8 h-8 text-primary" />
-            <h1 className="text-2xl font-bold text-white">Admin Panel</h1>
+            <div>
+              <h1 className="text-2xl font-bold text-white">Admin Panel</h1>
+              <p className="text-sm text-gray-400">
+                Logged in as: <span className={`badge ${getRoleBadge(userRole)} ml-1`}>{userRole || 'Owner'}</span>
+              </p>
+            </div>
           </div>
           <button onClick={fetchData} className="btn btn-secondary">
             <RefreshCw className="w-4 h-4" />
@@ -149,12 +281,7 @@ const AdminPage = () => {
 
         {/* Tabs */}
         <div className="flex gap-2 border-b border-dark-300 mb-8 overflow-x-auto pb-2">
-          {[
-            { id: 'overview', label: 'Overview', icon: BarChart3 },
-            { id: 'users', label: 'Users', icon: Users },
-            { id: 'listings', label: 'Listings', icon: Package },
-            { id: 'orders', label: 'Orders', icon: ShoppingCart },
-          ].map(tab => (
+          {getTabs().map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -169,52 +296,59 @@ const AdminPage = () => {
             </button>
           ))}
           
-          {/* Link to Analytics Dashboard */}
-          <Link
-            to="/admin/analytics"
-            className="px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors whitespace-nowrap bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-500 hover:to-blue-500 ml-auto"
-          >
-            <TrendingUp className="w-4 h-4" />
-            Advanced Analytics
-          </Link>
+          {/* Link to Analytics Dashboard - only for owner/manager */}
+          {canSeeAllStats && (
+            <Link
+              to="/admin/analytics"
+              className="px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors whitespace-nowrap bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-500 hover:to-blue-500 ml-auto"
+            >
+              <TrendingUp className="w-4 h-4" />
+              Advanced Analytics
+            </Link>
+          )}
         </div>
 
-        {/* Overview Tab */}
-        {activeTab === 'overview' && (
+        {/* Overview Tab - Only for owner and manager */}
+        {activeTab === 'overview' && canSeeAllStats && (
           <>
             {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-              <div className="bg-dark-400 rounded-xl p-6">
-                <DollarSign className="w-10 h-10 text-green-400 mb-3" />
-                <p className="text-3xl font-bold text-white">
-                  ${analytics?.total_gmv?.toLocaleString() || '0'}
-                </p>
-                <p className="text-gray-400 text-sm">Total GMV</p>
-              </div>
-              <div className="bg-dark-400 rounded-xl p-6">
-                <TrendingUp className="w-10 h-10 text-primary mb-3" />
-                <p className="text-3xl font-bold text-white">
-                  ${analytics?.total_fees_collected?.toLocaleString() || '0'}
-                </p>
-                <p className="text-gray-400 text-sm">Platform Fees ({analytics?.platform_fee_percent || 3}%)</p>
-              </div>
-              <div className="bg-dark-400 rounded-xl p-6">
-                <CreditCard className="w-10 h-10 text-cyan-400 mb-3" />
-                <p className="text-3xl font-bold text-white">
-                  ${analytics?.total_processing_fees_collected?.toLocaleString() || '0'}
-                </p>
-                <p className="text-gray-400 text-sm">Payment Processing</p>
-                <p className="text-gray-500 text-xs mt-1">
-                  {analytics?.payment_processing_percent || 3.19}% + ${analytics?.payment_processing_fixed || 0.49}
-                </p>
-              </div>
-              <div className="bg-dark-400 rounded-xl p-6">
-                <Percent className="w-10 h-10 text-emerald-400 mb-3" />
-                <p className="text-3xl font-bold text-white">
-                  ${((analytics?.total_fees_collected || 0) + (analytics?.total_processing_fees_collected || 0)).toLocaleString()}
-                </p>
-                <p className="text-gray-400 text-sm">Total Fees Collected</p>
-              </div>
+            <div className={`grid gap-4 mb-8 ${canSeeFinancials ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-6' : 'grid-cols-2 md:grid-cols-4'}`}>
+              {/* Financial stats - only for owner */}
+              {canSeeFinancials && (
+                <>
+                  <div className="bg-dark-400 rounded-xl p-6">
+                    <DollarSign className="w-10 h-10 text-green-400 mb-3" />
+                    <p className="text-3xl font-bold text-white">
+                      ${analytics?.total_gmv?.toLocaleString() || '0'}
+                    </p>
+                    <p className="text-gray-400 text-sm">Total GMV</p>
+                  </div>
+                  <div className="bg-dark-400 rounded-xl p-6">
+                    <TrendingUp className="w-10 h-10 text-primary mb-3" />
+                    <p className="text-3xl font-bold text-white">
+                      ${analytics?.total_fees_collected?.toLocaleString() || '0'}
+                    </p>
+                    <p className="text-gray-400 text-sm">Platform Fees ({analytics?.platform_fee_percent || 3}%)</p>
+                  </div>
+                  <div className="bg-dark-400 rounded-xl p-6">
+                    <CreditCard className="w-10 h-10 text-cyan-400 mb-3" />
+                    <p className="text-3xl font-bold text-white">
+                      ${analytics?.total_processing_fees_collected?.toLocaleString() || '0'}
+                    </p>
+                    <p className="text-gray-400 text-sm">Payment Processing</p>
+                    <p className="text-gray-500 text-xs mt-1">
+                      {analytics?.payment_processing_percent || 3.19}% + ${analytics?.payment_processing_fixed || 0.49}
+                    </p>
+                  </div>
+                  <div className="bg-dark-400 rounded-xl p-6">
+                    <Percent className="w-10 h-10 text-emerald-400 mb-3" />
+                    <p className="text-3xl font-bold text-white">
+                      ${((analytics?.total_fees_collected || 0) + (analytics?.total_processing_fees_collected || 0)).toLocaleString()}
+                    </p>
+                    <p className="text-gray-400 text-sm">Total Fees Collected</p>
+                  </div>
+                </>
+              )}
               <div className="bg-dark-400 rounded-xl p-6">
                 <Package className="w-10 h-10 text-blue-400 mb-3" />
                 <p className="text-3xl font-bold text-white">
@@ -545,8 +679,12 @@ const AdminPage = () => {
                       <th className="px-6 py-3 text-left text-gray-400 text-sm">Order</th>
                       <th className="px-6 py-3 text-left text-gray-400 text-sm">Buyer</th>
                       <th className="px-6 py-3 text-left text-gray-400 text-sm">Total</th>
-                      <th className="px-6 py-3 text-left text-gray-400 text-sm">Platform Fee</th>
-                      <th className="px-6 py-3 text-left text-gray-400 text-sm">Processing Fee</th>
+                      {canSeeFinancials && (
+                        <>
+                          <th className="px-6 py-3 text-left text-gray-400 text-sm">Platform Fee</th>
+                          <th className="px-6 py-3 text-left text-gray-400 text-sm">Processing Fee</th>
+                        </>
+                      )}
                       <th className="px-6 py-3 text-left text-gray-400 text-sm">Status</th>
                       <th className="px-6 py-3 text-left text-gray-400 text-sm">Date</th>
                       <th className="px-6 py-3 text-left text-gray-400 text-sm">Actions</th>
@@ -562,8 +700,12 @@ const AdminPage = () => {
                           </Link>
                         </td>
                         <td className="px-6 py-4 text-white">${order.total?.toLocaleString()}</td>
-                        <td className="px-6 py-4 text-primary">${order.platform_fee?.toFixed(2)}</td>
-                        <td className="px-6 py-4 text-cyan-400">${(order.payment_processing_fee || 0)?.toFixed(2)}</td>
+                        {canSeeFinancials && (
+                          <>
+                            <td className="px-6 py-4 text-primary">${order.platform_fee?.toFixed(2)}</td>
+                            <td className="px-6 py-4 text-cyan-400">${(order.payment_processing_fee || 0)?.toFixed(2)}</td>
+                          </>
+                        )}
                         <td className="px-6 py-4">
                           <span className={`badge ${getStatusBadge(order.status)}`}>{order.status}</span>
                         </td>
@@ -608,6 +750,216 @@ const AdminPage = () => {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Employees Tab - Owner Only */}
+        {activeTab === 'employees' && canManageEmployees && (
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-white">Team Management</h2>
+              <button
+                onClick={() => setShowAddEmployeeModal(true)}
+                className="btn btn-primary"
+              >
+                <UserPlus className="w-4 h-4" />
+                Add Employee
+              </button>
+            </div>
+
+            {/* Role Descriptions */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+              <div className="bg-dark-400 rounded-xl p-4 border border-red-500/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <Shield className="w-5 h-5 text-red-400" />
+                  <span className="font-semibold text-red-400">Admin</span>
+                </div>
+                <p className="text-gray-400 text-sm">Full access to all features including financials, analytics, and team management.</p>
+              </div>
+              <div className="bg-dark-400 rounded-xl p-4 border border-blue-500/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <Briefcase className="w-5 h-5 text-blue-400" />
+                  <span className="font-semibold text-blue-400">Manager</span>
+                </div>
+                <p className="text-gray-400 text-sm">Access to all features except financial data (GMV, fees, revenue).</p>
+              </div>
+              <div className="bg-dark-400 rounded-xl p-4 border border-green-500/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="w-5 h-5 text-green-400" />
+                  <span className="font-semibold text-green-400">Employee</span>
+                </div>
+                <p className="text-gray-400 text-sm">Access to Users, Listings, Orders, and Support Tickets only.</p>
+              </div>
+            </div>
+
+            {/* Employees Table */}
+            <div className="bg-dark-400 rounded-xl overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-dark-300">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-gray-400 text-sm">Employee</th>
+                      <th className="px-6 py-3 text-left text-gray-400 text-sm">Role</th>
+                      <th className="px-6 py-3 text-left text-gray-400 text-sm">Status</th>
+                      <th className="px-6 py-3 text-left text-gray-400 text-sm">Added</th>
+                      <th className="px-6 py-3 text-left text-gray-400 text-sm">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {employees.map(emp => (
+                      <tr key={emp.id} className="border-t border-dark-300 hover:bg-dark-300/50">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-dark-200 rounded-full flex items-center justify-center">
+                              <span className="text-primary font-bold">{emp.username?.[0]?.toUpperCase()}</span>
+                            </div>
+                            <div>
+                              <p className="text-white font-medium">{emp.username}</p>
+                              <p className="text-gray-500 text-sm">{emp.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          {emp.is_first_user ? (
+                            <span className="badge bg-purple-500/20 text-purple-400">Owner</span>
+                          ) : (
+                            <select
+                              value={emp.employee_role || 'admin'}
+                              onChange={(e) => handleUpdateEmployeeRole(emp.id, e.target.value)}
+                              className="bg-dark-300 text-white rounded-lg px-3 py-1 text-sm border-none"
+                              disabled={emp.is_first_user}
+                            >
+                              <option value="admin">Admin</option>
+                              <option value="manager">Manager</option>
+                              <option value="employee">Employee</option>
+                            </select>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          {emp.password_setup_required ? (
+                            <span className="badge bg-yellow-500/20 text-yellow-400">Pending Setup</span>
+                          ) : (
+                            <span className="badge bg-green-500/20 text-green-400">Active</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-gray-400">
+                          {new Date(emp.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex gap-2">
+                            {/* Edit Button */}
+                            <button
+                              onClick={() => openEditModal(emp)}
+                              className="p-2 bg-blue-500/20 rounded-lg hover:bg-blue-500/30"
+                              title="Edit Details"
+                            >
+                              <Edit className="w-4 h-4 text-blue-400" />
+                            </button>
+                            {/* Resend Setup Email - only for pending users */}
+                            {emp.password_setup_required && !emp.is_first_user && (
+                              <button
+                                onClick={() => handleResendSetupEmail(emp.id)}
+                                className="p-2 bg-primary/20 rounded-lg hover:bg-primary/30"
+                                title="Resend Setup Email"
+                              >
+                                <Mail className="w-4 h-4 text-primary" />
+                              </button>
+                            )}
+                            {/* Delete Button */}
+                            {!emp.is_first_user && emp.id !== user?.id && (
+                              <button
+                                onClick={() => handleDeleteEmployee(emp.id)}
+                                className="p-2 bg-red-500/20 rounded-lg hover:bg-red-500/30"
+                                title="Remove Employee"
+                              >
+                                <Trash2 className="w-4 h-4 text-red-400" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add Employee Modal */}
+        {showAddEmployeeModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-dark-400 rounded-xl max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-white">Add New Employee</h2>
+                <button onClick={() => setShowAddEmployeeModal(false)} className="text-gray-400 hover:text-white">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              {employeeError && (
+                <div className="bg-red-500/20 border border-red-500/50 text-red-400 p-3 rounded-lg mb-4">
+                  {employeeError}
+                </div>
+              )}
+
+              <form onSubmit={handleAddEmployee} className="space-y-4">
+                <div>
+                  <label className="block text-gray-400 text-sm mb-1">Username</label>
+                  <input
+                    type="text"
+                    value={newEmployee.username}
+                    onChange={(e) => setNewEmployee({ ...newEmployee, username: e.target.value })}
+                    required
+                    className="w-full"
+                    placeholder="employee_username"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-400 text-sm mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={newEmployee.email}
+                    onChange={(e) => setNewEmployee({ ...newEmployee, email: e.target.value })}
+                    required
+                    className="w-full"
+                    placeholder="employee@company.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-400 text-sm mb-1">Password</label>
+                  <input
+                    type="password"
+                    value={newEmployee.password}
+                    onChange={(e) => setNewEmployee({ ...newEmployee, password: e.target.value })}
+                    required
+                    minLength={8}
+                    className="w-full"
+                    placeholder="Min 8 characters"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-400 text-sm mb-1">Role</label>
+                  <select
+                    value={newEmployee.role}
+                    onChange={(e) => setNewEmployee({ ...newEmployee, role: e.target.value })}
+                    className="w-full"
+                  >
+                    <option value="employee">Employee (Limited Access)</option>
+                    <option value="manager">Manager (No Financials)</option>
+                    <option value="admin">Admin (Full Access)</option>
+                  </select>
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <button type="button" onClick={() => setShowAddEmployeeModal(false)} className="btn btn-secondary flex-1">
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary flex-1">
+                    Add Employee
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

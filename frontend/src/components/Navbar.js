@@ -322,14 +322,6 @@ const Navbar = () => {
                         My Profile
                       </Link>
                       <Link
-                        to="/edit-profile"
-                        className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-gray-300 hover:bg-dark-300' : 'text-gray-700 hover:bg-gray-50'}`}
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        <Edit className="w-4 h-4" />
-                        Edit Profile
-                      </Link>
-                      <Link
                         to="/dashboard"
                         className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-gray-300 hover:bg-dark-300' : 'text-gray-700 hover:bg-gray-50'}`}
                         onClick={() => setUserMenuOpen(false)}
@@ -372,7 +364,7 @@ const Navbar = () => {
                         {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                         {isDark ? 'Light Mode' : 'Dark Mode'}
                       </button>
-                      {user?.is_admin && (
+                      {(user?.is_admin || user?.is_employee) && (
                         <Link
                           to="/admin"
                           className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-primary hover:bg-dark-300' : 'text-primary hover:bg-gray-50'}`}
@@ -494,14 +486,14 @@ const Navbar = () => {
                     My Profile
                   </Link>
                   <Link
-                    to="/my-listings"
+                    to="/dashboard"
                     className={`flex items-center gap-2 py-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <Package className="w-5 h-5" />
                     My Listings
                   </Link>
-                  {user?.is_admin && (
+                  {(user?.is_admin || user?.is_employee) && (
                     <Link
                       to="/admin"
                       className="flex items-center gap-2 py-2 text-primary font-medium"

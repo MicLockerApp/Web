@@ -431,3 +431,149 @@ MicLocker Support System
     except Exception as e:
         logger.error(f"Failed to send ticket reply notification: {e}")
         return False
+
+
+async def send_password_setup_email(to_email: str, username: str, setup_token: str, role: str, frontend_url: str = "https://audio-bazaar-6.preview.emergentagent.com") -> bool:
+    """
+    Send email to new employee to set up their password
+    
+    Args:
+        to_email: Employee email address
+        username: Employee username
+        setup_token: Password setup token
+        role: Employee role (admin, manager, employee)
+        frontend_url: Base URL for the frontend app
+        
+    Returns:
+        True if email sent successfully, False otherwise
+    """
+    if not email_service.client:
+        logger.warning(f"SES client not available - logging setup token instead: {setup_token}")
+        return False
+    
+    subject = "Welcome to MicLocker Team - Set Up Your Account"
+    setup_url = f"{frontend_url}/forgot-password/verify?token={setup_token}&email={to_email}&setup=true"
+    
+    role_display = {
+        "admin": "Administrator",
+        "manager": "Manager",
+        "employee": "Team Member"
+    }.get(role, "Team Member")
+    
+    html_body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #1a1a1a;">
+        <table role="presentation" style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td align="center" style="padding: 40px 0;">
+                    <table role="presentation" style="width: 600px; max-width: 100%; border-collapse: collapse; background-color: #2d2d2d; border-radius: 12px; overflow: hidden;">
+                        <!-- Header -->
+                        <tr>
+                            <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);">
+                                <h1 style="margin: 0; color: #FFD700; font-size: 32px; font-weight: bold;">🎵 MicLocker</h1>
+                                <p style="margin: 10px 0 0; color: #888; font-size: 14px;">The Marketplace for Music Pros</p>
+                            </td>
+                        </tr>
+                        
+                        <!-- Main Content -->
+                        <tr>
+                            <td style="padding: 30px 40px;">
+                                <h2 style="margin: 0 0 20px; color: #ffffff; font-size: 24px;">🎉 Welcome to the Team!</h2>
+                                <p style="margin: 0 0 20px; color: #cccccc; font-size: 16px; line-height: 1.6;">
+                                    Hi <strong style="color: #FFD700;">{username}</strong>,
+                                </p>
+                                <p style="margin: 0 0 20px; color: #cccccc; font-size: 16px; line-height: 1.6;">
+                                    You've been added to the MicLocker team as a <strong style="color: #FFD700;">{role_display}</strong>. 
+                                    Please click the button below to set up your password and access your account.
+                                </p>
+                                
+                                <!-- CTA Button -->
+                                <div style="text-align: center; margin: 30px 0;">
+                                    <a href="{setup_url}" style="display: inline-block; background-color: #FFD700; color: #000000; text-decoration: none; padding: 16px 32px; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                                        🔐 Set Up Your Password
+                                    </a>
+                                </div>
+                                
+                                <p style="margin: 0 0 10px; color: #cccccc; font-size: 14px; line-height: 1.6;">
+                                    ⏰ This link will expire in <strong style="color: #FFD700;">7 days</strong>.
+                                </p>
+                                
+                                <div style="background-color: #1a1a1a; border-radius: 8px; padding: 15px; margin-top: 20px;">
+                                    <p style="margin: 0 0 8px; color: #888; font-size: 12px;">If the button doesn't work, copy and paste this link:</p>
+                                    <p style="margin: 0; color: #FFD700; font-size: 12px; word-break: break-all;">{setup_url}</p>
+                                </div>
+                                
+                                <p style="margin: 20px 0 0; color: #888; font-size: 14px; line-height: 1.6;">
+                                    If you didn't expect this email or believe it was sent in error, please contact your administrator.
+                                </p>
+                            </td>
+                        </tr>
+                        
+                        <!-- Footer -->
+                        <tr>
+                            <td style="padding: 30px 40px; background-color: #1a1a1a; border-top: 1px solid #3d3d3d;">
+                                <p style="margin: 0 0 10px; color: #666; font-size: 12px; text-align: center;">
+                                    This is an automated message from MicLocker. Please do not reply to this email.
+                                </p>
+                                <p style="margin: 0; color: #666; font-size: 12px; text-align: center;">
+                                    © 2024 MicLocker. All rights reserved.
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    """
+    
+    text_body = f"""
+Welcome to MicLocker Team!
+
+Hi {username},
+
+You've been added to the MicLocker team as a {role_display}. 
+Please click the link below to set up your password and access your account:
+
+{setup_url}
+
+This link will expire in 7 days.
+
+If you didn't expect this email or believe it was sent in error, please contact your administrator.
+
+---
+This is an automated message from MicLocker.
+    """
+    
+    try:
+        response = email_service.client.send_email(
+            Source=email_service.sender_email,
+            Destination={'ToAddresses': [to_email]},
+            Message={
+                'Subject': {'Data': subject, 'Charset': 'UTF-8'},
+                'Body': {
+                    'Text': {'Data': text_body, 'Charset': 'UTF-8'},
+                    'Html': {'Data': html_body, 'Charset': 'UTF-8'}
+                }
+            }
+        )
+        
+        message_id = response.get('MessageId', 'unknown')
+        logger.info(f"Password setup email sent to {to_email} (MessageId: {message_id})")
+        return True
+        
+    except ClientError as e:
+        error_code = e.response['Error']['Code']
+        error_message = e.response['Error']['Message']
+        logger.error(f"Failed to send setup email to {to_email}: {error_code} - {error_message}")
+        return False
+        
+    except Exception as e:
+        logger.error(f"Unexpected error sending setup email to {to_email}: {e}")
+        return False

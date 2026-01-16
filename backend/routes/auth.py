@@ -45,11 +45,12 @@ async def register(user_data: UserCreate):
         )
     
     # Check if this is the first user (will be admin)
-    user_count = await db.users.count_documents({})
+    # Count only regular users (not employees) for promo eligibility
+    user_count = await db.users.count_documents({"is_employee": {"$ne": True}})
     is_first_user = user_count == 0
     
-    # First 100 users get lifetime 0% platform fees
-    has_lifetime_free_fees = user_count < 100
+    # First 300 users get lifetime 0% platform fees
+    has_lifetime_free_fees = user_count < 300
     
     # Create user
     user = UserInDB(

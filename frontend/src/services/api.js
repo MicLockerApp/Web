@@ -158,6 +158,11 @@ export const adminAPI = {
   removeListing: (listingId) => api.post(`/admin/listings/${listingId}/remove`),
   getOrders: (params) => api.get('/admin/orders', { params }),
   getSettings: () => api.get('/admin/settings'),
+  // Employee management
+  getEmployees: () => api.get('/admin/employees'),
+  createEmployee: (data) => api.post('/admin/employees', data),
+  updateEmployeeRole: (employeeId, role) => api.put(`/admin/employees/${employeeId}/role`, { role }),
+  deleteEmployee: (employeeId) => api.delete(`/admin/employees/${employeeId}`),
 };
 
 // Files API

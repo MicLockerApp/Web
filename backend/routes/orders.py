@@ -109,7 +109,7 @@ async def create_order(
         await db.cart_items.delete_many({"user_id": current_user["id"]})
     
     # Calculate fees
-    # Check if buyer has lifetime free platform fees (first 100 users perk)
+    # Check if buyer has lifetime free platform fees (first 300 users perk)
     has_free_fees = current_user.get("has_lifetime_free_fees", False)
     
     # Platform fee: 3% of subtotal (goes to MicLocker) - 0% for lifetime free users

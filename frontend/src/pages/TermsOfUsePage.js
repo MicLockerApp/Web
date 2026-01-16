@@ -59,7 +59,6 @@ const TermsOfUsePage = () => {
               </p>
               <ul className={`list-disc list-inside space-y-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 <li><Link to="/legal/privacy-policy" className="text-primary hover:underline">Privacy Policy</Link></li>
-                <li><Link to="/legal/cookies-policy" className="text-primary hover:underline">Cookies Policy</Link></li>
                 <li><Link to="/legal/intellectual-property" className="text-primary hover:underline">Intellectual Property Policy</Link></li>
                 <li><Link to="/legal/buyers" className="text-primary hover:underline">Community Rules: Buyers</Link></li>
                 <li><Link to="/legal/sellers" className="text-primary hover:underline">Community Rules: Sellers</Link></li>

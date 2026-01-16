@@ -141,8 +141,12 @@ class UserInDB(BaseModel):
     is_first_user: bool = False
     is_suspended: bool = False
     profile_completed: bool = False
-    # Lifetime 0% platform fee for first 100 users
+    # Lifetime 0% platform fee for first 300 users
     has_lifetime_free_fees: bool = False
+    # Employee system - employees don't count toward user count
+    is_employee: bool = False
+    # Employee role: 'admin', 'manager', 'employee' (only applies if is_admin or is_employee)
+    employee_role: Optional[str] = None
     
     # Profile fields
     bio: Optional[str] = None
@@ -203,6 +207,8 @@ class UserResponse(BaseModel):
     category: Optional[str] = None
     sub_categories: Optional[List[str]] = None
     is_admin: bool = False
+    is_employee: bool = False
+    employee_role: Optional[str] = None
     profile_completed: bool = False
     has_lifetime_free_fees: bool = False
     bio: Optional[str] = None
