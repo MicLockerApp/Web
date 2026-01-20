@@ -492,7 +492,7 @@ const OrderDetailPage = () => {
       {/* Review Modal */}
       {showReviewModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-          <div className={`rounded-xl p-6 max-w-md w-full ${isDark ? 'bg-dark-400' : 'bg-white'}`}>
+          <div className={`rounded-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto ${isDark ? 'bg-dark-400' : 'bg-white'}`}>
             <div className="flex items-center justify-between mb-6">
               <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 {reviewType === 'buyer_to_seller' ? 'Review Seller' : 'Review Buyer'}
@@ -535,6 +535,65 @@ const OrderDetailPage = () => {
                 </div>
               </div>
 
+              {/* Item Condition (only for buyer reviewing seller) */}
+              {reviewType === 'buyer_to_seller' && (
+                <div className="mb-6">
+                  <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Item Condition <span className="text-primary">*</span>
+                  </label>
+                  <p className={`text-xs mb-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                    How did the item compare to the listing description?
+                  </p>
+                  <div className="space-y-2">
+                    {[
+                      { value: 'as_described', label: 'As Described', desc: 'Item exactly as described', color: 'text-green-400' },
+                      { value: 'minor_issues', label: 'Minor Issues', desc: 'Small cosmetic or minor differences', color: 'text-yellow-400' },
+                      { value: 'significantly_different', label: 'Significantly Different', desc: 'Major differences from description', color: 'text-orange-400' },
+                      { value: 'damaged', label: 'Damaged', desc: 'Item arrived damaged', color: 'text-red-400' }
+                    ].map(option => (
+                      <label
+                        key={option.value}
+                        className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer border transition-colors ${
+                          itemCondition === option.value
+                            ? isDark ? 'border-primary bg-primary/10' : 'border-primary bg-primary/5'
+                            : isDark ? 'border-dark-200 hover:border-dark-100' : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="itemCondition"
+                          value={option.value}
+                          checked={itemCondition === option.value}
+                          onChange={(e) => setItemCondition(e.target.value)}
+                          className="mt-1"
+                          required
+                        />
+                        <div>
+                          <span className={`font-medium ${option.color}`}>{option.label}</span>
+                          <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{option.desc}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                  
+                  {/* Condition notes for issues */}
+                  {itemCondition && itemCondition !== 'as_described' && (
+                    <div className="mt-3">
+                      <label className={`block text-sm mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Please describe the issue (optional)
+                      </label>
+                      <textarea
+                        value={conditionNotes}
+                        onChange={(e) => setConditionNotes(e.target.value)}
+                        placeholder="Describe any issues with the item..."
+                        rows={2}
+                        className="w-full text-sm"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="mb-6">
                 <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                   Written Review <span className="text-primary">*</span>
@@ -566,7 +625,7 @@ const OrderDetailPage = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={reviewSubmitting || reviewComment.length < 10}
+                  disabled={reviewSubmitting || reviewComment.length < 10 || (reviewType === 'buyer_to_seller' && !itemCondition)}
                   className="btn btn-primary flex-1"
                   data-testid="submit-review-btn"
                 >
