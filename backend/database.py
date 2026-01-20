@@ -54,9 +54,11 @@ async def create_indexes():
     await db.db.messages.create_index("thread_id")
     await db.db.message_threads.create_index("participants")
     
-    # Reviews collection indexes
+    # Reviews collection indexes - allows bidirectional reviews (buyer->seller & seller->buyer)
     await db.db.reviews.create_index("seller_id")
-    await db.db.reviews.create_index("order_id", unique=True)
+    await db.db.reviews.create_index("reviewee_id")
+    await db.db.reviews.create_index("reviewer_id")
+    await db.db.reviews.create_index([("order_id", 1), ("review_type", 1)], unique=True)
     
     # Cart items indexes
     await db.db.cart_items.create_index("user_id")

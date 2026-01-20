@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Package, Truck, Check, MapPin, CreditCard, Star, MessageSquare, ArrowLeft, Clock, AlertCircle } from 'lucide-react';
+import { Package, Truck, Check, MapPin, CreditCard, Star, MessageSquare, ArrowLeft, Clock, AlertCircle, X, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { ordersAPI, reviewsAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import StarRating from '../components/StarRating';
@@ -10,16 +11,25 @@ const OrderDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
+  const { isDark } = useTheme();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewType, setReviewType] = useState('buyer_to_seller');
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [trackingNumber, setTrackingNumber] = useState('');
   const [message, setMessage] = useState({ type: '', text: '' });
-  const [hasReviewed, setHasReviewed] = useState(false);
+  
+  // Reviews state
+  const [orderReviews, setOrderReviews] = useState({
+    buyer_to_seller: null,
+    seller_to_buyer: null,
+    can_buyer_review: false,
+    can_seller_review: false
+  });
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -33,7 +43,14 @@ const OrderDetailPage = () => {
     try {
       const res = await ordersAPI.getById(id);
       setOrder(res.data);
-      // Check if already reviewed (would need backend support)
+      
+      // Fetch existing reviews for this order
+      try {
+        const reviewsRes = await reviewsAPI.getOrderReviews(id);
+        setOrderReviews(reviewsRes.data);
+      } catch (err) {
+        console.error('Error fetching order reviews:', err);
+      }
     } catch (error) {
       console.error('Error fetching order:', error);
       navigate('/dashboard');
@@ -55,6 +72,46 @@ const OrderDetailPage = () => {
     }
   };
 
+  const handleAddTracking = async () => {
+    if (!trackingNumber.trim()) {
+      setMessage({ type: 'error', text: 'Please enter a tracking number' });
+      return;
+    }
+    setUpdating(true);
+    try {
+      await ordersAPI.addTracking(id, { 
+        tracking_number: trackingNumber,
+        carrier: 'Standard Shipping'
+      });
+      setMessage({ type: 'success', text: 'Tracking information added!' });
+      fetchOrder();
+    } catch (error) {
+      setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to add tracking' });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleConfirmDelivery = async () => {
+    setUpdating(true);
+    try {
+      await ordersAPI.confirmDelivery(id);
+      setMessage({ type: 'success', text: 'Delivery confirmed! Thank you.' });
+      fetchOrder();
+    } catch (error) {
+      setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to confirm delivery' });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const openReviewModal = (type) => {
+    setReviewType(type);
+    setReviewRating(5);
+    setReviewComment('');
+    setShowReviewModal(true);
+  };
+
   const handleSubmitReview = async (e) => {
     e.preventDefault();
     setReviewSubmitting(true);
@@ -63,10 +120,11 @@ const OrderDetailPage = () => {
         order_id: order.id,
         rating: reviewRating,
         comment: reviewComment,
+        review_type: reviewType
       });
       setMessage({ type: 'success', text: 'Review submitted! Thank you for your feedback.' });
       setShowReviewModal(false);
-      setHasReviewed(true);
+      fetchOrder(); // Refresh to get updated review status
     } catch (error) {
       setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to submit review' });
     } finally {
@@ -76,235 +134,288 @@ const OrderDetailPage = () => {
 
   const isBuyer = user?.id === order?.buyer_id;
   const isSeller = order?.items?.some(item => item.seller_id === user?.id);
-  const canReview = isBuyer && ['delivered', 'completed'].includes(order?.status) && !hasReviewed;
+  const canBuyerReview = isBuyer && ['delivered', 'completed'].includes(order?.status) && orderReviews.can_buyer_review;
+  const canSellerReview = isSeller && ['delivered', 'completed'].includes(order?.status) && orderReviews.can_seller_review;
 
-  const getStatusStep = (status) => {
-    const steps = ['pending', 'paid', 'shipped', 'delivered', 'completed'];
-    return steps.indexOf(status);
+  const getStatusColor = (status) => {
+    const colors = {
+      pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+      paid: 'bg-green-500/20 text-green-400 border-green-500/30',
+      shipped: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      delivered: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+      completed: 'bg-green-500/20 text-green-400 border-green-500/30',
+      cancelled: 'bg-red-500/20 text-red-400 border-red-500/30',
+      refunded: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+    };
+    return colors[status] || 'bg-gray-500/20 text-gray-400 border-gray-500/30';
   };
 
-  const statusSteps = [
-    { key: 'paid', label: 'Paid', icon: CreditCard },
-    { key: 'shipped', label: 'Shipped', icon: Truck },
-    { key: 'delivered', label: 'Delivered', icon: Package },
-    { key: 'completed', label: 'Completed', icon: Check },
-  ];
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'pending': return <Clock className="w-4 h-4" />;
+      case 'paid': return <CreditCard className="w-4 h-4" />;
+      case 'shipped': return <Truck className="w-4 h-4" />;
+      case 'delivered':
+      case 'completed': return <Check className="w-4 h-4" />;
+      default: return <Package className="w-4 h-4" />;
+    }
+  };
 
   if (loading) return <LoadingSpinner />;
-  if (!order) return <div className="text-center py-16 text-gray-400">Order not found</div>;
+  if (!order) return null;
+
+  // Get the other party for review purposes
+  const sellerInfo = order.items?.[0];
+  const revieweeForBuyer = { id: sellerInfo?.seller_id, username: sellerInfo?.seller_username };
+  const revieweeForSeller = { id: order.buyer_id, username: order.buyer_username };
 
   return (
     <div className="min-h-screen" data-testid="order-detail-page">
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <button onClick={() => navigate(-1)} className="text-gray-400 hover:text-white">
-            <ArrowLeft className="w-5 h-5" />
+        <div className="flex items-center gap-4 mb-8">
+          <button
+            onClick={() => navigate('/orders')}
+            className={`p-2 rounded-full ${isDark ? 'hover:bg-dark-300' : 'hover:bg-gray-100'}`}
+          >
+            <ArrowLeft className={`w-5 h-5 ${isDark ? 'text-white' : 'text-gray-900'}`} />
           </button>
-          <div>
-            <h1 className="text-2xl font-bold text-white">Order {order.order_number}</h1>
-            <p className="text-gray-400 text-sm">Placed on {new Date(order.created_at).toLocaleDateString()}</p>
+          <div className="flex-1">
+            <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              Order {order.order_number}
+            </h1>
+            <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
+              Placed on {new Date(order.created_at).toLocaleDateString()}
+            </p>
           </div>
+          <span className={`badge border ${getStatusColor(order.status)} flex items-center gap-1`}>
+            {getStatusIcon(order.status)}
+            {order.status}
+          </span>
         </div>
 
-        {/* Message */}
+        {/* Messages */}
         {message.text && (
-          <div className={`mb-6 px-4 py-3 rounded-lg ${message.type === 'success' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+          <div className={`mb-6 p-4 rounded-lg flex items-center gap-2 ${
+            message.type === 'error' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'
+          }`}>
+            {message.type === 'error' ? <AlertCircle className="w-5 h-5" /> : <Check className="w-5 h-5" />}
             {message.text}
           </div>
         )}
 
-        {/* Status Timeline */}
-        <div className="bg-dark-400 rounded-xl p-6 mb-6">
-          <h2 className="text-lg font-semibold text-white mb-4">Order Status</h2>
+        {/* Order Progress */}
+        <div className={`rounded-xl p-6 mb-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
+          <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Order Progress</h2>
           <div className="flex items-center justify-between">
-            {statusSteps.map((step, index) => {
-              const currentStep = getStatusStep(order.status);
-              const stepIndex = getStatusStep(step.key);
-              const isActive = stepIndex <= currentStep;
-              const isCurrent = step.key === order.status;
-              const StepIcon = step.icon;
-
-              return (
-                <React.Fragment key={step.key}>
-                  <div className="flex flex-col items-center">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      isActive ? 'bg-primary text-black' : 'bg-dark-300 text-gray-500'
-                    } ${isCurrent ? 'ring-2 ring-primary ring-offset-2 ring-offset-dark-400' : ''}`}>
-                      <StepIcon className="w-5 h-5" />
-                    </div>
-                    <span className={`text-sm mt-2 ${isActive ? 'text-white' : 'text-gray-500'}`}>
-                      {step.label}
-                    </span>
+            {['paid', 'shipped', 'delivered', 'completed'].map((status, index) => (
+              <React.Fragment key={status}>
+                <div className="flex flex-col items-center">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    ['paid', 'shipped', 'delivered', 'completed'].indexOf(order.status) >= index
+                      ? 'bg-primary text-black'
+                      : isDark ? 'bg-dark-300 text-gray-500' : 'bg-gray-200 text-gray-400'
+                  }`}>
+                    {getStatusIcon(status)}
                   </div>
-                  {index < statusSteps.length - 1 && (
-                    <div className={`flex-1 h-1 mx-2 rounded ${stepIndex < currentStep ? 'bg-primary' : 'bg-dark-300'}`} />
-                  )}
-                </React.Fragment>
-              );
-            })}
+                  <span className={`text-xs mt-2 capitalize ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{status}</span>
+                </div>
+                {index < 3 && (
+                  <div className={`flex-1 h-1 mx-2 rounded ${
+                    ['paid', 'shipped', 'delivered', 'completed'].indexOf(order.status) > index
+                      ? 'bg-primary'
+                      : isDark ? 'bg-dark-300' : 'bg-gray-200'
+                  }`} />
+                )}
+              </React.Fragment>
+            ))}
           </div>
-
-          {order.status === 'cancelled' && (
-            <div className="mt-4 p-3 bg-red-500/20 rounded-lg flex items-center gap-2 text-red-400">
-              <AlertCircle className="w-5 h-5" />
-              <span>This order has been cancelled</span>
-            </div>
-          )}
         </div>
 
         {/* Seller Actions */}
         {isSeller && order.status === 'paid' && (
-          <div className="bg-dark-400 rounded-xl p-6 mb-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Ship This Order</h2>
+          <div className={`rounded-xl p-6 mb-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
+            <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Seller Actions</h2>
             <div className="flex flex-col md:flex-row gap-4">
               <input
                 type="text"
                 value={trackingNumber}
                 onChange={(e) => setTrackingNumber(e.target.value)}
-                placeholder="Enter tracking number (optional)"
+                placeholder="Enter tracking number"
                 className="flex-1"
               />
               <button
-                onClick={() => handleUpdateStatus('shipped')}
-                disabled={updating}
+                onClick={handleAddTracking}
+                disabled={updating || !trackingNumber.trim()}
                 className="btn btn-primary"
-                data-testid="mark-shipped-button"
               >
-                <Truck className="w-4 h-4" />
-                {updating ? 'Updating...' : 'Mark as Shipped'}
+                {updating ? 'Adding...' : 'Add Tracking & Ship'}
               </button>
             </div>
           </div>
         )}
 
-        {/* Buyer Actions - Confirm Delivery */}
+        {/* Buyer Delivery Confirmation */}
         {isBuyer && order.status === 'shipped' && (
-          <div className="bg-dark-400 rounded-xl p-6 mb-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Confirm Delivery</h2>
-            <p className="text-gray-400 mb-4">
-              Once you confirm delivery, the funds will be released to the seller.
+          <div className={`rounded-xl p-6 mb-6 border-2 border-primary/30 ${isDark ? 'bg-dark-400' : 'bg-white'}`}>
+            <h2 className={`text-lg font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              Received Your Order?
+            </h2>
+            <p className={`mb-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              Once you confirm delivery, the payment will be released to the seller.
             </p>
-            {order.tracking_info?.tracking_number && (
-              <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4 mb-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-purple-400 text-xs uppercase tracking-wider mb-1">
-                      Tracking ({order.tracking_info.carrier})
-                    </p>
-                    <p className="text-white font-mono text-lg">{order.tracking_info.tracking_number}</p>
-                    {order.tracking_info.estimated_delivery && (
-                      <p className="text-gray-400 text-sm mt-1">
-                        Est. Delivery: {order.tracking_info.estimated_delivery}
-                      </p>
-                    )}
-                  </div>
-                  {order.tracking_info.tracking_url && (
-                    <a
-                      href={order.tracking_info.tracking_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn btn-secondary"
-                    >
-                      Track Package
-                    </a>
-                  )}
-                </div>
-              </div>
-            )}
             <button
-              onClick={async () => {
-                if (window.confirm('Are you sure you received your order? This will release the payment to the seller.')) {
-                  setUpdating(true);
-                  try {
-                    await ordersAPI.confirmDelivery(id);
-                    setMessage({ type: 'success', text: 'Delivery confirmed! Funds have been released to the seller.' });
-                    fetchOrder();
-                  } catch (error) {
-                    setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to confirm delivery' });
-                  } finally {
-                    setUpdating(false);
-                  }
-                }
-              }}
+              onClick={handleConfirmDelivery}
               disabled={updating}
               className="btn btn-primary"
-              data-testid="confirm-delivery-button"
+              data-testid="confirm-delivery-btn"
             >
-              <Package className="w-4 h-4" />
-              {updating ? 'Confirming...' : 'Confirm Delivery & Release Funds'}
+              {updating ? 'Confirming...' : 'Confirm Delivery'}
             </button>
-          </div>
-        )}
-
-        {/* Tracking Info Display - for shipped orders viewed by buyer */}
-        {isBuyer && order.tracking_info?.tracking_number && order.status !== 'shipped' && ['delivered', 'completed'].includes(order.status) && (
-          <div className="bg-dark-400 rounded-xl p-6 mb-6">
-            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <Truck className="w-5 h-5 text-purple-400" />
-              Tracking Information
-            </h2>
-            <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-400 text-sm">Carrier: <span className="text-white">{order.tracking_info.carrier}</span></p>
-                  <p className="text-white font-mono text-lg mt-1">{order.tracking_info.tracking_number}</p>
-                </div>
-                {order.tracking_info.tracking_url && (
-                  <a
-                    href={order.tracking_info.tracking_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-secondary"
-                  >
-                    Track
-                  </a>
-                )}
-              </div>
-            </div>
           </div>
         )}
 
         {/* Review Section */}
-        {canReview && (
-          <div className="bg-dark-400 rounded-xl p-6 mb-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Leave a Review</h2>
-            <p className="text-gray-400 mb-4">Share your experience with other buyers</p>
-            <button
-              onClick={() => setShowReviewModal(true)}
-              className="btn btn-primary"
-              data-testid="leave-review-button"
-            >
-              <Star className="w-4 h-4" />
-              Write a Review
-            </button>
+        {['delivered', 'completed'].includes(order.status) && (
+          <div className={`rounded-xl p-6 mb-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
+            <h2 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <Star className="w-5 h-5 text-yellow-400" />
+              Reviews
+            </h2>
+            
+            {/* Existing Reviews */}
+            <div className="space-y-4 mb-6">
+              {orderReviews.buyer_to_seller && (
+                <div className={`p-4 rounded-lg ${isDark ? 'bg-dark-300' : 'bg-gray-50'}`}>
+                  <div className="flex items-start gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? 'bg-dark-200' : 'bg-gray-200'}`}>
+                      <User className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                          {orderReviews.buyer_to_seller.reviewer_username}
+                        </span>
+                        <span className={`text-xs px-2 py-0.5 rounded ${isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600'}`}>
+                          Buyer
+                        </span>
+                        <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>→</span>
+                        <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>
+                          {orderReviews.buyer_to_seller.reviewee_username}
+                        </span>
+                      </div>
+                      <StarRating rating={orderReviews.buyer_to_seller.rating} size={16} />
+                      {orderReviews.buyer_to_seller.comment && (
+                        <p className={`mt-2 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                          {orderReviews.buyer_to_seller.comment}
+                        </p>
+                      )}
+                      <p className={`text-xs mt-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                        {new Date(orderReviews.buyer_to_seller.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {orderReviews.seller_to_buyer && (
+                <div className={`p-4 rounded-lg ${isDark ? 'bg-dark-300' : 'bg-gray-50'}`}>
+                  <div className="flex items-start gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? 'bg-dark-200' : 'bg-gray-200'}`}>
+                      <User className="w-5 h-5 text-green-500" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                          {orderReviews.seller_to_buyer.reviewer_username}
+                        </span>
+                        <span className={`text-xs px-2 py-0.5 rounded ${isDark ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-600'}`}>
+                          Seller
+                        </span>
+                        <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>→</span>
+                        <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>
+                          {orderReviews.seller_to_buyer.reviewee_username}
+                        </span>
+                      </div>
+                      <StarRating rating={orderReviews.seller_to_buyer.rating} size={16} />
+                      {orderReviews.seller_to_buyer.comment && (
+                        <p className={`mt-2 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                          {orderReviews.seller_to_buyer.comment}
+                        </p>
+                      )}
+                      <p className={`text-xs mt-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                        {new Date(orderReviews.seller_to_buyer.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!orderReviews.buyer_to_seller && !orderReviews.seller_to_buyer && (
+                <p className={`text-center py-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                  No reviews yet for this order
+                </p>
+              )}
+            </div>
+
+            {/* Review Buttons */}
+            <div className="flex flex-wrap gap-3">
+              {canBuyerReview && (
+                <button
+                  onClick={() => openReviewModal('buyer_to_seller')}
+                  className="btn btn-primary flex items-center gap-2"
+                  data-testid="review-seller-btn"
+                >
+                  <Star className="w-4 h-4" />
+                  Review Seller ({revieweeForBuyer.username})
+                </button>
+              )}
+              {canSellerReview && (
+                <button
+                  onClick={() => openReviewModal('seller_to_buyer')}
+                  className="btn btn-secondary flex items-center gap-2"
+                  data-testid="review-buyer-btn"
+                >
+                  <Star className="w-4 h-4" />
+                  Review Buyer ({revieweeForSeller.username})
+                </button>
+              )}
+            </div>
           </div>
         )}
 
         {/* Order Items */}
-        <div className="bg-dark-400 rounded-xl p-6 mb-6">
-          <h2 className="text-lg font-semibold text-white mb-4">Items</h2>
+        <div className={`rounded-xl p-6 mb-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
+          <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Order Items</h2>
           <div className="space-y-4">
-            {order.items?.map((item, index) => (
-              <div key={index} className="flex gap-4 pb-4 border-b border-dark-300 last:border-0 last:pb-0">
+            {order.items?.map((item) => (
+              <div key={item.listing_id} className={`flex gap-4 p-4 rounded-lg ${isDark ? 'bg-dark-300' : 'bg-gray-50'}`}>
                 <img
                   src={item.listing_image || 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=100'}
                   alt={item.listing_title}
                   className="w-20 h-20 object-cover rounded-lg"
                 />
                 <div className="flex-1">
-                  <Link to={`/listing/${item.listing_id}`} className="text-white font-medium hover:text-primary">
+                  <Link 
+                    to={`/listings/${item.listing_id}`} 
+                    className={`font-medium hover:text-primary ${isDark ? 'text-white' : 'text-gray-900'}`}
+                  >
                     {item.listing_title}
                   </Link>
-                  <p className="text-gray-400 text-sm">Qty: {item.quantity}</p>
-                  <Link to={`/profile/${item.seller_id}`} className="text-gray-500 text-sm hover:text-primary">
+                  <p className={isDark ? 'text-gray-400' : 'text-gray-500'}>Qty: {item.quantity}</p>
+                  <Link 
+                    to={`/profile/${item.seller_id}`} 
+                    className={`text-sm hover:text-primary ${isDark ? 'text-gray-500' : 'text-gray-400'}`}
+                  >
                     Seller: {item.seller_username}
                   </Link>
                 </div>
                 <div className="text-right">
                   <p className="text-primary font-bold">${item.listing_price?.toLocaleString()}</p>
                   {item.shipping_cost > 0 && (
-                    <p className="text-gray-500 text-sm">+${item.shipping_cost} shipping</p>
+                    <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                      +${item.shipping_cost} shipping
+                    </p>
                   )}
                 </div>
               </div>
@@ -315,42 +426,50 @@ const OrderDetailPage = () => {
         {/* Order Summary */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Shipping Address */}
-          <div className="bg-dark-400 rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <div className={`rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
+            <h2 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
               <MapPin className="w-5 h-5" />
               Shipping Address
             </h2>
-            <div className="text-gray-300">
+            <div className={isDark ? 'text-gray-300' : 'text-gray-600'}>
               <p className="font-medium">{order.shipping_address?.full_name}</p>
               <p>{order.shipping_address?.address_line1}</p>
               {order.shipping_address?.address_line2 && <p>{order.shipping_address?.address_line2}</p>}
               <p>{order.shipping_address?.city}, {order.shipping_address?.state} {order.shipping_address?.postal_code}</p>
               <p>{order.shipping_address?.country}</p>
             </div>
+            
+            {/* Tracking Info */}
+            {order.tracking_number && (
+              <div className={`mt-4 pt-4 border-t ${isDark ? 'border-dark-300' : 'border-gray-200'}`}>
+                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Tracking Number:</p>
+                <p className={`font-mono ${isDark ? 'text-white' : 'text-gray-900'}`}>{order.tracking_number}</p>
+              </div>
+            )}
           </div>
 
           {/* Payment Summary */}
-          <div className="bg-dark-400 rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <div className={`rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
+            <h2 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
               <CreditCard className="w-5 h-5" />
               Payment Summary
             </h2>
             <div className="space-y-2">
-              <div className="flex justify-between text-gray-400">
+              <div className={`flex justify-between ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                 <span>Subtotal</span>
                 <span>${order.subtotal?.toLocaleString()}</span>
               </div>
-              <div className="flex justify-between text-gray-400">
+              <div className={`flex justify-between ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                 <span>Shipping</span>
                 <span>${order.shipping_total?.toLocaleString()}</span>
               </div>
               {order.payment_processing_fee > 0 && (
-                <div className="flex justify-between text-gray-400">
+                <div className={`flex justify-between ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                   <span>Processing Fee</span>
                   <span>${order.payment_processing_fee?.toFixed(2)}</span>
                 </div>
               )}
-              <div className="border-t border-dark-300 pt-2 mt-2 flex justify-between text-white font-bold">
+              <div className={`border-t pt-2 mt-2 flex justify-between font-bold ${isDark ? 'border-dark-300 text-white' : 'border-gray-200 text-gray-900'}`}>
                 <span>Total</span>
                 <span className="text-primary">${order.total?.toLocaleString()}</span>
               </div>
@@ -358,7 +477,7 @@ const OrderDetailPage = () => {
           </div>
         </div>
 
-        {/* Contact Seller/Buyer */}
+        {/* Contact Button */}
         <div className="mt-6">
           <Link
             to={`/messages?to=${isBuyer ? order.items?.[0]?.seller_id : order.buyer_id}`}
@@ -373,21 +492,43 @@ const OrderDetailPage = () => {
       {/* Review Modal */}
       {showReviewModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-          <div className="bg-dark-400 rounded-xl p-6 max-w-md w-full">
-            <h2 className="text-xl font-bold text-white mb-6">Write a Review</h2>
+          <div className={`rounded-xl p-6 max-w-md w-full ${isDark ? 'bg-dark-400' : 'bg-white'}`}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {reviewType === 'buyer_to_seller' ? 'Review Seller' : 'Review Buyer'}
+              </h2>
+              <button 
+                onClick={() => setShowReviewModal(false)} 
+                className={isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {/* Who you're reviewing */}
+            <div className={`p-3 rounded-lg mb-4 ${isDark ? 'bg-dark-300' : 'bg-gray-100'}`}>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                You are reviewing:
+              </p>
+              <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {reviewType === 'buyer_to_seller' ? revieweeForBuyer.username : revieweeForSeller.username}
+              </p>
+            </div>
+
             <form onSubmit={handleSubmitReview}>
               <div className="mb-6">
-                <label className="block text-gray-400 mb-3">Rating</label>
+                <label className={`block mb-3 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Rating</label>
                 <div className="flex gap-2">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
                       key={star}
                       type="button"
                       onClick={() => setReviewRating(star)}
-                      className="p-1"
+                      className="p-1 transition-transform hover:scale-110"
+                      data-testid={`star-${star}`}
                     >
                       <Star
-                        className={`w-8 h-8 ${star <= reviewRating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-500'}`}
+                        className={`w-8 h-8 ${star <= reviewRating ? 'text-yellow-400 fill-yellow-400' : isDark ? 'text-gray-600' : 'text-gray-300'}`}
                       />
                     </button>
                   ))}
@@ -395,16 +536,24 @@ const OrderDetailPage = () => {
               </div>
 
               <div className="mb-6">
-                <label className="block text-gray-400 mb-2">Comment (optional)</label>
+                <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Written Review <span className="text-primary">*</span>
+                </label>
                 <textarea
                   value={reviewComment}
                   onChange={(e) => setReviewComment(e.target.value)}
+                  placeholder={reviewType === 'buyer_to_seller' 
+                    ? "How was your experience with this seller? Describe the item quality, shipping speed, communication, etc."
+                    : "How was your experience with this buyer? Were they communicative, prompt with payment, etc."}
                   rows={4}
-                  placeholder="Tell others about your experience..."
-                  maxLength={1000}
-                  data-testid="review-comment-input"
+                  required
+                  minLength={10}
+                  className="w-full"
+                  data-testid="review-comment"
                 />
-                <p className="text-gray-500 text-sm mt-1">{reviewComment.length}/1000</p>
+                <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                  This review will be publicly displayed on the user&apos;s profile. Minimum 10 characters.
+                </p>
               </div>
 
               <div className="flex gap-3">
@@ -417,9 +566,9 @@ const OrderDetailPage = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={reviewSubmitting}
+                  disabled={reviewSubmitting || reviewComment.length < 10}
                   className="btn btn-primary flex-1"
-                  data-testid="submit-review-button"
+                  data-testid="submit-review-btn"
                 >
                   {reviewSubmitting ? 'Submitting...' : 'Submit Review'}
                 </button>

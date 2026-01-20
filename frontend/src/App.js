@@ -22,6 +22,7 @@ import CheckoutSuccessPage from './pages/CheckoutSuccessPage';
 import CheckoutCancelPage from './pages/CheckoutCancelPage';
 import ProfilePage from './pages/ProfilePage';
 import EditProfilePage from './pages/EditProfilePage';
+import AccountSettingsPage from './pages/AccountSettingsPage';
 import FavoritesPage from './pages/FavoritesPage';
 import DashboardPage from './pages/DashboardPage';
 import CreateListingPage from './pages/CreateListingPage';
@@ -102,7 +103,10 @@ function AppContent() {
               <Route path="/checkout/cancel" element={<CheckoutCancelPage />} />
               <Route path="/profile/:id" element={<ProfilePage />} />
               <Route path="/profile/edit" element={<EditProfilePage />} />
+              <Route path="/profile/:id/edit" element={<EditProfilePage />} />
               <Route path="/settings" element={<EditProfilePage />} />
+              <Route path="/account" element={<AccountSettingsPage />} />
+              <Route path="/account/settings" element={<AccountSettingsPage />} />
               <Route path="/favorites" element={<FavoritesPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/dashboard/listings/:id/edit" element={<EditListingPage />} />

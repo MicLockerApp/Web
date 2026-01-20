@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, Literal
 from datetime import datetime
 import uuid
 
@@ -7,6 +7,7 @@ class ReviewCreate(BaseModel):
     order_id: str
     rating: int = Field(..., ge=1, le=5)
     comment: Optional[str] = Field(None, max_length=1000)
+    review_type: Literal["buyer_to_seller", "seller_to_buyer"] = "buyer_to_seller"
 
 class ReviewInDB(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -14,6 +15,17 @@ class ReviewInDB(BaseModel):
     listing_id: str
     listing_title: str
     
+    # The reviewer (who wrote the review)
+    reviewer_id: str
+    reviewer_username: str
+    reviewer_role: str  # "buyer" or "seller"
+    
+    # The reviewee (who is being reviewed)
+    reviewee_id: str
+    reviewee_username: str
+    reviewee_role: str  # "buyer" or "seller"
+    
+    # Legacy fields for backwards compatibility
     buyer_id: str
     buyer_username: str
     seller_id: str
@@ -21,6 +33,10 @@ class ReviewInDB(BaseModel):
     
     rating: int  # 1-5 stars
     comment: Optional[str] = None
+    review_type: str = "buyer_to_seller"  # "buyer_to_seller" or "seller_to_buyer"
+    
+    # Reviews are always public and cannot be hidden
+    is_public: bool = True
     
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -29,11 +45,20 @@ class ReviewResponse(BaseModel):
     order_id: str
     listing_id: str
     listing_title: str
+    reviewer_id: str
+    reviewer_username: str
+    reviewer_role: str
+    reviewee_id: str
+    reviewee_username: str
+    reviewee_role: str
     buyer_id: str
     buyer_username: str
     seller_id: str
+    seller_username: str
     rating: int
     comment: Optional[str] = None
+    review_type: str
+    is_public: bool = True
     created_at: datetime
 
 # Admin Analytics Models

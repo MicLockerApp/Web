@@ -141,6 +141,7 @@ class UserInDB(BaseModel):
     is_first_user: bool = False
     is_suspended: bool = False
     profile_completed: bool = False
+    email_verified: bool = False  # Email verification status
     # Lifetime 0% platform fee for first 300 users
     has_lifetime_free_fees: bool = False
     # Employee system - employees don't count toward user count
@@ -210,6 +211,7 @@ class UserResponse(BaseModel):
     is_employee: bool = False
     employee_role: Optional[str] = None
     profile_completed: bool = False
+    email_verified: bool = False
     has_lifetime_free_fees: bool = False
     bio: Optional[str] = None
     location: Optional[str] = None

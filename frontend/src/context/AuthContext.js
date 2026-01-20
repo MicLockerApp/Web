@@ -55,6 +55,17 @@ export const AuthProvider = ({ children }) => {
     setUser(prev => ({ ...prev, ...userData }));
   };
 
+  // Setter function for direct token management (used by email verification signup)
+  const setToken = (token) => {
+    if (token) {
+      localStorage.setItem('token', token);
+      setIsAuthenticated(true);
+    } else {
+      localStorage.removeItem('token');
+      setIsAuthenticated(false);
+    }
+  };
+
   const value = {
     user,
     loading,
@@ -65,6 +76,9 @@ export const AuthProvider = ({ children }) => {
     updateUser,
     loadUser,
     refreshUser: loadUser,
+    setUser,
+    setToken,
+    setIsAuthenticated,
   };
 
   return (

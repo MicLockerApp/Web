@@ -15,8 +15,18 @@ MicLocker is a production-ready full-stack marketplace where musicians, audio en
 
 #### 1. User Authentication & Profiles
 - JWT-based authentication
-- User registration and login
+- User registration with **email verification**
+  - 6-digit verification code sent via email
+  - 15-minute code expiration
+  - Resend code functionality
+  - Users cannot complete signup until email is verified
+- User login
 - Profile management with image upload
+- **Account Settings** (NEW - January 2026)
+  - Change username (requires password verification)
+  - Change email (requires password + verification to new email)
+  - Change password (requires current password, auto-logout for security)
+  - Accessible via /account or user dropdown menu
 - Seller profiles with ratings and reviews
 
 #### 2. Marketplace Core
@@ -28,10 +38,20 @@ MicLocker is a production-ready full-stack marketplace where musicians, audio en
 
 #### 3. Offers System
 - Make offers on listings
-- Counter offers
-- Accept/decline functionality
+- Counter offers with negotiation history
+- Accept/decline/withdraw functionality
+- Pending action tracking (buyer/seller turn indicator)
 
-#### 4. Messaging System
+#### 4. Reviews & Ratings System (NEW - January 2026)
+- **Bidirectional reviews**: Buyers rate sellers AND sellers rate buyers
+- 5-star rating system with written comments
+- Reviews are **publicly displayed** on user profiles (cannot be hidden)
+- Separate rating statistics: "As Seller" and "As Buyer"
+- Rating distribution breakdown
+- Tied to completed orders (delivered/completed status)
+- Review submission from Order Detail page
+
+#### 5. Messaging System
 - Direct messaging between users
 - Thread-based conversations
 - System notifications
@@ -112,6 +132,47 @@ MicLocker is a production-ready full-stack marketplace where musicians, audio en
 ```
 
 ## Completed This Session (January 20, 2026)
+
+### Bidirectional Reviews & Ratings System (NEW)
+1. Enhanced review model to support buyer-to-seller AND seller-to-buyer reviews
+2. Added `reviewer_id`, `reviewee_id`, `reviewer_role`, `reviewee_role`, `review_type` fields
+3. Reviews are publicly displayed on user profiles (cannot be hidden)
+4. Separate rating statistics: "As Seller" and "As Buyer" ratings
+5. Updated ProfilePage to show bidirectional reviews with proper badges
+6. Updated OrderDetailPage with review submission UI for both parties
+7. Added review API endpoints: `/api/reviews/user/{id}`, `/api/reviews/order/{id}`
+8. Seeded database with 28 sample reviews
+9. All 27 backend tests passing (100%)
+
+### Files Modified for Reviews
+- `/app/backend/routes/reviews.py` - Complete rewrite with bidirectional support
+- `/app/backend/models/review.py` - Added reviewer/reviewee fields, review_type
+- `/app/backend/database.py` - Updated index to allow multiple reviews per order
+- `/app/frontend/src/pages/OrderDetailPage.js` - Review submission UI
+- `/app/frontend/src/pages/ProfilePage.js` - Enhanced reviews display
+- `/app/frontend/src/services/api.js` - Added reviewsAPI methods
+- `/app/backend/seed_reviews.py` - Seed data script
+
+### Email Verification Disabled (Code Kept)
+- Email verification step temporarily disabled due to AWS SES sandbox limitations
+- All verification code preserved in codebase for future use
+- Signup flow now: Account creation → Category selection → Profile completion
+- Code can be re-enabled by uncommenting in RegisterPage.js
+
+### Account Settings Feature
+1. Added ability for users to change username, email, and password
+2. All changes require password verification for security
+3. Email change uses 2-step verification (password + code to new email)
+4. Password change automatically logs user out for security
+5. Created `/app/frontend/src/pages/AccountSettingsPage.js`
+6. Added Account Settings link to navbar user dropdown
+
+### Files Modified for Account Settings
+- `/app/backend/routes/auth.py` - Added change-username, change-email/*, change-password endpoints
+- `/app/frontend/src/pages/AccountSettingsPage.js` - New page for account settings
+- `/app/frontend/src/services/api.js` - Added authAPI methods for account changes
+- `/app/frontend/src/components/Navbar.js` - Added Account Settings link
+- `/app/frontend/src/App.js` - Added routes for /account
 
 ### Stripe Connect Implementation
 1. Integrated delivery scheduler in server.py (runs hourly)
