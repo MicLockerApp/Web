@@ -13,15 +13,18 @@ class Settings(BaseSettings):
     algorithm: str = os.getenv("ALGORITHM", "HS256")
     access_token_expire_minutes: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "10080"))
     
-    # CORS Settings - Read from environment or use defaults
-    cors_origins: List[str] = []
-    
     @property
     def get_cors_origins(self) -> List[str]:
         """Get CORS origins from environment or use defaults"""
         env_origins = os.getenv("CORS_ORIGINS", "")
+        
+        # Handle wildcard
+        if env_origins == "*":
+            return ["*"]
+        
         if env_origins:
-            return [origin.strip() for origin in env_origins.split(",")]
+            return [origin.strip() for origin in env_origins.split(",") if origin.strip()]
+        
         # Default origins for development and production
         return [
             "http://localhost:3000",
