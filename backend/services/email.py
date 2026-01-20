@@ -421,7 +421,7 @@ MicLocker Support System
         return False
 
 
-async def send_ticket_reply_notification(ticket, reply, is_staff_reply: bool, frontend_url: str = "https://music-gear-swap.preview.emergentagent.com") -> bool:
+async def send_ticket_reply_notification(ticket, reply, is_staff_reply: bool, frontend_url: str = None) -> bool:
     """
     Send email notification when a reply is added to a ticket
     
@@ -429,11 +429,15 @@ async def send_ticket_reply_notification(ticket, reply, is_staff_reply: bool, fr
         ticket: Ticket dict
         reply: TicketReply object
         is_staff_reply: True if staff replied, False if customer
-        frontend_url: Base URL for the frontend app
+        frontend_url: Base URL for the frontend app (uses settings if not provided)
         
     Returns:
         True if email sent successfully
     """
+    from config import settings
+    if frontend_url is None:
+        frontend_url = settings.frontend_url or "https://miclockerapp.com"
+    
     if not email_service.client:
         return False
     
