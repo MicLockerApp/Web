@@ -455,7 +455,7 @@ async def confirm_delivery(
     """
     Buyer confirms delivery of the order
     
-    This releases the held funds to the seller.
+    This releases the held funds to the seller and sets up review gating.
     """
     db = get_database()
     
@@ -493,6 +493,32 @@ async def confirm_delivery(
         }}
     )
     
+    # Set review gating for buyer (if they've made purchases before, or mark first purchase complete)
+    buyer_update = {
+        "first_purchase_completed": True,
+        "pending_review_order_id": order_id,
+        "pending_review_type": "buyer",
+        "updated_at": datetime.utcnow()
+    }
+    # Increment total_purchases
+    await db.users.update_one(
+        {"id": order["buyer_id"]},
+        {"$set": buyer_update, "$inc": {"total_purchases": 1}}
+    )
+    
+    # Set review gating for seller(s)
+    seller_ids = list(set(item["seller_id"] for item in order["items"]))
+    for seller_id in seller_ids:
+        await db.users.update_one(
+            {"id": seller_id},
+            {"$set": {
+                "first_sale_completed": True,
+                "pending_review_order_id": order_id,
+                "pending_review_type": "seller",
+                "updated_at": datetime.utcnow()
+            }}
+        )
+    
     # Notify seller that funds are released
     for item in order["items"]:
         seller_id = item["seller_id"]
@@ -520,6 +546,8 @@ Great news! The buyer has confirmed delivery for **Order #{order['order_number']
 **Your payout of ${order['seller_payout_amount']:.2f} has been released!**
 
 The funds will be transferred to your account according to Stripe's standard payout schedule.
+
+⭐ **Please review the buyer** - Don't forget to leave a review for {order.get('buyer_username', 'the buyer')}!
 
 Thank you for selling on MicLocker!
 """
