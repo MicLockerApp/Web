@@ -3,11 +3,29 @@ from typing import Optional, Literal
 from datetime import datetime
 import uuid
 
+# Item condition options for buyers reporting item state
+ITEM_CONDITION_OPTIONS = [
+    "as_described",      # Item exactly as described
+    "minor_issues",      # Small cosmetic or minor functional differences
+    "significantly_different",  # Major differences from description
+    "damaged"            # Item arrived damaged
+]
+
+
+class ItemConditionReport(BaseModel):
+    """Buyer's report on item condition during review"""
+    condition: str = "as_described"  # One of ITEM_CONDITION_OPTIONS
+    notes: Optional[str] = None  # Optional details about condition
+
+
 class ReviewCreate(BaseModel):
     order_id: str
     rating: int = Field(..., ge=1, le=5)
     comment: Optional[str] = Field(None, max_length=1000)
     review_type: Literal["buyer_to_seller", "seller_to_buyer"] = "buyer_to_seller"
+    # Item condition (only for buyer_to_seller reviews)
+    item_condition: Optional[str] = None  # as_described, minor_issues, significantly_different, damaged
+    condition_notes: Optional[str] = None
 
 class ReviewInDB(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
