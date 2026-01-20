@@ -116,6 +116,8 @@ function AppContent() {
               <Route path="/offers" element={<OffersPage />} />
               <Route path="/orders" element={<OrdersPage />} />
               <Route path="/orders/:id" element={<OrderDetailPage />} />
+              <Route path="/trades" element={<TradesPage />} />
+              <Route path="/trades/:tradeId" element={<TradeDetailPage />} />
               <Route path="/messages" element={<MessagesPage />} />
               <Route path="/admin" element={<AdminPage />} />
               <Route path="/admin/analytics" element={<AnalyticsDashboard />} />
