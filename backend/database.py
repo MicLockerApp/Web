@@ -1,6 +1,7 @@
 from motor.motor_asyncio import AsyncIOMotorClient
 from config import settings
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -10,15 +11,61 @@ class Database:
 
 db = Database()
 
+def get_database_name_from_url(mongo_url: str) -> str:
+    """Extract database name from MongoDB URL or use settings"""
+    # For Atlas URLs like: mongodb+srv://user:pass@cluster.mongodb.net/dbname?...
+    # Try to extract database name from URL
+    if '/' in mongo_url:
+        # Get the part after the last / and before any ?
+        path_part = mongo_url.split('/')[-1]
+        if '?' in path_part:
+            db_name = path_part.split('?')[0]
+        else:
+            db_name = path_part
+        
+        # If we got a valid db name from URL, use it
+        if db_name and db_name not in ['', 'admin', 'local']:
+            return db_name
+    
+    # Fall back to settings
+    return settings.database_name
+
 async def connect_to_mongo():
     """Connect to MongoDB"""
-    logger.info(f"Connecting to MongoDB at {settings.mongo_url}")
-    db.client = AsyncIOMotorClient(settings.mongo_url)
-    db.db = db.client[settings.database_name]
+    mongo_url = settings.mongo_url
     
-    # Create indexes
-    await create_indexes()
-    logger.info("Connected to MongoDB")
+    # Mask credentials in log
+    if '@' in mongo_url:
+        masked_url = mongo_url.split('@')[1] if '@' in mongo_url else mongo_url
+        logger.info(f"Connecting to MongoDB at ...@{masked_url}")
+    else:
+        logger.info(f"Connecting to MongoDB at {mongo_url}")
+    
+    try:
+        # Create client with appropriate settings for Atlas
+        db.client = AsyncIOMotorClient(
+            mongo_url,
+            serverSelectionTimeoutMS=30000,  # 30 second timeout
+            connectTimeoutMS=30000,
+            socketTimeoutMS=30000,
+            retryWrites=True,
+            w='majority'
+        )
+        
+        # Get database name
+        db_name = get_database_name_from_url(mongo_url)
+        db.db = db.client[db_name]
+        
+        # Test connection
+        await db.client.admin.command('ping')
+        logger.info(f"Connected to MongoDB database: {db_name}")
+        
+        # Create indexes
+        await create_indexes()
+        
+    except Exception as e:
+        logger.error(f"Failed to connect to MongoDB: {e}")
+        raise
 
 async def close_mongo_connection():
     """Close MongoDB connection"""
