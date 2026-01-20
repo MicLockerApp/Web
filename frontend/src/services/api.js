@@ -200,6 +200,12 @@ export const paymentsAPI = {
   
   // Get payment status
   getStatus: (sessionId) => api.get(`/payments/status/${sessionId}`),
+  
+  // Stripe Connect - Seller Onboarding
+  startSellerOnboarding: () => api.post('/payments/connect/onboard'),
+  getConnectStatus: () => api.get('/payments/connect/status'),
+  refreshOnboardingLink: () => api.post('/payments/connect/refresh-link'),
+  getSellerBalance: () => api.get('/payments/connect/balance'),
 };
 
 export default api;

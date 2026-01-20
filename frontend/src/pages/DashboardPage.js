@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Package, DollarSign, MessageSquare, Plus, Eye, Edit2, Trash2, Star, Truck, Clock, CheckCircle, AlertCircle, Copy, ExternalLink, X } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Package, DollarSign, MessageSquare, Plus, Eye, Edit2, Trash2, Star, Truck, Clock, CheckCircle, AlertCircle, Copy, ExternalLink, X, CreditCard, Wallet, RefreshCw, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { listingsAPI, ordersAPI, offersAPI } from '../services/api';
+import { listingsAPI, ordersAPI, offersAPI, paymentsAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
+  const [searchParams] = useSearchParams();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const { isDark } = useTheme();
   const [activeTab, setActiveTab] = useState('listings');
   const [listings, setListings] = useState([]);
@@ -16,6 +17,13 @@ const DashboardPage = () => {
   const [sales, setSales] = useState([]);
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Stripe Connect state
+  const [stripeStatus, setStripeStatus] = useState(null);
+  const [stripeBalance, setStripeBalance] = useState(null);
+  const [stripeLoading, setStripeLoading] = useState(false);
+  const [stripeError, setStripeError] = useState('');
+  const [stripeSuccess, setStripeSuccess] = useState('');
   
   // Tracking modal state
   const [showTrackingModal, setShowTrackingModal] = useState(false);
@@ -30,12 +38,49 @@ const DashboardPage = () => {
   const [trackingSuccess, setTrackingSuccess] = useState('');
 
   useEffect(() => {
+    // Wait for auth loading to complete before checking authentication
+    if (authLoading) return;
+    
     if (!isAuthenticated) {
       navigate('/login');
       return;
     }
     fetchData();
-  }, [isAuthenticated, navigate, activeTab]);
+    fetchStripeStatus();
+    
+    // Check for Stripe onboarding return
+    const onboardingComplete = searchParams.get('stripe_onboarding');
+    const stripeRefresh = searchParams.get('stripe_refresh');
+    
+    if (onboardingComplete === 'complete') {
+      setStripeSuccess('Stripe account setup completed! Your account is being verified.');
+      // Clear the URL params
+      window.history.replaceState({}, '', '/dashboard');
+      // Refresh status after a moment
+      setTimeout(() => fetchStripeStatus(), 2000);
+    }
+    
+    if (stripeRefresh === 'true') {
+      // User returned but needs to continue setup
+      fetchStripeStatus();
+      window.history.replaceState({}, '', '/dashboard');
+    }
+  }, [authLoading, isAuthenticated, navigate, activeTab, searchParams]);
+  
+  const fetchStripeStatus = async () => {
+    try {
+      const statusRes = await paymentsAPI.getConnectStatus();
+      setStripeStatus(statusRes.data);
+      
+      // Fetch balance if connected
+      if (statusRes.data?.can_receive_payouts) {
+        const balanceRes = await paymentsAPI.getSellerBalance();
+        setStripeBalance(balanceRes.data);
+      }
+    } catch (error) {
+      console.error('Error fetching Stripe status:', error);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -80,6 +125,45 @@ const DashboardPage = () => {
       fetchData();
     } catch (error) {
       console.error('Error handling offer:', error);
+    }
+  };
+
+  const handleStripeConnect = async () => {
+    setStripeLoading(true);
+    setStripeError('');
+    setStripeSuccess('');
+    
+    try {
+      const response = await paymentsAPI.startSellerOnboarding();
+      
+      if (response.data.status === 'complete') {
+        setStripeSuccess('Your Stripe account is already fully set up!');
+        setStripeStatus({ ...stripeStatus, status: 'connected', can_receive_payouts: true });
+        fetchStripeStatus();
+      } else if (response.data.onboarding_url) {
+        // Redirect to Stripe onboarding
+        window.location.href = response.data.onboarding_url;
+      }
+    } catch (error) {
+      setStripeError(error.response?.data?.detail || 'Failed to start Stripe setup. Please try again.');
+    } finally {
+      setStripeLoading(false);
+    }
+  };
+
+  const handleRefreshStripeLink = async () => {
+    setStripeLoading(true);
+    setStripeError('');
+    
+    try {
+      const response = await paymentsAPI.refreshOnboardingLink();
+      if (response.data.onboarding_url) {
+        window.location.href = response.data.onboarding_url;
+      }
+    } catch (error) {
+      setStripeError(error.response?.data?.detail || 'Failed to generate new link. Please try again.');
+    } finally {
+      setStripeLoading(false);
     }
   };
 
@@ -171,6 +255,15 @@ const DashboardPage = () => {
   const pendingShipments = sales.filter(s => s.status === 'paid').length;
   const releasedPayouts = sales.filter(s => s.seller_payout_status === 'released').length;
 
+  // Show loading while auth is initializing
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen" data-testid="dashboard-page">
       <div className="max-w-6xl mx-auto px-4 py-8">
@@ -208,6 +301,171 @@ const DashboardPage = () => {
             <p className="text-2xl font-bold text-white">{user?.rating?.toFixed(1) || '0.0'}</p>
             <p className="text-gray-400 text-sm">Rating ({user?.review_count || 0} reviews)</p>
           </div>
+        </div>
+
+        {/* Stripe Connect Section */}
+        <div className="mb-8" data-testid="stripe-connect-section">
+          {stripeError && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-4 flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+              <p className="text-red-400">{stripeError}</p>
+              <button onClick={() => setStripeError('')} className="ml-auto text-red-400 hover:text-red-300">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+          
+          {stripeSuccess && (
+            <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 mb-4 flex items-center gap-3">
+              <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
+              <p className="text-green-400">{stripeSuccess}</p>
+              <button onClick={() => setStripeSuccess('')} className="ml-auto text-green-400 hover:text-green-300">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Not Connected State */}
+          {stripeStatus?.status === 'not_connected' && (
+            <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/30 rounded-xl p-6">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-purple-500/20 rounded-xl">
+                  <CreditCard className="w-8 h-8 text-purple-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-white mb-1">Connect with Stripe to Get Paid</h3>
+                  <p className="text-gray-400 mb-4">
+                    Connect your Stripe account to receive payouts when you make sales. Stripe handles secure payments and direct deposits to your bank account.
+                  </p>
+                  <ul className="text-gray-400 text-sm space-y-1 mb-4">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-400" />
+                      Secure payment processing
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-400" />
+                      Direct deposits to your bank
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-400" />
+                      Automatic payouts after delivery confirmation
+                    </li>
+                  </ul>
+                  <button 
+                    onClick={handleStripeConnect}
+                    disabled={stripeLoading}
+                    className="btn btn-primary flex items-center gap-2"
+                    data-testid="connect-stripe-button"
+                  >
+                    {stripeLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Setting up...
+                      </>
+                    ) : (
+                      <>
+                        <Wallet className="w-4 h-4" />
+                        Connect Stripe Account
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Pending/In Progress State */}
+          {stripeStatus?.status === 'pending' && (
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-yellow-500/20 rounded-xl">
+                  <Clock className="w-8 h-8 text-yellow-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-white mb-1">Complete Your Stripe Setup</h3>
+                  <p className="text-gray-400 mb-4">
+                    Your Stripe account is partially set up. Please complete the verification process to start receiving payouts.
+                  </p>
+                  {stripeStatus?.account?.requirements?.currently_due?.length > 0 && (
+                    <div className="bg-dark-400 rounded-lg p-3 mb-4">
+                      <p className="text-yellow-400 text-sm font-medium mb-2">Action Required:</p>
+                      <ul className="text-gray-400 text-sm space-y-1">
+                        {stripeStatus.account.requirements.currently_due.slice(0, 3).map((req, idx) => (
+                          <li key={idx} className="flex items-center gap-2">
+                            <AlertCircle className="w-3 h-3 text-yellow-400" />
+                            {req.replace(/_/g, ' ')}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  <button 
+                    onClick={handleRefreshStripeLink}
+                    disabled={stripeLoading}
+                    className="btn btn-primary flex items-center gap-2"
+                    data-testid="continue-stripe-setup-button"
+                  >
+                    {stripeLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-4 h-4" />
+                        Continue Setup
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Connected State */}
+          {stripeStatus?.status === 'connected' && stripeStatus?.can_receive_payouts && (
+            <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-6">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-green-500/20 rounded-xl">
+                  <CheckCircle className="w-8 h-8 text-green-400" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-lg font-bold text-white">Stripe Connected</h3>
+                    <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full font-medium">
+                      Active
+                    </span>
+                  </div>
+                  <p className="text-gray-400 mb-4">
+                    Your Stripe account is fully set up. You&apos;ll receive payouts automatically when buyers confirm delivery.
+                  </p>
+                  
+                  {/* Balance Display */}
+                  {stripeBalance && (
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div className="bg-dark-400 rounded-lg p-4">
+                        <p className="text-gray-400 text-sm mb-1">Available Balance</p>
+                        <p className="text-2xl font-bold text-green-400">
+                          ${(stripeBalance.available || 0).toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="bg-dark-400 rounded-lg p-4">
+                        <p className="text-gray-400 text-sm mb-1">Pending</p>
+                        <p className="text-2xl font-bold text-yellow-400">
+                          ${(stripeBalance.pending || 0).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center gap-2 text-gray-500 text-sm">
+                    <CreditCard className="w-4 h-4" />
+                    Payouts are processed automatically by Stripe
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Tabs */}

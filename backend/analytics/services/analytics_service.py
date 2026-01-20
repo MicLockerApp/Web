@@ -66,6 +66,15 @@ class AnalyticsService:
             "timestamp": {"$gte": one_hour_ago}
         })
         
+        # Unique visitors today (count unique session_ids from page.view events)
+        visitors_pipeline = [
+            {"$match": {"event_type": "page.view", "timestamp": {"$gte": today_start}}},
+            {"$group": {"_id": "$session_id"}},
+            {"$count": "unique_visitors"}
+        ]
+        visitors_result = await db.analytics_events.aggregate(visitors_pipeline).to_list(length=1)
+        visitors_today = visitors_result[0]["unique_visitors"] if visitors_result else 0
+        
         # Yesterday same time comparison
         yesterday_same_time = now - timedelta(days=1)
         orders_yesterday = await db.analytics_events.count_documents({
@@ -83,7 +92,8 @@ class AnalyticsService:
             new_listings_today=new_listings_today,
             orders_last_hour=orders_last_hour,
             searches_last_hour=searches_last_hour,
-            orders_delta_pct=round(orders_delta, 2)
+            orders_delta_pct=round(orders_delta, 2),
+            visitors_today=visitors_today
         )
     
     @staticmethod
@@ -361,3 +371,55 @@ class AnalyticsService:
         
         result = await db.analytics_events.aggregate(pipeline).to_list(length=limit)
         return [{"term": r["_id"], "count": r["count"], "avg_results": r.get("avg_results", 0)} for r in result if r["_id"]]
+
+    @staticmethod
+    async def get_daily_visitors(
+        start_date: datetime,
+        end_date: datetime
+    ) -> Dict[str, Any]:
+        """Get daily unique visitor counts"""
+        db = get_database()
+        
+        # Get daily unique visitors from page.view events
+        pipeline = [
+            {
+                "$match": {
+                    "event_type": "page.view",
+                    "timestamp": {"$gte": start_date, "$lte": end_date}
+                }
+            },
+            {
+                "$group": {
+                    "_id": {
+                        "date": {"$dateToString": {"format": "%Y-%m-%d", "date": "$timestamp"}},
+                        "session_id": "$session_id"
+                    }
+                }
+            },
+            {
+                "$group": {
+                    "_id": "$_id.date",
+                    "unique_visitors": {"$sum": 1}
+                }
+            },
+            {"$sort": {"_id": 1}}
+        ]
+        
+        result = await db.analytics_events.aggregate(pipeline).to_list(length=100)
+        
+        # Calculate totals
+        total_visitors = sum(r["unique_visitors"] for r in result)
+        avg_daily = total_visitors / len(result) if result else 0
+        
+        # Format timeline
+        timeline = [
+            {"date": r["_id"], "visitors": r["unique_visitors"]}
+            for r in result
+        ]
+        
+        return {
+            "total_visitors": total_visitors,
+            "avg_daily_visitors": round(avg_daily, 1),
+            "days_with_data": len(result),
+            "timeline": timeline
+        }

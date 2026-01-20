@@ -16,6 +16,9 @@ from routes.search import router as search_router
 from routes.tickets import router as tickets_router
 from routes.payments import router as payments_router
 
+# Delivery tasks import
+from tasks.delivery_tasks import start_delivery_scheduler
+
 # Analytics imports
 from analytics.routes import analytics_router, events_router
 from analytics.tasks import start_scheduler, stop_scheduler, run_initial_aggregation
@@ -55,6 +58,10 @@ async def lifespan(app: FastAPI):
     # Start analytics background scheduler
     start_scheduler()
     logger.info("Analytics scheduler started")
+    
+    # Start delivery confirmation scheduler (checks every hour for auto-delivery)
+    start_delivery_scheduler()
+    logger.info("Delivery confirmation scheduler started")
     
     # Run initial aggregation if needed (in background)
     try:

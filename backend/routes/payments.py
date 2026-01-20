@@ -792,7 +792,23 @@ async def handle_charge_refunded(db, charge):
     payment_intent_id = charge.get("payment_intent")
     
     if not payment_intent_id:
-
+        return
+    
+    order = await db.orders.find_one({
+        "payment_info.stripe_payment_intent_id": payment_intent_id
+    })
+    
+    if order:
+        await db.orders.update_one(
+            {"id": order["id"]},
+            {"$set": {
+                "status": "refunded",
+                "payment_info.funds_status": "refunded",
+                "seller_payout_status": "cancelled",
+                "updated_at": datetime.utcnow()
+            }}
+        )
+        logger.info(f"Refund processed for order {order['id']}")
 
 
 # ============================================
@@ -846,8 +862,8 @@ async def start_seller_onboarding(
     
     if not account:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create Stripe account. Please try again."
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Stripe Connect is not yet enabled for this platform. The marketplace administrator needs to enable Stripe Connect in the Stripe Dashboard at https://dashboard.stripe.com/connect/onboarding"
         )
     
     # Save account ID to user
@@ -1015,22 +1031,3 @@ async def get_webhook_info():
             "step5": "Copy the signing secret and add to STRIPE_WEBHOOK_SECRET env var"
         }
     }
-
-        return
-    
-    order = await db.orders.find_one({
-        "payment_info.stripe_payment_intent_id": payment_intent_id
-    })
-    
-    if order:
-        await db.orders.update_one(
-            {"id": order["id"]},
-            {"$set": {
-                "status": "refunded",
-                "payment_info.funds_status": "refunded",
-                "seller_payout_status": "cancelled",
-                "updated_at": datetime.utcnow()
-            }}
-        )
-        logger.info(f"Refund processed for order {order['id']}")
-

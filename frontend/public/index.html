@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/favicon-32.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#0A0A0A" />
     <meta name="description" content="MicLocker - The marketplace for musicians, audio engineers, studios, and venues to buy, sell, and trade musical equipment." />
@@ -16,6 +17,79 @@
         background-color: #0A0A0A;
       }
     </style>
+    <script>
+      // Animated spinning vinyl favicon
+      (function() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 32;
+        canvas.height = 32;
+        const ctx = canvas.getContext('2d');
+        let rotation = 0;
+        
+        function drawVinyl() {
+          ctx.clearRect(0, 0, 32, 32);
+          ctx.save();
+          ctx.translate(16, 16);
+          ctx.rotate(rotation);
+          
+          // Outer disc (black)
+          ctx.beginPath();
+          ctx.arc(0, 0, 14, 0, Math.PI * 2);
+          ctx.fillStyle = '#1a1a1a';
+          ctx.fill();
+          
+          // Grooves
+          for (let i = 4; i <= 12; i += 2) {
+            ctx.beginPath();
+            ctx.arc(0, 0, i, 0, Math.PI * 2);
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+          
+          // Shine effect
+          ctx.beginPath();
+          ctx.arc(0, 0, 14, -0.3, 0.3);
+          ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+          ctx.lineWidth = 3;
+          ctx.stroke();
+          
+          // Center label (red/yellow gradient)
+          const gradient = ctx.createLinearGradient(0, -5, 0, 5);
+          gradient.addColorStop(0, '#e63946');
+          gradient.addColorStop(1, '#f4d03f');
+          ctx.beginPath();
+          ctx.arc(0, 0, 5, 0, Math.PI * 2);
+          ctx.fillStyle = gradient;
+          ctx.fill();
+          
+          // Center hole
+          ctx.beginPath();
+          ctx.arc(0, 0, 1, 0, Math.PI * 2);
+          ctx.fillStyle = '#0A0A0A';
+          ctx.fill();
+          
+          ctx.restore();
+          
+          rotation += 0.05;
+          
+          // Update favicon
+          const link = document.querySelector("link[rel*='icon']");
+          if (link) {
+            link.href = canvas.toDataURL('image/png');
+          }
+          
+          requestAnimationFrame(drawVinyl);
+        }
+        
+        // Start animation after page loads
+        if (document.readyState === 'complete') {
+          drawVinyl();
+        } else {
+          window.addEventListener('load', drawVinyl);
+        }
+      })();
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

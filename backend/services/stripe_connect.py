@@ -67,6 +67,12 @@ class StripeConnectService:
                 "details_submitted": account.details_submitted
             }
             
+        except stripe.error.InvalidRequestError as e:
+            if "signed up for Connect" in str(e):
+                logger.error(f"Stripe Connect not enabled for this account. Please enable it at https://dashboard.stripe.com/connect/onboarding")
+            else:
+                logger.error(f"Invalid request error creating Stripe account: {e}")
+            return None
         except stripe.error.StripeError as e:
             logger.error(f"Error creating Stripe account: {e}")
             return None

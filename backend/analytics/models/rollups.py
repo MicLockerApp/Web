@@ -210,6 +210,7 @@ class RealtimeMetrics(BaseModel):
     new_users_today: int = 0
     new_listings_today: int = 0
     active_sessions: int = 0
+    visitors_today: int = 0  # Unique visitors today
     
     # Last hour
     orders_last_hour: int = 0
