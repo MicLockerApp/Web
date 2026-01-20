@@ -384,8 +384,11 @@ async def run_scheduled_tasks():
     
     while True:
         try:
-            # Run auto-delivery confirmation
+            # Run auto-delivery confirmation (14 days)
             await auto_confirm_deliveries()
+            
+            # Run 5-day review reminders
+            await send_five_day_review_reminders()
             
         except Exception as e:
             logger.error(f"Error in scheduled tasks: {e}")
