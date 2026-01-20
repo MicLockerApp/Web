@@ -164,15 +164,24 @@ app.include_router(events_router, prefix="/api")
 # Chatbot routes
 app.include_router(chatbot_router, prefix="/api")
 
-# Health check
+# Health check endpoints
 @app.get("/api/health")
-async def health_check():
+async def api_health_check():
     return {
         "status": "healthy",
         "app": settings.app_name,
         "environment": settings.environment,
         "storage": "S3" if settings.use_s3 else "Local",
         "analytics": "enabled"
+    }
+
+# Root health check for Kubernetes/deployment health probes
+@app.get("/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "app": settings.app_name,
+        "environment": settings.environment
     }
 
 @app.get("/")
