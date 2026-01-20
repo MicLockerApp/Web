@@ -179,6 +179,38 @@ export const reviewsAPI = {
   getById: (id) => api.get(`/reviews/${id}`),
 };
 
+// Trades APIs
+export const tradesAPI = {
+  // Check eligibility for trading
+  checkEligibility: () => api.get('/trades/eligibility'),
+  // Acknowledge trade rules modal
+  acknowledgeRules: () => api.post('/trades/acknowledge-rules'),
+  // Initiate a trade
+  create: (myListingId, theirListingId) => api.post('/trades', {
+    my_listing_id: myListingId,
+    their_listing_id: theirListingId
+  }),
+  // Get all trades for current user
+  getAll: (params) => api.get('/trades', { params }),
+  // Get a specific trade
+  getById: (tradeId) => api.get(`/trades/${tradeId}`),
+  // Respond to trade (accept/decline)
+  respond: (tradeId, action) => api.post(`/trades/${tradeId}/respond`, null, { params: { action } }),
+  // Submit shipping address
+  submitAddress: (tradeId, address) => api.post(`/trades/${tradeId}/shipping-address`, address),
+  // Add tracking
+  addTracking: (tradeId, carrier, trackingNumber, estimatedDelivery) => 
+    api.post(`/trades/${tradeId}/tracking`, null, { 
+      params: { carrier, tracking_number: trackingNumber, estimated_delivery: estimatedDelivery }
+    }),
+  // Confirm receipt
+  confirmReceipt: (tradeId) => api.post(`/trades/${tradeId}/confirm-receipt`),
+  // Cancel trade
+  cancel: (tradeId) => api.post(`/trades/${tradeId}/cancel`),
+  // Open dispute
+  openDispute: (tradeId, reason) => api.post(`/trades/${tradeId}/dispute`, null, { params: { reason } }),
+};
+
 // Admin APIs
 export const adminAPI = {
   getAnalytics: () => api.get('/admin/analytics'),
