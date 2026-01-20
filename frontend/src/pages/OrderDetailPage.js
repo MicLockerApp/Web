@@ -113,6 +113,8 @@ const OrderDetailPage = () => {
     setReviewType(type);
     setReviewRating(5);
     setReviewComment('');
+    setItemCondition('');
+    setConditionNotes('');
     setShowReviewModal(true);
   };
 
@@ -120,12 +122,22 @@ const OrderDetailPage = () => {
     e.preventDefault();
     setReviewSubmitting(true);
     try {
-      await reviewsAPI.create({
+      const reviewData = {
         order_id: order.id,
         rating: reviewRating,
         comment: reviewComment,
         review_type: reviewType
-      });
+      };
+      
+      // Add item condition for buyer reviews
+      if (reviewType === 'buyer_to_seller' && itemCondition) {
+        reviewData.item_condition = itemCondition;
+        if (conditionNotes) {
+          reviewData.condition_notes = conditionNotes;
+        }
+      }
+      
+      await reviewsAPI.create(reviewData);
       setMessage({ type: 'success', text: 'Review submitted! Thank you for your feedback.' });
       setShowReviewModal(false);
       fetchOrder(); // Refresh to get updated review status
