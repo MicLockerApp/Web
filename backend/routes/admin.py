@@ -152,7 +152,7 @@ async def suspend_user(
     user_id: str,
     staff_user: dict = Depends(get_staff_user)
 ):
-    """Suspend a user (staff only)"""
+    """Suspend a user (staff only) - temporary suspension"""
     db = get_database()
     
     user = await db.users.find_one({"id": user_id})
@@ -170,25 +170,182 @@ async def suspend_user(
     
     await db.users.update_one(
         {"id": user_id},
-        {"$set": {"is_suspended": True, "updated_at": datetime.utcnow()}}
+        {"$set": {
+            "is_suspended": True, 
+            "suspension_type": "temporary",
+            "updated_at": datetime.utcnow()
+        }}
     )
     
-    return {"message": "User suspended"}
+    return {"message": "User suspended temporarily"}
 
 @router.post("/users/{user_id}/unsuspend")
 async def unsuspend_user(
     user_id: str,
     staff_user: dict = Depends(get_staff_user)
 ):
-    """Unsuspend a user (admin only)"""
+    """Unsuspend a user (staff only)"""
     db = get_database()
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Cannot unsuspend permanently banned users without admin approval
+    if user.get("is_banned"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot unsuspend a permanently banned user. Use unban instead."
+        )
     
     await db.users.update_one(
         {"id": user_id},
-        {"$set": {"is_suspended": False, "updated_at": datetime.utcnow()}}
+        {"$set": {
+            "is_suspended": False, 
+            "suspension_type": None,
+            "updated_at": datetime.utcnow()
+        }}
     )
     
     return {"message": "User unsuspended"}
+
+@router.post("/users/{user_id}/ban")
+async def ban_user(
+    user_id: str,
+    reason: str = Body(None, embed=True),
+    staff_user: dict = Depends(get_staff_user)
+):
+    """Permanently ban a user (staff only)"""
+    db = get_database()
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    if user.get("is_admin") or user.get("is_employee"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot ban admin or employee users"
+        )
+    
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {
+            "is_banned": True,
+            "is_suspended": True,
+            "suspension_type": "permanent",
+            "ban_reason": reason,
+            "banned_at": datetime.utcnow(),
+            "banned_by": staff_user.get("username"),
+            "updated_at": datetime.utcnow()
+        }}
+    )
+    
+    # Also deactivate all their active listings
+    await db.listings.update_many(
+        {"seller_id": user_id, "status": "active"},
+        {"$set": {"status": "removed", "updated_at": datetime.utcnow()}}
+    )
+    
+    return {"message": "User permanently banned"}
+
+@router.post("/users/{user_id}/unban")
+async def unban_user(
+    user_id: str,
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Remove permanent ban from a user (admin only)"""
+    db = get_database()
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    if not user.get("is_banned"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not banned"
+        )
+    
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {
+            "is_banned": False,
+            "is_suspended": False,
+            "suspension_type": None,
+            "updated_at": datetime.utcnow()
+        },
+        "$unset": {
+            "ban_reason": "",
+            "banned_at": "",
+            "banned_by": ""
+        }}
+    )
+    
+    return {"message": "User ban removed"}
+
+@router.delete("/users/{user_id}")
+async def delete_user(
+    user_id: str,
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Permanently delete a user and all their data (admin only)"""
+    db = get_database()
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    if user.get("is_admin") or user.get("is_employee") or user.get("is_first_user"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete admin, employee, or owner users"
+        )
+    
+    # Delete user's listings
+    await db.listings.delete_many({"seller_id": user_id})
+    
+    # Delete user's messages (both sent and in threads)
+    await db.messages.delete_many({"sender_id": user_id})
+    
+    # Remove user from message threads
+    await db.message_threads.update_many(
+        {"participants": user_id},
+        {"$pull": {"participants": user_id}}
+    )
+    
+    # Delete empty message threads
+    await db.message_threads.delete_many({"participants": {"$size": 0}})
+    await db.message_threads.delete_many({"participants": {"$size": 1}})
+    
+    # Delete user's cart
+    await db.carts.delete_many({"user_id": user_id})
+    
+    # Delete user's offers
+    await db.offers.delete_many({"$or": [{"buyer_id": user_id}, {"seller_id": user_id}]})
+    
+    # Delete user's reviews (as reviewer)
+    await db.reviews.delete_many({"reviewer_id": user_id})
+    
+    # Delete user's support tickets
+    await db.support_tickets.delete_many({"user_id": user_id})
+    
+    # Finally delete the user
+    await db.users.delete_one({"id": user_id})
+    
+    return {"message": "User and all associated data deleted permanently"}
 
 @router.get("/listings")
 async def get_all_listings(

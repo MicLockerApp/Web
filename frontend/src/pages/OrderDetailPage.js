@@ -178,20 +178,90 @@ const OrderDetailPage = () => {
           </div>
         )}
 
-        {/* Buyer Actions */}
+        {/* Buyer Actions - Confirm Delivery */}
         {isBuyer && order.status === 'shipped' && (
           <div className="bg-dark-400 rounded-xl p-6 mb-6">
             <h2 className="text-lg font-semibold text-white mb-4">Confirm Delivery</h2>
-            <p className="text-gray-400 mb-4">Did you receive your order?</p>
+            <p className="text-gray-400 mb-4">
+              Once you confirm delivery, the funds will be released to the seller.
+            </p>
+            {order.tracking_info?.tracking_number && (
+              <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4 mb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-purple-400 text-xs uppercase tracking-wider mb-1">
+                      Tracking ({order.tracking_info.carrier})
+                    </p>
+                    <p className="text-white font-mono text-lg">{order.tracking_info.tracking_number}</p>
+                    {order.tracking_info.estimated_delivery && (
+                      <p className="text-gray-400 text-sm mt-1">
+                        Est. Delivery: {order.tracking_info.estimated_delivery}
+                      </p>
+                    )}
+                  </div>
+                  {order.tracking_info.tracking_url && (
+                    <a
+                      href={order.tracking_info.tracking_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-secondary"
+                    >
+                      Track Package
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
             <button
-              onClick={() => handleUpdateStatus('delivered')}
+              onClick={async () => {
+                if (window.confirm('Are you sure you received your order? This will release the payment to the seller.')) {
+                  setUpdating(true);
+                  try {
+                    await ordersAPI.confirmDelivery(id);
+                    setMessage({ type: 'success', text: 'Delivery confirmed! Funds have been released to the seller.' });
+                    fetchOrder();
+                  } catch (error) {
+                    setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to confirm delivery' });
+                  } finally {
+                    setUpdating(false);
+                  }
+                }
+              }}
               disabled={updating}
               className="btn btn-primary"
-              data-testid="mark-delivered-button"
+              data-testid="confirm-delivery-button"
             >
               <Package className="w-4 h-4" />
-              {updating ? 'Updating...' : 'Confirm Delivery'}
+              {updating ? 'Confirming...' : 'Confirm Delivery & Release Funds'}
             </button>
+          </div>
+        )}
+
+        {/* Tracking Info Display - for shipped orders viewed by buyer */}
+        {isBuyer && order.tracking_info?.tracking_number && order.status !== 'shipped' && ['delivered', 'completed'].includes(order.status) && (
+          <div className="bg-dark-400 rounded-xl p-6 mb-6">
+            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <Truck className="w-5 h-5 text-purple-400" />
+              Tracking Information
+            </h2>
+            <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 text-sm">Carrier: <span className="text-white">{order.tracking_info.carrier}</span></p>
+                  <p className="text-white font-mono text-lg mt-1">{order.tracking_info.tracking_number}</p>
+                </div>
+                {order.tracking_info.tracking_url && (
+                  <a
+                    href={order.tracking_info.tracking_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-secondary"
+                  >
+                    Track
+                  </a>
+                )}
+              </div>
+            </div>
           </div>
         )}
 

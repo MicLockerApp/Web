@@ -48,6 +48,20 @@ class Settings(BaseSettings):
     # AI Chatbot (Emergent LLM Key)
     emergent_llm_key: Optional[str] = os.getenv("EMERGENT_LLM_KEY") or None
     
+    # Stripe Payment Settings
+    stripe_api_key: Optional[str] = os.getenv("STRIPE_API_KEY") or None
+    stripe_publishable_key: Optional[str] = os.getenv("STRIPE_PUBLISHABLE_KEY") or None
+    stripe_webhook_secret: Optional[str] = os.getenv("STRIPE_WEBHOOK_SECRET") or None
+    
+    # Stripe Connect (for seller payouts)
+    stripe_connect_enabled: bool = os.getenv("STRIPE_CONNECT_ENABLED", "true").lower() == "true"
+    
+    # Auto-delivery confirmation (days)
+    auto_delivery_days: int = int(os.getenv("AUTO_DELIVERY_DAYS", "14"))
+    
+    # Frontend URL for webhooks
+    frontend_url: str = os.getenv("FRONTEND_URL", "https://audio-bazaar-6.preview.emergentagent.com")
+    
     # File Upload Restrictions
     max_image_size_mb: int = 10
     max_video_size_mb: int = 100

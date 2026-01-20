@@ -98,7 +98,14 @@ async def login(username: str, password: str):
             detail="Invalid credentials"
         )
     
-    if not verify_password(password, user["hashed_password"]):
+    # Check if employee needs to set up password
+    if user.get("password_setup_required") and not user.get("hashed_password"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Please check your email to set up your password before logging in."
+        )
+    
+    if not user.get("hashed_password") or not verify_password(password, user["hashed_password"]):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials"
@@ -352,3 +359,118 @@ async def check_reset_code(email: str, code: str):
         return {"valid": False, "message": "Code has expired"}
     
     return {"valid": True, "message": "Code is valid"}
+
+
+# Employee password setup via token
+from pydantic import Field
+
+class EmployeePasswordSetup(PasswordResetVerify):
+    """Used for employee password setup via email token"""
+    token: str = Field(..., description="Setup token from email link")
+
+
+@router.post("/setup-employee-password")
+async def setup_employee_password(email: str, token: str, new_password: str):
+    """Set up password for new employee account using token from email"""
+    db = get_database()
+    
+    # Validate password
+    if len(new_password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 8 characters"
+        )
+    
+    # Find the user with this email and token
+    user = await db.users.find_one({
+        "email": email,
+        "is_employee": True
+    })
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired setup link"
+        )
+    
+    # Check for valid token in password_reset_codes array
+    valid_token = None
+    password_reset_codes = user.get("password_reset_codes", [])
+    
+    for reset_code in password_reset_codes:
+        if reset_code.get("code") == token and reset_code.get("is_setup"):
+            # Check if expired
+            expires_at = reset_code.get("expires_at")
+            if isinstance(expires_at, datetime) and datetime.utcnow() > expires_at:
+                continue
+            if reset_code.get("used"):
+                continue
+            valid_token = reset_code
+            break
+    
+    if not valid_token:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired setup link. Please contact your administrator to resend the invitation."
+        )
+    
+    # Hash the password and update user
+    hashed_password = get_password_hash(new_password)
+    
+    # Mark all setup tokens as used and update password
+    updated_codes = []
+    for code in password_reset_codes:
+        if code.get("code") == token:
+            code["used"] = True
+        updated_codes.append(code)
+    
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {
+            "hashed_password": hashed_password,
+            "password_setup_required": False,
+            "password_reset_codes": updated_codes,
+            "updated_at": datetime.utcnow()
+        }}
+    )
+    
+    logger.info(f"Employee {user['username']} ({email}) set up their password successfully")
+    
+    return {
+        "message": "Password set successfully! You can now log in.",
+        "username": user["username"]
+    }
+
+
+@router.get("/verify-setup-token")
+async def verify_setup_token(email: str, token: str):
+    """Verify if a password setup token is valid"""
+    db = get_database()
+    
+    user = await db.users.find_one({
+        "email": email,
+        "is_employee": True
+    })
+    
+    if not user:
+        return {"valid": False, "message": "Invalid setup link"}
+    
+    # Check for valid token
+    password_reset_codes = user.get("password_reset_codes", [])
+    
+    for reset_code in password_reset_codes:
+        if reset_code.get("code") == token and reset_code.get("is_setup"):
+            expires_at = reset_code.get("expires_at")
+            if isinstance(expires_at, datetime) and datetime.utcnow() > expires_at:
+                return {"valid": False, "message": "Setup link has expired. Please contact your administrator."}
+            if reset_code.get("used"):
+                return {"valid": False, "message": "This setup link has already been used."}
+            return {
+                "valid": True, 
+                "message": "Setup link is valid",
+                "username": user.get("username"),
+                "email": user.get("email"),
+                "role": user.get("employee_role")
+            }
+    
+    return {"valid": False, "message": "Invalid setup link"}

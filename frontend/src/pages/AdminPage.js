@@ -6,7 +6,8 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { 
   DollarSign, Package, Users, ShoppingCart, TrendingUp, AlertCircle, CreditCard, Percent,
   Search, ChevronLeft, ChevronRight, Eye, Ban, CheckCircle, Trash2, RefreshCw,
-  BarChart3, Calendar, UserCheck, Package2, UserPlus, Shield, Briefcase, X, Edit, Mail
+  BarChart3, Calendar, UserCheck, Package2, UserPlus, Shield, Briefcase, X, Edit, Mail,
+  AlertTriangle, UserX, Clock
 } from 'lucide-react';
 
 const AdminPage = () => {
@@ -31,6 +32,12 @@ const AdminPage = () => {
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [newEmployee, setNewEmployee] = useState({ username: '', email: '', role: 'employee' });
   const [employeeError, setEmployeeError] = useState('');
+  
+  // User action modal state
+  const [showUserActionModal, setShowUserActionModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [banReason, setBanReason] = useState('');
+  const [userActionError, setUserActionError] = useState('');
 
   // Determine user role permissions
   const userRole = analytics?.user_role || (user?.is_admin ? 'admin' : null);
@@ -124,6 +131,85 @@ const AdminPage = () => {
       fetchUsers(usersPagination.page);
     } catch (error) {
       console.error('Error updating user:', error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Open user action modal
+  const openUserActionModal = (userToManage) => {
+    setSelectedUser(userToManage);
+    setBanReason('');
+    setUserActionError('');
+    setShowUserActionModal(true);
+  };
+
+  // Handle suspend from modal
+  const handleSuspendFromModal = async () => {
+    if (!selectedUser) return;
+    setActionLoading(selectedUser.id);
+    setUserActionError('');
+    try {
+      if (selectedUser.is_suspended && !selectedUser.is_banned) {
+        await adminAPI.unsuspendUser(selectedUser.id);
+      } else {
+        await adminAPI.suspendUser(selectedUser.id);
+      }
+      setShowUserActionModal(false);
+      fetchUsers(usersPagination.page);
+    } catch (error) {
+      setUserActionError(error.response?.data?.detail || 'Failed to update user status');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Handle ban user
+  const handleBanUser = async () => {
+    if (!selectedUser) return;
+    setActionLoading(selectedUser.id);
+    setUserActionError('');
+    try {
+      await adminAPI.banUser(selectedUser.id, banReason || null);
+      setShowUserActionModal(false);
+      fetchUsers(usersPagination.page);
+    } catch (error) {
+      setUserActionError(error.response?.data?.detail || 'Failed to ban user');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Handle unban user
+  const handleUnbanUser = async () => {
+    if (!selectedUser) return;
+    setActionLoading(selectedUser.id);
+    setUserActionError('');
+    try {
+      await adminAPI.unbanUser(selectedUser.id);
+      setShowUserActionModal(false);
+      fetchUsers(usersPagination.page);
+    } catch (error) {
+      setUserActionError(error.response?.data?.detail || 'Failed to unban user');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Handle delete user
+  const handleDeleteUser = async () => {
+    if (!selectedUser) return;
+    if (!window.confirm(`PERMANENT ACTION: Are you absolutely sure you want to delete ${selectedUser.username}? This will remove ALL their data including listings, messages, and orders. This cannot be undone!`)) {
+      return;
+    }
+    setActionLoading(selectedUser.id);
+    setUserActionError('');
+    try {
+      await adminAPI.deleteUser(selectedUser.id);
+      setShowUserActionModal(false);
+      fetchUsers(usersPagination.page);
+    } catch (error) {
+      setUserActionError(error.response?.data?.detail || 'Failed to delete user');
     } finally {
       setActionLoading(null);
     }
@@ -470,8 +556,10 @@ const AdminPage = () => {
                         <td className="px-6 py-4">
                           {u.is_admin ? (
                             <span className="badge bg-primary/20 text-primary">Admin</span>
+                          ) : u.is_banned ? (
+                            <span className="badge bg-red-700/30 text-red-300">Banned</span>
                           ) : u.is_suspended ? (
-                            <span className="badge bg-red-500/20 text-red-400">Suspended</span>
+                            <span className="badge bg-orange-500/20 text-orange-400">Suspended</span>
                           ) : u.has_lifetime_free_fees ? (
                             <span className="badge bg-green-500/20 text-green-400">VIP</span>
                           ) : (
@@ -486,18 +574,13 @@ const AdminPage = () => {
                             <Link to={`/profile/${u.id}`} className="p-2 bg-dark-200 rounded-lg hover:bg-dark-100" title="View Profile">
                               <Eye className="w-4 h-4 text-gray-400" />
                             </Link>
-                            {!u.is_admin && (
+                            {!u.is_admin && !u.is_employee && (
                               <button
-                                onClick={() => handleSuspendUser(u.id, u.is_suspended)}
-                                disabled={actionLoading === u.id}
-                                className={`p-2 rounded-lg ${u.is_suspended ? 'bg-green-500/20 hover:bg-green-500/30' : 'bg-red-500/20 hover:bg-red-500/30'}`}
-                                title={u.is_suspended ? 'Unsuspend' : 'Suspend'}
+                                onClick={() => openUserActionModal(u)}
+                                className="p-2 bg-dark-200 rounded-lg hover:bg-red-500/20 text-gray-400 hover:text-red-400"
+                                title="Manage User"
                               >
-                                {u.is_suspended ? (
-                                  <CheckCircle className="w-4 h-4 text-green-400" />
-                                ) : (
-                                  <Ban className="w-4 h-4 text-red-400" />
-                                )}
+                                <UserX className="w-4 h-4" />
                               </button>
                             )}
                           </div>
@@ -926,18 +1009,9 @@ const AdminPage = () => {
                     className="w-full"
                     placeholder="employee@company.com"
                   />
-                </div>
-                <div>
-                  <label className="block text-gray-400 text-sm mb-1">Password</label>
-                  <input
-                    type="password"
-                    value={newEmployee.password}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, password: e.target.value })}
-                    required
-                    minLength={8}
-                    className="w-full"
-                    placeholder="Min 8 characters"
-                  />
+                  <p className="text-gray-500 text-xs mt-1">
+                    A password setup link will be sent to this email
+                  </p>
                 </div>
                 <div>
                   <label className="block text-gray-400 text-sm mb-1">Role</label>
@@ -951,15 +1025,251 @@ const AdminPage = () => {
                     <option value="admin">Admin (Full Access)</option>
                   </select>
                 </div>
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                  <p className="text-blue-400 text-sm">
+                    <strong>Note:</strong> The new employee will receive an email with a link to set up their password. They have 7 days to complete the setup.
+                  </p>
+                </div>
                 <div className="flex gap-3 pt-4">
                   <button type="button" onClick={() => setShowAddEmployeeModal(false)} className="btn btn-secondary flex-1">
                     Cancel
                   </button>
                   <button type="submit" className="btn btn-primary flex-1">
-                    Add Employee
+                    <Mail className="w-4 h-4" />
+                    Send Invite
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Employee Modal */}
+        {showEditEmployeeModal && editingEmployee && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-dark-400 rounded-xl max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-white">Edit Employee</h2>
+                <button onClick={() => setShowEditEmployeeModal(false)} className="text-gray-400 hover:text-white">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              {employeeError && (
+                <div className="bg-red-500/20 border border-red-500/50 text-red-400 p-3 rounded-lg mb-4">
+                  {employeeError}
+                </div>
+              )}
+
+              <form onSubmit={handleEditEmployee} className="space-y-4">
+                <div>
+                  <label className="block text-gray-400 text-sm mb-1">Username</label>
+                  <input
+                    type="text"
+                    value={editingEmployee.username}
+                    onChange={(e) => setEditingEmployee({ ...editingEmployee, username: e.target.value })}
+                    required
+                    className="w-full"
+                    placeholder="employee_username"
+                    disabled={editingEmployee.is_first_user}
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-400 text-sm mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={editingEmployee.email}
+                    onChange={(e) => setEditingEmployee({ ...editingEmployee, email: e.target.value })}
+                    required
+                    className="w-full"
+                    placeholder="employee@company.com"
+                    disabled={editingEmployee.is_first_user}
+                  />
+                </div>
+                {editingEmployee.is_first_user && (
+                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+                    <p className="text-yellow-400 text-sm">
+                      <strong>Note:</strong> The owner account details cannot be modified from here.
+                    </p>
+                  </div>
+                )}
+                <div className="flex gap-3 pt-4">
+                  <button type="button" onClick={() => setShowEditEmployeeModal(false)} className="btn btn-secondary flex-1">
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn btn-primary flex-1"
+                    disabled={editingEmployee.is_first_user}
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* User Action Modal */}
+        {showUserActionModal && selectedUser && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-dark-400 rounded-xl max-w-lg w-full p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-white">Manage User</h2>
+                <button onClick={() => setShowUserActionModal(false)} className="text-gray-400 hover:text-white">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              {/* User Info */}
+              <div className="flex items-center gap-4 p-4 bg-dark-300 rounded-xl mb-6">
+                <div className="w-14 h-14 bg-dark-200 rounded-full flex items-center justify-center">
+                  {selectedUser.profile_image ? (
+                    <img src={selectedUser.profile_image} alt="" className="w-full h-full rounded-full object-cover" />
+                  ) : (
+                    <span className="text-primary text-xl font-bold">{selectedUser.username?.[0]?.toUpperCase()}</span>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className="text-white font-bold text-lg">{selectedUser.username}</p>
+                  <p className="text-gray-400 text-sm">{selectedUser.email}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {selectedUser.is_banned ? (
+                      <span className="badge bg-red-700/30 text-red-300 text-xs">Permanently Banned</span>
+                    ) : selectedUser.is_suspended ? (
+                      <span className="badge bg-orange-500/20 text-orange-400 text-xs">Suspended</span>
+                    ) : (
+                      <span className="badge bg-green-500/20 text-green-400 text-xs">Active</span>
+                    )}
+                    {selectedUser.has_lifetime_free_fees && (
+                      <span className="badge bg-primary/20 text-primary text-xs">VIP Member</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {userActionError && (
+                <div className="bg-red-500/20 border border-red-500/50 text-red-400 p-3 rounded-lg mb-4 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  {userActionError}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                {/* Suspend / Unsuspend Option */}
+                {!selectedUser.is_banned && (
+                  <button
+                    onClick={handleSuspendFromModal}
+                    disabled={actionLoading === selectedUser.id}
+                    className={`w-full p-4 rounded-xl border-2 flex items-center gap-4 transition-all ${
+                      selectedUser.is_suspended 
+                        ? 'border-green-500/30 bg-green-500/10 hover:bg-green-500/20' 
+                        : 'border-orange-500/30 bg-orange-500/10 hover:bg-orange-500/20'
+                    }`}
+                  >
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                      selectedUser.is_suspended ? 'bg-green-500/20' : 'bg-orange-500/20'
+                    }`}>
+                      {selectedUser.is_suspended ? (
+                        <CheckCircle className="w-6 h-6 text-green-400" />
+                      ) : (
+                        <Clock className="w-6 h-6 text-orange-400" />
+                      )}
+                    </div>
+                    <div className="text-left flex-1">
+                      <p className={`font-bold ${selectedUser.is_suspended ? 'text-green-400' : 'text-orange-400'}`}>
+                        {selectedUser.is_suspended ? 'Unsuspend User' : 'Suspend User'}
+                      </p>
+                      <p className="text-gray-400 text-sm">
+                        {selectedUser.is_suspended 
+                          ? 'Restore user access to their account' 
+                          : 'Temporarily disable user access (can be reversed)'}
+                      </p>
+                    </div>
+                  </button>
+                )}
+
+                {/* Ban Forever Option */}
+                {!selectedUser.is_banned ? (
+                  <div className="border-2 border-red-600/30 bg-red-900/10 rounded-xl p-4">
+                    <div className="flex items-center gap-4 mb-3">
+                      <div className="w-12 h-12 bg-red-600/20 rounded-full flex items-center justify-center">
+                        <Ban className="w-6 h-6 text-red-500" />
+                      </div>
+                      <div className="text-left flex-1">
+                        <p className="font-bold text-red-500">Ban Forever</p>
+                        <p className="text-gray-400 text-sm">Permanently ban this user and remove all their listings</p>
+                      </div>
+                    </div>
+                    <div className="mb-3">
+                      <label className="block text-gray-400 text-sm mb-1">Reason for ban (optional)</label>
+                      <input
+                        type="text"
+                        value={banReason}
+                        onChange={(e) => setBanReason(e.target.value)}
+                        placeholder="e.g., Violation of terms of service"
+                        className="w-full bg-dark-300 border border-dark-200 rounded-lg px-3 py-2 text-white text-sm"
+                      />
+                    </div>
+                    <button
+                      onClick={handleBanUser}
+                      disabled={actionLoading === selectedUser.id}
+                      className="w-full py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {actionLoading === selectedUser.id ? 'Processing...' : 'Ban User Forever'}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleUnbanUser}
+                    disabled={actionLoading === selectedUser.id}
+                    className="w-full p-4 rounded-xl border-2 border-green-500/30 bg-green-500/10 hover:bg-green-500/20 flex items-center gap-4 transition-all"
+                  >
+                    <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
+                      <CheckCircle className="w-6 h-6 text-green-400" />
+                    </div>
+                    <div className="text-left flex-1">
+                      <p className="font-bold text-green-400">Remove Ban</p>
+                      <p className="text-gray-400 text-sm">Restore this user&apos;s account access</p>
+                    </div>
+                  </button>
+                )}
+
+                {/* Delete User Option */}
+                <div className="border-2 border-red-900/50 bg-red-950/20 rounded-xl p-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-red-900/30 rounded-full flex items-center justify-center">
+                      <Trash2 className="w-6 h-6 text-red-400" />
+                    </div>
+                    <div className="text-left flex-1">
+                      <p className="font-bold text-red-400">Delete User</p>
+                      <p className="text-gray-500 text-sm">Permanently delete user and ALL their data</p>
+                    </div>
+                    <button
+                      onClick={handleDeleteUser}
+                      disabled={actionLoading === selectedUser.id}
+                      className="px-4 py-2 bg-red-900 hover:bg-red-800 text-red-300 font-medium rounded-lg transition-colors disabled:opacity-50 text-sm"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                  <div className="mt-3 p-2 bg-red-950/50 rounded-lg flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-red-400/80 text-xs">
+                      This action is <strong>permanent</strong> and cannot be undone. All listings, messages, orders, and reviews will be deleted.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cancel Button */}
+              <button
+                onClick={() => setShowUserActionModal(false)}
+                className="w-full mt-4 py-3 bg-dark-300 hover:bg-dark-200 text-gray-400 font-medium rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         )}

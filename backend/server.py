@@ -14,6 +14,7 @@ from routes import (
 )
 from routes.search import router as search_router
 from routes.tickets import router as tickets_router
+from routes.payments import router as payments_router
 
 # Analytics imports
 from analytics.routes import analytics_router, events_router
@@ -145,6 +146,7 @@ app.include_router(admin_router, prefix="/api")
 app.include_router(files_router, prefix="/api")
 app.include_router(search_router, prefix="/api")
 app.include_router(tickets_router, prefix="/api")
+app.include_router(payments_router, prefix="/api")
 
 # Analytics routes
 app.include_router(analytics_router, prefix="/api")

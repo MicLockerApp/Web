@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Tag, Clock, Check, X, MessageSquare, DollarSign, ArrowRight, Send, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { offersAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import analytics from '../services/analytics';
@@ -9,6 +10,7 @@ import analytics from '../services/analytics';
 const OffersPage = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
+  const { isDark } = useTheme();
   const [activeTab, setActiveTab] = useState('received');
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -167,8 +169,8 @@ const OffersPage = () => {
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-white">Offers</h1>
-            <p className="text-gray-400">Manage your buying and selling offers</p>
+            <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Offers</h1>
+            <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>Manage your buying and selling offers</p>
           </div>
         </div>
 

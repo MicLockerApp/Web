@@ -452,7 +452,7 @@ async def send_password_setup_email(to_email: str, username: str, setup_token: s
         return False
     
     subject = "Welcome to MicLocker Team - Set Up Your Account"
-    setup_url = f"{frontend_url}/forgot-password/verify?token={setup_token}&email={to_email}&setup=true"
+    setup_url = f"{frontend_url}/employee-setup?token={setup_token}&email={to_email}"
     
     role_display = {
         "admin": "Administrator",
@@ -577,3 +577,258 @@ This is an automated message from MicLocker.
     except Exception as e:
         logger.error(f"Unexpected error sending setup email to {to_email}: {e}")
         return False
+
+
+
+async def send_seller_sale_notification_email(
+    to_email: str,
+    seller_username: str,
+    order_number: str,
+    buyer_username: str,
+    items: list,
+    shipping_address: dict,
+    payout_amount: float
+) -> bool:
+    """
+    Send email to seller when they make a sale
+    """
+    if not email_service.client or not to_email:
+        logger.warning(f"Cannot send seller notification - SES not configured or no email")
+        return False
+    
+    subject = f"🎉 You made a sale! Order #{order_number}"
+    
+    # Build items list
+    items_html = ""
+    for item in items:
+        items_html += f"""
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #3d3d3d; color: #ffffff;">{item.get('listing_title', 'Item')}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #3d3d3d; color: #FFD700; text-align: right;">${item.get('listing_price', 0):.2f}</td>
+        </tr>
+        """
+    
+    # Build shipping address
+    addr = shipping_address
+    shipping_html = f"""
+    <p style="margin: 0; color: #cccccc; line-height: 1.6;">
+        <strong>{addr.get('full_name', '')}</strong><br>
+        {addr.get('address_line1', '')}<br>
+        {f"{addr.get('address_line2')}<br>" if addr.get('address_line2') else ''}
+        {addr.get('city', '')}, {addr.get('state', '')} {addr.get('postal_code', '')}<br>
+        {addr.get('country', 'USA')}<br>
+        {f"Phone: {addr.get('phone')}" if addr.get('phone') else ''}
+    </p>
+    """
+    
+    html_body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: Arial, sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0a0a0a; padding: 20px 0;">
+            <tr>
+                <td align="center">
+                    <table width="600" cellpadding="0" cellspacing="0" style="background-color: #1a1a1a; border-radius: 12px; overflow: hidden; border: 1px solid #3d3d3d;">
+                        <tr>
+                            <td style="padding: 30px 40px; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); text-align: center;">
+                                <h1 style="margin: 0; color: #000000; font-size: 28px;">🎉 You Made a Sale!</h1>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="padding: 30px 40px;">
+                                <p style="margin: 0 0 20px; color: #ffffff; font-size: 18px;">
+                                    Hi <strong>{seller_username}</strong>,
+                                </p>
+                                
+                                <p style="margin: 0 0 20px; color: #cccccc; font-size: 16px;">
+                                    Congratulations! <strong style="color: #FFD700;">{buyer_username}</strong> just purchased from your shop.
+                                </p>
+                                
+                                <div style="background-color: #2d2d2d; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                                    <h3 style="margin: 0 0 15px; color: #FFD700;">Order #{order_number}</h3>
+                                    <table width="100%" cellpadding="0" cellspacing="0">
+                                        {items_html}
+                                    </table>
+                                </div>
+                                
+                                <div style="background-color: #2d2d2d; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                                    <h3 style="margin: 0 0 15px; color: #FFD700;">📦 Ship To:</h3>
+                                    {shipping_html}
+                                </div>
+                                
+                                <div style="background-color: #1a4d1a; border: 1px solid #2d7a2d; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
+                                    <p style="margin: 0 0 5px; color: #90EE90; font-size: 14px;">Your Payout</p>
+                                    <p style="margin: 0; color: #00FF00; font-size: 32px; font-weight: bold;">${payout_amount:.2f}</p>
+                                </div>
+                                
+                                <div style="background-color: #4d4d1a; border: 1px solid #7a7a2d; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                                    <h4 style="margin: 0 0 10px; color: #FFD700;">⚠️ Important: Funds Held</h4>
+                                    <p style="margin: 0; color: #cccccc; font-size: 14px; line-height: 1.6;">
+                                        Your payment is being held until the buyer confirms delivery. Please ship the item promptly and add tracking information to your order.
+                                    </p>
+                                </div>
+                                
+                                <p style="margin: 20px 0; color: #888; font-size: 14px; text-align: center;">
+                                    Log in to MicLocker to add tracking information and view order details.
+                                </p>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="padding: 30px 40px; background-color: #0d0d0d; border-top: 1px solid #3d3d3d; text-align: center;">
+                                <p style="margin: 0; color: #666; font-size: 12px;">
+                                    © 2024 MicLocker. All rights reserved.
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    """
+    
+    try:
+        response = email_service.client.send_email(
+            Source=email_service.sender_email,
+            Destination={'ToAddresses': [to_email]},
+            Message={
+                'Subject': {'Data': subject, 'Charset': 'UTF-8'},
+                'Body': {
+                    'Html': {'Data': html_body, 'Charset': 'UTF-8'}
+                }
+            }
+        )
+        logger.info(f"Sent sale notification email to {to_email}, MessageId: {response['MessageId']}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send sale notification email: {e}")
+        return False
+
+
+async def send_order_confirmation_email(
+    to_email: str,
+    buyer_username: str,
+    order_number: str,
+    items: list,
+    shipping_address: dict,
+    total: float
+) -> bool:
+    """
+    Send order confirmation email to buyer
+    """
+    if not email_service.client or not to_email:
+        logger.warning(f"Cannot send order confirmation - SES not configured or no email")
+        return False
+    
+    subject = f"Order Confirmed! #{order_number}"
+    
+    # Build items list
+    items_html = ""
+    for item in items:
+        items_html += f"""
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #3d3d3d; color: #ffffff;">{item.get('listing_title', 'Item')}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #3d3d3d; color: #FFD700; text-align: right;">${item.get('listing_price', 0):.2f}</td>
+        </tr>
+        """
+    
+    # Build shipping address
+    addr = shipping_address
+    shipping_html = f"""
+    <p style="margin: 0; color: #cccccc; line-height: 1.6;">
+        <strong>{addr.get('full_name', '')}</strong><br>
+        {addr.get('address_line1', '')}<br>
+        {f"{addr.get('address_line2')}<br>" if addr.get('address_line2') else ''}
+        {addr.get('city', '')}, {addr.get('state', '')} {addr.get('postal_code', '')}<br>
+        {addr.get('country', 'USA')}
+    </p>
+    """
+    
+    html_body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: Arial, sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0a0a0a; padding: 20px 0;">
+            <tr>
+                <td align="center">
+                    <table width="600" cellpadding="0" cellspacing="0" style="background-color: #1a1a1a; border-radius: 12px; overflow: hidden; border: 1px solid #3d3d3d;">
+                        <tr>
+                            <td style="padding: 30px 40px; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); text-align: center;">
+                                <h1 style="margin: 0; color: #000000; font-size: 28px;">✓ Order Confirmed!</h1>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="padding: 30px 40px;">
+                                <p style="margin: 0 0 20px; color: #ffffff; font-size: 18px;">
+                                    Hi <strong>{buyer_username}</strong>,
+                                </p>
+                                
+                                <p style="margin: 0 0 20px; color: #cccccc; font-size: 16px;">
+                                    Thank you for your purchase! Your order has been confirmed.
+                                </p>
+                                
+                                <div style="background-color: #2d2d2d; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                                    <h3 style="margin: 0 0 15px; color: #FFD700;">Order #{order_number}</h3>
+                                    <table width="100%" cellpadding="0" cellspacing="0">
+                                        {items_html}
+                                        <tr>
+                                            <td style="padding: 15px 10px 10px; color: #ffffff; font-weight: bold;">Total</td>
+                                            <td style="padding: 15px 10px 10px; color: #FFD700; text-align: right; font-weight: bold; font-size: 18px;">${total:.2f}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                
+                                <div style="background-color: #2d2d2d; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                                    <h3 style="margin: 0 0 15px; color: #FFD700;">📦 Shipping To:</h3>
+                                    {shipping_html}
+                                </div>
+                                
+                                <p style="margin: 20px 0; color: #cccccc; font-size: 14px; line-height: 1.6;">
+                                    The seller has been notified and will ship your item soon. You'll receive tracking information once available.
+                                </p>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="padding: 30px 40px; background-color: #0d0d0d; border-top: 1px solid #3d3d3d; text-align: center;">
+                                <p style="margin: 0; color: #666; font-size: 12px;">
+                                    © 2024 MicLocker. All rights reserved.
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    """
+    
+    try:
+        response = email_service.client.send_email(
+            Source=email_service.sender_email,
+            Destination={'ToAddresses': [to_email]},
+            Message={
+                'Subject': {'Data': subject, 'Charset': 'UTF-8'},
+                'Body': {
+                    'Html': {'Data': html_body, 'Charset': 'UTF-8'}
+                }
+            }
+        )
+        logger.info(f"Sent order confirmation email to {to_email}, MessageId: {response['MessageId']}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send order confirmation email: {e}")
+        return False
+

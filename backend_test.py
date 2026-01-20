@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 """
-MicLocker Support Ticketing System Test Suite
+MicLocker Employee Management System Test Suite
 
-Tests backend support ticket APIs and functionality.
+Tests backend employee management APIs and functionality.
 """
 import requests
 import json
 import sys
 import time
+import urllib.parse
 from datetime import datetime
 from typing import Dict, Any, Optional
 
-class TicketingTestSuite:
+class EmployeeManagementTestSuite:
     def __init__(self, base_url: str = "https://audio-bazaar-6.preview.emergentagent.com"):
         self.base_url = base_url
         self.token = None
@@ -21,13 +22,17 @@ class TicketingTestSuite:
         self.tests_passed = 0
         self.test_results = []
         
-        # Test ticket system
-        self.test_ticket_id = None
-        self.test_ticket_number = None
+        # Test employee system
+        self.test_employee_id = None
+        self.test_employee_username = None
         
-        # Test credentials
-        self.test_username = "jmcdougall"
-        self.test_password = "Eisenhower1212!!"
+        # Test user management system
+        self.test_user_id = None
+        self.test_user_username = None
+        
+        # Admin credentials for employee management
+        self.admin_username = "miclocker.support"
+        self.admin_password = "Finally2026!!"
 
     def log_result(self, test_name: str, passed: bool, details: str = "", response_data: Any = None):
         """Log test result"""
@@ -76,263 +81,455 @@ class TicketingTestSuite:
             print(f"Request failed: {e}")
             raise
 
-    def test_login(self) -> bool:
-        """Test user login and get token"""
+    def test_admin_login(self) -> bool:
+        """Test admin login with special characters"""
         try:
-            # Login endpoint expects query parameters
-            url = f"{self.base_url}/api/auth/login?username={self.test_username}&password={self.test_password}"
+            # URL encode the password with special characters
+            encoded_password = urllib.parse.quote(self.admin_password)
+            url = f"{self.base_url}/api/auth/login?username={self.admin_username}&password={encoded_password}"
+            
             response = requests.post(url, headers={'Content-Type': 'application/json'}, timeout=30)
             
             if response.status_code == 200:
                 data = response.json()
                 self.token = data.get('access_token')
+                self.admin_token = self.token
                 
-                # Get user info to check if admin
-                user_response = self.make_request('GET', '/auth/me')
+                # Get user info
+                user_response = self.make_request('GET', '/auth/me', use_admin=True)
                 if user_response.status_code == 200:
                     user_data = user_response.json()
                     self.user_id = user_data.get('id')
-                    if user_data.get('is_admin'):
-                        self.admin_token = self.token
-                
-                self.log_result("User Login", True, f"Token obtained, Admin: {bool(self.admin_token)}")
-                return True
-            else:
-                self.log_result("User Login", False, f"Status: {response.status_code}")
-                return False
-        except Exception as e:
-            self.log_result("User Login", False, str(e))
-            return False
-
-    def test_ticket_creation(self):
-        """Test ticket creation API"""
-        if not self.token:
-            self.log_result("Ticket Creation", False, "No authentication token")
-            return
-
-        try:
-            ticket_data = {
-                "category": "Technical Issue",
-                "subject": "Test ticket from automated test",
-                "message": "This is a test ticket created by the automated test suite to verify the ticketing system is working correctly.",
-                "order_id": None
-            }
-            
-            response = self.make_request('POST', '/tickets', ticket_data)
-            
-            if response.status_code == 201:
-                data = response.json()
-                if 'ticket_number' in data and 'ticket_id' in data:
-                    self.test_ticket_id = data['ticket_id']
-                    self.test_ticket_number = data['ticket_number']
-                    self.log_result("Ticket Creation", True, f"Created ticket {data['ticket_number']}")
+                    is_admin = user_data.get('is_admin', False)
+                    
+                    self.log_result("Admin Login", True, f"Admin access: {is_admin}")
                     return True
                 else:
-                    self.log_result("Ticket Creation", False, "Missing ticket_number or ticket_id in response")
+                    self.log_result("Admin Login", False, f"Failed to get user info: {user_response.status_code}")
+                    return False
             else:
-                self.log_result("Ticket Creation", False, f"Status: {response.status_code}, Response: {response.text}")
-        except Exception as e:
-            self.log_result("Ticket Creation", False, str(e))
-        return False
-
-    def test_ticket_categories(self):
-        """Test getting ticket categories"""
-        try:
-            response = self.make_request('GET', '/tickets/categories')
-            
-            if response.status_code == 200:
-                data = response.json()
-                if 'categories' in data and 'statuses' in data and 'priorities' in data:
-                    categories = data['categories']
-                    if len(categories) > 0:
-                        self.log_result("Ticket Categories", True, f"Found {len(categories)} categories")
-                    else:
-                        self.log_result("Ticket Categories", False, "No categories returned")
-                else:
-                    self.log_result("Ticket Categories", False, "Missing required fields in response")
-            else:
-                self.log_result("Ticket Categories", False, f"Status: {response.status_code}")
-        except Exception as e:
-            self.log_result("Ticket Categories", False, str(e))
-
-    def test_admin_ticket_stats(self):
-        """Test admin ticket statistics API"""
-        if not self.admin_token:
-            self.log_result("Admin Ticket Stats", False, "No admin token available")
-            return
-
-        try:
-            response = self.make_request('GET', '/tickets/admin/stats', use_admin=True)
-            
-            if response.status_code == 200:
-                data = response.json()
-                required_fields = ['total_tickets', 'open', 'in_progress', 'resolved', 'pending_total']
-                missing_fields = [field for field in required_fields if field not in data]
+                error_msg = "Unknown error"
+                try:
+                    error_data = response.json()
+                    error_msg = error_data.get('detail', error_msg)
+                except:
+                    error_msg = response.text[:200]
                 
-                if not missing_fields:
-                    self.log_result("Admin Ticket Stats", True, f"Stats: {data['pending_total']} pending, {data['total_tickets']} total")
-                else:
-                    self.log_result("Admin Ticket Stats", False, f"Missing fields: {missing_fields}")
-            else:
-                self.log_result("Admin Ticket Stats", False, f"Status: {response.status_code}")
-        except Exception as e:
-            self.log_result("Admin Ticket Stats", False, str(e))
-
-    def test_admin_ticket_list(self):
-        """Test admin ticket list API"""
-        if not self.admin_token:
-            self.log_result("Admin Ticket List", False, "No admin token available")
-            return
-
-        try:
-            response = self.make_request('GET', '/tickets/admin/all?limit=10', use_admin=True)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if 'tickets' in data and 'total' in data:
-                    tickets = data['tickets']
-                    self.log_result("Admin Ticket List", True, f"Retrieved {len(tickets)} tickets, total: {data['total']}")
-                else:
-                    self.log_result("Admin Ticket List", False, "Missing tickets or total in response")
-            else:
-                self.log_result("Admin Ticket List", False, f"Status: {response.status_code}")
-        except Exception as e:
-            self.log_result("Admin Ticket List", False, str(e))
-
-    def test_ticket_detail(self):
-        """Test getting ticket details"""
-        if not hasattr(self, 'test_ticket_id') or not self.test_ticket_id:
-            self.log_result("Ticket Detail", False, "No test ticket ID available")
-            return
-
-        try:
-            response = self.make_request('GET', f'/tickets/{self.test_ticket_id}')
-            
-            if response.status_code == 200:
-                data = response.json()
-                required_fields = ['id', 'ticket_number', 'subject', 'message', 'status', 'category']
-                missing_fields = [field for field in required_fields if field not in data]
+                self.log_result("Admin Login", False, f"Status {response.status_code}: {error_msg}")
+                return False
                 
-                if not missing_fields:
-                    self.log_result("Ticket Detail", True, f"Retrieved ticket {data['ticket_number']}")
-                else:
-                    self.log_result("Ticket Detail", False, f"Missing fields: {missing_fields}")
-            else:
-                self.log_result("Ticket Detail", False, f"Status: {response.status_code}")
         except Exception as e:
-            self.log_result("Ticket Detail", False, str(e))
-
-    def test_ticket_reply(self):
-        """Test adding a reply to a ticket"""
-        if not hasattr(self, 'test_ticket_id') or not self.test_ticket_id:
-            self.log_result("Ticket Reply", False, "No test ticket ID available")
-            return
-
-        try:
-            reply_data = {
-                "message": "This is a test reply from the automated test suite."
-            }
-            
-            response = self.make_request('POST', f'/tickets/{self.test_ticket_id}/reply', reply_data)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if 'message' in data:
-                    self.log_result("Ticket Reply", True, "Reply added successfully")
-                else:
-                    self.log_result("Ticket Reply", False, "Unexpected response format")
-            else:
-                self.log_result("Ticket Reply", False, f"Status: {response.status_code}, Response: {response.text}")
-        except Exception as e:
-            self.log_result("Ticket Reply", False, str(e))
-
-    def test_admin_ticket_status_update(self):
-        """Test updating ticket status (admin only)"""
-        if not self.admin_token or not hasattr(self, 'test_ticket_id') or not self.test_ticket_id:
-            self.log_result("Admin Status Update", False, "No admin token or test ticket ID")
-            return
-
-        try:
-            update_data = {
-                "status": "in_progress",
-                "priority": "high"
-            }
-            
-            response = self.make_request('PUT', f'/tickets/admin/{self.test_ticket_id}/status', update_data, use_admin=True)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if 'message' in data:
-                    self.log_result("Admin Status Update", True, "Status updated successfully")
-                else:
-                    self.log_result("Admin Status Update", False, "Unexpected response format")
-            else:
-                self.log_result("Admin Status Update", False, f"Status: {response.status_code}, Response: {response.text}")
-        except Exception as e:
-            self.log_result("Admin Status Update", False, str(e))
-
-    def run_all_tests(self):
-        """Run all ticket system tests"""
-        print("🎫 Starting MicLocker Support Ticketing System Tests...")
-        print(f"📡 Testing against: {self.base_url}")
-        print("=" * 60)
-
-        # Authentication
-        if not self.test_login():
-            print("❌ Cannot proceed without authentication")
+            self.log_result("Admin Login", False, f"Exception: {str(e)}")
             return False
 
-        # Test ticket categories
-        print("\n📋 Testing Ticket Categories...")
-        self.test_ticket_categories()
-
-        # Test ticket creation
-        print("\n🎫 Testing Ticket Creation...")
-        if self.test_ticket_creation():
-            # Test ticket detail retrieval
-            print("\n🔍 Testing Ticket Detail...")
-            self.test_ticket_detail()
+    def test_admin_analytics_access(self) -> bool:
+        """Test admin can access analytics (required for admin panel)"""
+        try:
+            response = self.make_request('GET', '/admin/analytics', use_admin=True)
             
-            # Test ticket reply
-            print("\n💬 Testing Ticket Reply...")
-            self.test_ticket_reply()
+            if response.status_code == 200:
+                data = response.json()
+                user_role = data.get('user_role')
+                is_owner = data.get('is_owner', False)
+                
+                self.log_result("Admin Analytics Access", True, f"Role: {user_role}, Owner: {is_owner}")
+                return True
+            else:
+                self.log_result("Admin Analytics Access", False, f"Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Admin Analytics Access", False, f"Exception: {str(e)}")
+            return False
 
-        # Test admin endpoints
-        if self.admin_token:
-            print("\n👑 Testing Admin Endpoints...")
-            self.test_admin_ticket_stats()
-            self.test_admin_ticket_list()
+    def test_get_employees(self) -> bool:
+        """Test getting employees list"""
+        try:
+            response = self.make_request('GET', '/admin/employees', use_admin=True)
             
-            if hasattr(self, 'test_ticket_id') and self.test_ticket_id:
-                print("\n⚙️ Testing Admin Status Update...")
-                self.test_admin_ticket_status_update()
+            if response.status_code == 200:
+                data = response.json()
+                employees = data.get('employees', [])
+                
+                self.log_result("Get Employees List", True, f"Found {len(employees)} employees")
+                return True
+            else:
+                self.log_result("Get Employees List", False, f"Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Get Employees List", False, f"Exception: {str(e)}")
+            return False
 
-        # Summary
+    def test_create_employee(self) -> bool:
+        """Test creating employee without password"""
+        try:
+            timestamp = datetime.now().strftime('%H%M%S')
+            employee_data = {
+                "username": f"test_employee_{timestamp}",
+                "email": f"test.employee.{timestamp}@example.com",
+                "role": "employee"
+            }
+            
+            response = self.make_request('POST', '/admin/employees', data=employee_data, use_admin=True)
+            
+            if response.status_code == 200:
+                data = response.json()
+                employee = data.get('employee', {})
+                self.test_employee_id = employee.get('id')
+                self.test_employee_username = employee.get('username')
+                
+                message = data.get('message', '')
+                has_password_setup = 'password setup' in message.lower() or 'email' in message.lower()
+                
+                self.log_result("Create Employee (No Password)", True, f"ID: {self.test_employee_id}, Setup email: {has_password_setup}")
+                return True
+            else:
+                error_msg = "Unknown error"
+                try:
+                    error_data = response.json()
+                    error_msg = error_data.get('detail', error_msg)
+                except:
+                    pass
+                
+                self.log_result("Create Employee (No Password)", False, f"Status {response.status_code}: {error_msg}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Create Employee (No Password)", False, f"Exception: {str(e)}")
+            return False
+
+    def test_resend_setup_email(self) -> bool:
+        """Test resending setup email"""
+        if not self.test_employee_id:
+            self.log_result("Resend Setup Email", False, "No test employee ID available")
+            return False
+            
+        try:
+            response = self.make_request('POST', f'/admin/employees/{self.test_employee_id}/resend-setup', use_admin=True)
+            
+            if response.status_code == 200:
+                data = response.json()
+                message = data.get('message', '')
+                
+                self.log_result("Resend Setup Email", True, f"Message: {message}")
+                return True
+            else:
+                self.log_result("Resend Setup Email", False, f"Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Resend Setup Email", False, f"Exception: {str(e)}")
+            return False
+
+    def test_update_employee_details(self) -> bool:
+        """Test updating employee details"""
+        if not self.test_employee_id:
+            self.log_result("Update Employee Details", False, "No test employee ID available")
+            return False
+            
+        try:
+            timestamp = datetime.now().strftime('%H%M%S')
+            update_data = {
+                "username": f"updated_employee_{timestamp}",
+                "email": f"updated.employee.{timestamp}@example.com"
+            }
+            
+            response = self.make_request('PUT', f'/admin/employees/{self.test_employee_id}', data=update_data, use_admin=True)
+            
+            if response.status_code == 200:
+                data = response.json()
+                message = data.get('message', '')
+                
+                self.log_result("Update Employee Details", True, f"Message: {message}")
+                return True
+            else:
+                self.log_result("Update Employee Details", False, f"Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Update Employee Details", False, f"Exception: {str(e)}")
+            return False
+
+    def test_update_employee_role(self) -> bool:
+        """Test updating employee role"""
+        if not self.test_employee_id:
+            self.log_result("Update Employee Role", False, "No test employee ID available")
+            return False
+            
+        try:
+            role_data = {"role": "manager"}
+            
+            response = self.make_request('PUT', f'/admin/employees/{self.test_employee_id}/role', data=role_data, use_admin=True)
+            
+            if response.status_code == 200:
+                data = response.json()
+                message = data.get('message', '')
+                
+                self.log_result("Update Employee Role", True, f"Message: {message}")
+                return True
+            else:
+                self.log_result("Update Employee Role", False, f"Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Update Employee Role", False, f"Exception: {str(e)}")
+            return False
+
+    def test_verify_invalid_setup_token(self) -> bool:
+        """Test verifying invalid setup token"""
+        try:
+            params = "?email=invalid@example.com&token=invalid_token"
+            response = self.make_request('GET', f'/auth/verify-setup-token{params}')
+            
+            if response.status_code == 200:
+                data = response.json()
+                is_valid = data.get('valid', True)
+                message = data.get('message', '')
+                
+                if not is_valid:
+                    self.log_result("Verify Invalid Setup Token", True, f"Correctly rejected: {message}")
+                    return True
+                else:
+                    self.log_result("Verify Invalid Setup Token", False, "Should have rejected invalid token")
+                    return False
+            else:
+                self.log_result("Verify Invalid Setup Token", False, f"Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Verify Invalid Setup Token", False, f"Exception: {str(e)}")
+            return False
+
+    def test_setup_password_invalid_token(self) -> bool:
+        """Test setting up password with invalid token"""
+        try:
+            encoded_email = urllib.parse.quote("invalid@example.com")
+            encoded_token = urllib.parse.quote("invalid_token")
+            encoded_password = urllib.parse.quote("TestPassword123!")
+            
+            endpoint = f'/auth/setup-employee-password?email={encoded_email}&token={encoded_token}&new_password={encoded_password}'
+            response = self.make_request('POST', endpoint)
+            
+            if response.status_code == 400:
+                self.log_result("Setup Password Invalid Token", True, "Correctly rejected invalid token")
+                return True
+            else:
+                self.log_result("Setup Password Invalid Token", False, f"Expected 400, got {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Setup Password Invalid Token", False, f"Exception: {str(e)}")
+            return False
+
+    def test_delete_employee(self) -> bool:
+        """Test deleting test employee (cleanup)"""
+        if not self.test_employee_id:
+            self.log_result("Delete Test Employee", True, "No test employee to delete")
+            return True
+            
+        try:
+            response = self.make_request('DELETE', f'/admin/employees/{self.test_employee_id}', use_admin=True)
+            
+            if response.status_code == 200:
+                data = response.json()
+                message = data.get('message', '')
+                
+                self.log_result("Delete Test Employee", True, f"Message: {message}")
+                return True
+            else:
+                self.log_result("Delete Test Employee", False, f"Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Delete Test Employee", False, f"Exception: {str(e)}")
+            return False
+
+    # =====================
+    # User Management Tests
+    # =====================
+
+    def test_get_users(self) -> bool:
+        """Test getting users list for user management"""
+        try:
+            response = self.make_request('GET', '/admin/users?page=1&limit=10', use_admin=True)
+            
+            if response.status_code == 200:
+                data = response.json()
+                users = data.get('users', [])
+                
+                # Find a regular user (not admin/employee) for testing
+                for user in users:
+                    if not user.get('is_admin') and not user.get('is_employee'):
+                        self.test_user_id = user.get('id')
+                        self.test_user_username = user.get('username')
+                        break
+                
+                self.log_result("Get Users List", True, f"Found {len(users)} users, test user: {self.test_user_username}")
+                return True
+            else:
+                self.log_result("Get Users List", False, f"Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Get Users List", False, f"Exception: {str(e)}")
+            return False
+
+    def test_suspend_user(self) -> bool:
+        """Test suspending a user"""
+        if not self.test_user_id:
+            self.log_result("Suspend User", True, "No test user available")
+            return True
+            
+        try:
+            response = self.make_request('POST', f'/admin/users/{self.test_user_id}/suspend', use_admin=True)
+            
+            if response.status_code == 200:
+                data = response.json()
+                message = data.get('message', '')
+                
+                self.log_result("Suspend User", True, f"Message: {message}")
+                return True
+            else:
+                self.log_result("Suspend User", False, f"Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Suspend User", False, f"Exception: {str(e)}")
+            return False
+
+    def test_unsuspend_user(self) -> bool:
+        """Test unsuspending a user"""
+        if not self.test_user_id:
+            self.log_result("Unsuspend User", True, "No test user available")
+            return True
+            
+        try:
+            response = self.make_request('POST', f'/admin/users/{self.test_user_id}/unsuspend', use_admin=True)
+            
+            if response.status_code == 200:
+                data = response.json()
+                message = data.get('message', '')
+                
+                self.log_result("Unsuspend User", True, f"Message: {message}")
+                return True
+            else:
+                self.log_result("Unsuspend User", False, f"Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Unsuspend User", False, f"Exception: {str(e)}")
+            return False
+
+    def test_ban_user(self) -> bool:
+        """Test banning a user with reason"""
+        if not self.test_user_id:
+            self.log_result("Ban User", True, "No test user available")
+            return True
+            
+        try:
+            ban_data = {"reason": "Testing ban functionality"}
+            response = self.make_request('POST', f'/admin/users/{self.test_user_id}/ban', 
+                                      data=ban_data, use_admin=True)
+            
+            if response.status_code == 200:
+                data = response.json()
+                message = data.get('message', '')
+                
+                self.log_result("Ban User", True, f"Message: {message}")
+                return True
+            else:
+                self.log_result("Ban User", False, f"Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Ban User", False, f"Exception: {str(e)}")
+            return False
+
+    def test_unban_user(self) -> bool:
+        """Test unbanning a user"""
+        if not self.test_user_id:
+            self.log_result("Unban User", True, "No test user available")
+            return True
+            
+        try:
+            response = self.make_request('POST', f'/admin/users/{self.test_user_id}/unban', use_admin=True)
+            
+            if response.status_code == 200:
+                data = response.json()
+                message = data.get('message', '')
+                
+                self.log_result("Unban User", True, f"Message: {message}")
+                return True
+            else:
+                self.log_result("Unban User", False, f"Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Unban User", False, f"Exception: {str(e)}")
+            return False
+
+    def run_all_tests(self) -> bool:
+        """Run all employee management and user management tests"""
+        print("🚀 Starting Employee Management & User Management System Tests")
+        print("=" * 60)
+        
+        # Test admin login first
+        if not self.test_admin_login():
+            print("❌ Cannot proceed without admin access")
+            return False
+        
+        # Test admin access to analytics
+        self.test_admin_analytics_access()
+        
+        # Test employee management endpoints
+        self.test_get_employees()
+        self.test_create_employee()
+        self.test_resend_setup_email()
+        self.test_update_employee_details()
+        self.test_update_employee_role()
+        
+        # Test employee setup endpoints
+        self.test_verify_invalid_setup_token()
+        self.test_setup_password_invalid_token()
+        
+        # Test user management endpoints
+        print("\n📋 Testing User Management APIs...")
+        self.test_get_users()
+        self.test_suspend_user()
+        self.test_unsuspend_user()
+        self.test_ban_user()
+        self.test_unban_user()
+        
+        # Cleanup
+        self.test_delete_employee()
+        
+        # Print summary
         print("\n" + "=" * 60)
-        print(f"📈 Test Results: {self.tests_passed}/{self.tests_run} passed")
+        print(f"📊 Test Summary: {self.tests_passed}/{self.tests_run} tests passed")
         
         if self.tests_passed == self.tests_run:
-            print("🎉 All ticketing tests passed!")
-            return True
+            print("🎉 All backend tests passed!")
         else:
-            print(f"⚠️  {self.tests_run - self.tests_passed} tests failed")
-            return False
+            print("⚠️  Some backend tests failed - check details above")
+        
+        return self.tests_passed == self.tests_run
 
 def main():
     """Main test runner"""
-    tester = TicketingTestSuite()
+    tester = EmployeeManagementTestSuite()
     success = tester.run_all_tests()
     
-    # Save detailed results
+    # Save test results
     results = {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now().isoformat(),
         "total_tests": tester.tests_run,
         "passed_tests": tester.tests_passed,
-        "success_rate": (tester.tests_passed / tester.tests_run * 100) if tester.tests_run > 0 else 0,
-        "test_details": tester.test_results
+        "success_rate": f"{(tester.tests_passed/tester.tests_run*100):.1f}%" if tester.tests_run > 0 else "0%",
+        "test_results": tester.test_results
     }
     
-    with open('/tmp/ticketing_test_results.json', 'w') as f:
+    with open('/app/backend_test_results.json', 'w') as f:
         json.dump(results, f, indent=2)
     
     return 0 if success else 1

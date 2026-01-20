@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
-import { ArrowLeft, ShoppingCart, Shield, MessageSquare, AlertTriangle, CheckCircle, Star, CreditCard, Package, Users } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, Shield, MessageSquare, AlertTriangle, CheckCircle, Star, CreditCard, Package, Users, Heart } from 'lucide-react';
 
 const CommunityRulesBuyersPage = () => {
   const { isDark } = useTheme();
@@ -115,6 +115,23 @@ const CommunityRulesBuyersPage = () => {
           </div>
           <p className={`text-lg ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
             MicLocker thrives because of our community of passionate musicians and gear enthusiasts. These guidelines help ensure everyone has a positive buying experience.
+          </p>
+        </div>
+
+        {/* Our Commitment */}
+        <div className={`rounded-xl p-6 mb-10 border-2 ${isDark ? 'bg-primary/5 border-primary/30' : 'bg-yellow-50 border-yellow-300'}`}>
+          <div className="flex items-center gap-3 mb-4">
+            <Heart className="w-6 h-6 text-primary" />
+            <h2 className={`text-xl font-bold ${isDark ? 'text-primary' : 'text-yellow-700'}`}>
+              Our Commitment to You
+            </h2>
+          </div>
+          <p className={`leading-relaxed ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+            MicLocker is committed to offering the highest level of service and satisfaction. MicLocker will do everything in its power to make every transaction fair and honest. Our commitment is to make sure that all users, including buyers and sellers are satisfied with our services. We at MicLocker stand by our name and our promise of a fair and honest platform and we want to make a platform that users can trust. If there are any major complaints or disputes for any reason, please contact{' '}
+            <a href="mailto:info@miclockerapp.com" className="text-primary hover:underline font-medium">info@miclockerapp.com</a>
+            {' '}and/or{' '}
+            <Link to="/help" className="text-primary hover:underline font-medium">submit a ticket for support</Link>
+            {' '}and every single message and ticket will be read. We will not let any dispute or issue go unresolved. That is our promise. That is our guarantee.
           </p>
         </div>
 

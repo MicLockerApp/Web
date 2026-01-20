@@ -51,6 +51,10 @@ export const authAPI = {
     new_password: newPassword 
   }),
   checkResetCode: (email, code) => api.get('/auth/check-reset-code', { params: { email, code } }),
+  // Employee password setup
+  verifySetupToken: (email, token) => api.get('/auth/verify-setup-token', { params: { email, token } }),
+  setupEmployeePassword: (email, token, newPassword) => 
+    api.post(`/auth/setup-employee-password?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}&new_password=${encodeURIComponent(newPassword)}`),
 };
 
 // Users APIs
@@ -116,6 +120,11 @@ export const ordersAPI = {
   getById: (id) => api.get(`/orders/${id}`),
   updateStatus: (id, status, trackingNumber) => 
     api.put(`/orders/${id}/status`, { status, tracking_number: trackingNumber }),
+  // Tracking
+  addTracking: (orderId, trackingData) => api.put(`/orders/${orderId}/tracking`, trackingData),
+  getTracking: (orderId) => api.get(`/orders/${orderId}/tracking`),
+  // Delivery confirmation
+  confirmDelivery: (orderId) => api.post(`/orders/${orderId}/confirm-delivery`),
 };
 
 // Offers APIs
@@ -154,6 +163,9 @@ export const adminAPI = {
   getUsers: (params) => api.get('/admin/users', { params }),
   suspendUser: (userId) => api.post(`/admin/users/${userId}/suspend`),
   unsuspendUser: (userId) => api.post(`/admin/users/${userId}/unsuspend`),
+  banUser: (userId, reason) => api.post(`/admin/users/${userId}/ban`, { reason }),
+  unbanUser: (userId) => api.post(`/admin/users/${userId}/unban`),
+  deleteUser: (userId) => api.delete(`/admin/users/${userId}`),
   getListings: (params) => api.get('/admin/listings', { params }),
   removeListing: (listingId) => api.post(`/admin/listings/${listingId}/remove`),
   getOrders: (params) => api.get('/admin/orders', { params }),
@@ -161,7 +173,9 @@ export const adminAPI = {
   // Employee management
   getEmployees: () => api.get('/admin/employees'),
   createEmployee: (data) => api.post('/admin/employees', data),
+  updateEmployeeDetails: (employeeId, data) => api.put(`/admin/employees/${employeeId}`, data),
   updateEmployeeRole: (employeeId, role) => api.put(`/admin/employees/${employeeId}/role`, { role }),
+  resendSetupEmail: (employeeId) => api.post(`/admin/employees/${employeeId}/resend-setup`),
   deleteEmployee: (employeeId) => api.delete(`/admin/employees/${employeeId}`),
 };
 
@@ -174,6 +188,18 @@ export const filesAPI = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
+};
+
+// Payments API (Stripe)
+export const paymentsAPI = {
+  // Get Stripe config (publishable key)
+  getConfig: () => api.get('/payments/config'),
+  
+  // Create checkout session
+  createCheckout: (data) => api.post('/payments/checkout', data),
+  
+  // Get payment status
+  getStatus: (sessionId) => api.get(`/payments/status/${sessionId}`),
 };
 
 export default api;

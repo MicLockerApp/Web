@@ -27,6 +27,16 @@ class PaymentInfo(BaseModel):
     method: str = "card"  # card, paypal, etc.
     card_last_four: Optional[str] = None
     transaction_id: Optional[str] = None
+    stripe_session_id: Optional[str] = None
+    stripe_payment_intent_id: Optional[str] = None
+    funds_status: str = "pending"  # pending, held, released, refunded
+
+class TrackingInfo(BaseModel):
+    carrier: Optional[str] = None  # USPS, UPS, FedEx, DHL, etc.
+    tracking_number: Optional[str] = None
+    tracking_url: Optional[str] = None
+    shipped_at: Optional[datetime] = None
+    estimated_delivery: Optional[str] = None
 
 class OrderCreate(BaseModel):
     shipping_address: ShippingAddress
@@ -38,10 +48,12 @@ class OrderInDB(BaseModel):
     order_number: str = Field(default_factory=lambda: f"ML-{str(uuid.uuid4())[:8].upper()}")
     buyer_id: str
     buyer_username: str
+    buyer_email: Optional[str] = None
     
     items: List[OrderItem]
     shipping_address: ShippingAddress
     payment_info: PaymentInfo
+    tracking_info: Optional[TrackingInfo] = None
     
     # Pricing
     subtotal: float
@@ -50,11 +62,22 @@ class OrderInDB(BaseModel):
     payment_processing_fee: float = 0.0  # 3.19% + $0.49 (goes to payment processor)
     total: float
     
+    # Seller payout info
+    seller_payout_amount: float = 0.0  # Amount seller receives after fees
+    seller_payout_status: str = "pending"  # pending, held, released, paid
+    
     # Status tracking
-    status: str = "pending"  # pending, paid, shipped, delivered, completed, cancelled, refunded
+    status: str = "pending"  # pending, awaiting_payment, paid, shipped, delivered, completed, cancelled, refunded
+    
+    # Stripe session for checkout
+    stripe_session_id: Optional[str] = None
     
     # Offer reference if applicable
     offer_id: Optional[str] = None
+    
+    # Notifications sent
+    seller_notified: bool = False
+    buyer_notified: bool = False
     
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -62,6 +85,7 @@ class OrderInDB(BaseModel):
     shipped_at: Optional[datetime] = None
     delivered_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
+    funds_released_at: Optional[datetime] = None
 
 class OrderResponse(BaseModel):
     id: str
@@ -70,19 +94,31 @@ class OrderResponse(BaseModel):
     buyer_username: str
     items: List[OrderItem]
     shipping_address: ShippingAddress
+    tracking_info: Optional[TrackingInfo] = None
     subtotal: float
     shipping_total: float
     platform_fee: float
     payment_processing_fee: float = 0.0
     total: float
+    seller_payout_amount: float = 0.0
+    seller_payout_status: str = "pending"
     status: str
+    stripe_session_id: Optional[str] = None
     offer_id: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     paid_at: Optional[datetime] = None
     shipped_at: Optional[datetime] = None
     delivered_at: Optional[datetime] = None
+    funds_released_at: Optional[datetime] = None
 
 class OrderStatusUpdate(BaseModel):
     status: str
     tracking_number: Optional[str] = None
+    tracking_carrier: Optional[str] = None
+
+class TrackingUpdate(BaseModel):
+    carrier: str  # USPS, UPS, FedEx, DHL, Other
+    tracking_number: str
+    estimated_delivery: Optional[str] = None
+

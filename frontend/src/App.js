@@ -18,6 +18,8 @@ import SearchPage from './pages/SearchPage';
 import ListingDetailPage from './pages/ListingDetailPage';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
+import CheckoutSuccessPage from './pages/CheckoutSuccessPage';
+import CheckoutCancelPage from './pages/CheckoutCancelPage';
 import ProfilePage from './pages/ProfilePage';
 import EditProfilePage from './pages/EditProfilePage';
 import FavoritesPage from './pages/FavoritesPage';
@@ -42,6 +44,7 @@ import TermsOfUsePage from './pages/TermsOfUsePage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import BillingPolicyPage from './pages/BillingPolicyPage';
 import PurchaseProtectionPage from './pages/PurchaseProtectionPage';
+import EmployeeSetupPage from './pages/EmployeeSetupPage';
 import CommunityRulesBuyersPage from './pages/CommunityRulesBuyersPage';
 import CommunityRulesSellersPage from './pages/CommunityRulesSellersPage';
 import PayoutsAndCreditsPage from './pages/PayoutsAndCreditsPage';
@@ -95,6 +98,8 @@ function AppContent() {
               <Route path="/listing/:id" element={<ListingDetailPage />} />
               <Route path="/cart" element={<CartPage />} />
               <Route path="/checkout" element={<CheckoutPage />} />
+              <Route path="/checkout/success" element={<CheckoutSuccessPage />} />
+              <Route path="/checkout/cancel" element={<CheckoutCancelPage />} />
               <Route path="/profile/:id" element={<ProfilePage />} />
               <Route path="/profile/edit" element={<EditProfilePage />} />
               <Route path="/settings" element={<EditProfilePage />} />
@@ -127,6 +132,7 @@ function AppContent() {
               <Route path="/legal/intellectual-property" element={<IntellectualPropertyPage />} />
               <Route path="/legal/search-ranking" element={<SearchAndAdRankingPage />} />
               <Route path="/legal/eu-policy" element={<EUDataPolicyPage />} />
+              <Route path="/employee-setup" element={<EmployeeSetupPage />} />
               {/* Fallback */}
               <Route path="*" element={
                 <div className="min-h-screen flex items-center justify-center">
