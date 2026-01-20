@@ -22,10 +22,12 @@ class Settings(BaseSettings):
         env_origins = os.getenv("CORS_ORIGINS", "")
         if env_origins:
             return [origin.strip() for origin in env_origins.split(",")]
-        # Default origins for development
+        # Default origins for development and production
         return [
             "http://localhost:3000",
             "http://127.0.0.1:3000",
+            "https://miclockerapp.com",
+            "https://www.miclockerapp.com",
             os.getenv("FRONTEND_URL", ""),
         ]
     
