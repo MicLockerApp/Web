@@ -265,8 +265,7 @@ MicLocker is a production-ready full-stack marketplace where musicians, audio en
   - Then seller onboarding will work
 
 ### P1 (High Priority)
-- Implement "Make an Offer" feature flow
-- Implement user ratings and review submission flow
+- Integrate email delivery (AWS SES production access or alternative provider)
 - Add Stripe webhook secret configuration
 
 ### P2 (Medium Priority)
