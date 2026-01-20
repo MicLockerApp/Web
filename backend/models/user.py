@@ -66,7 +66,7 @@ class UserBase(BaseModel):
     email: EmailStr
 
 class UserCreate(UserBase):
-    password: str = Field(..., min_length=6)
+    password: str = Field(..., min_length=8, description="Password must be at least 8 characters")
 
 class UserCategoryUpdate(BaseModel):
     category: str
@@ -141,8 +141,13 @@ class UserInDB(BaseModel):
     is_first_user: bool = False
     is_suspended: bool = False
     profile_completed: bool = False
-    # Lifetime 0% platform fee for first 100 users
+    email_verified: bool = False  # Email verification status
+    # Lifetime 0% platform fee for first 300 users
     has_lifetime_free_fees: bool = False
+    # Employee system - employees don't count toward user count
+    is_employee: bool = False
+    # Employee role: 'admin', 'manager', 'employee' (only applies if is_admin or is_employee)
+    employee_role: Optional[str] = None
     
     # Profile fields
     bio: Optional[str] = None
@@ -192,6 +197,22 @@ class UserInDB(BaseModel):
     rating: float = 0.0
     review_count: int = 0
     total_sales: int = 0
+    total_purchases: int = 0  # Track completed purchases
+    
+    # Review Gating - After first transaction, users must review before next action
+    pending_review_order_id: Optional[str] = None  # Order that needs to be reviewed
+    pending_review_type: Optional[str] = None  # "buyer" or "seller" - which role needs review
+    first_purchase_completed: bool = False  # Has made at least one purchase
+    first_sale_completed: bool = False  # Has made at least one sale
+    
+    # Trading System - 1 free trade per month
+    last_trade_date: Optional[datetime] = None  # Last trade completed
+    trades_this_month: int = 0  # Counter reset monthly
+    has_seen_trade_rules: bool = False  # Shown the rules modal
+    
+    # Stripe Connect for seller payouts
+    stripe_connect_account_id: Optional[str] = None
+    stripe_connect_status: Optional[str] = None  # pending, complete, disabled
     
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -203,7 +224,10 @@ class UserResponse(BaseModel):
     category: Optional[str] = None
     sub_categories: Optional[List[str]] = None
     is_admin: bool = False
+    is_employee: bool = False
+    employee_role: Optional[str] = None
     profile_completed: bool = False
+    email_verified: bool = False
     has_lifetime_free_fees: bool = False
     bio: Optional[str] = None
     location: Optional[str] = None
@@ -245,6 +269,19 @@ class UserResponse(BaseModel):
     rating: float = 0.0
     review_count: int = 0
     total_sales: int = 0
+    total_purchases: int = 0
+    # Review gating
+    pending_review_order_id: Optional[str] = None
+    pending_review_type: Optional[str] = None
+    first_purchase_completed: bool = False
+    first_sale_completed: bool = False
+    # Trading
+    last_trade_date: Optional[datetime] = None
+    trades_this_month: int = 0
+    has_seen_trade_rules: bool = False
+    # Stripe Connect
+    stripe_connect_account_id: Optional[str] = None
+    stripe_connect_status: Optional[str] = None
     created_at: datetime
 
 class UserPublicProfile(BaseModel):
@@ -290,6 +327,19 @@ class UserPublicProfile(BaseModel):
     rating: float = 0.0
     review_count: int = 0
     total_sales: int = 0
+    total_purchases: int = 0
+    # Review gating
+    pending_review_order_id: Optional[str] = None
+    pending_review_type: Optional[str] = None
+    first_purchase_completed: bool = False
+    first_sale_completed: bool = False
+    # Trading
+    last_trade_date: Optional[datetime] = None
+    trades_this_month: int = 0
+    has_seen_trade_rules: bool = False
+    # Stripe Connect
+    stripe_connect_account_id: Optional[str] = None
+    stripe_connect_status: Optional[str] = None
     created_at: datetime
 
 class Token(BaseModel):
@@ -305,7 +355,7 @@ class PasswordResetRequest(BaseModel):
 class PasswordResetVerify(BaseModel):
     email: EmailStr
     code: str
-    new_password: str = Field(..., min_length=6)
+    new_password: str = Field(..., min_length=8, description="Password must be at least 8 characters")
 
 class PasswordResetCode(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))

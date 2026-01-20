@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Package, DollarSign, Clock, Truck, Check, ShoppingBag } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { ordersAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const OrdersPage = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const { isDark } = useTheme();
   const [activeTab, setActiveTab] = useState('purchases');
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -68,8 +70,8 @@ const OrdersPage = () => {
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-white">Orders</h1>
-            <p className="text-gray-400">Track your purchases and sales</p>
+            <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Orders</h1>
+            <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>Track your purchases and sales</p>
           </div>
         </div>
 

@@ -38,6 +38,11 @@ api.interceptors.response.use(
 // Auth APIs
 export const authAPI = {
   register: (data) => api.post('/auth/register', data),
+  // New email verification signup flow
+  sendVerification: (data) => api.post('/auth/register/send-verification', data),
+  verifyEmail: (data) => api.post('/auth/register/verify-email', data),
+  resendVerification: (data) => api.post('/auth/register/resend-verification', data),
+  checkVerification: (email, code) => api.get('/auth/register/check-verification', { params: { email, code } }),
   login: (username, password) => 
     api.post(`/auth/login?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`),
   getMe: () => api.get('/auth/me'),
@@ -51,6 +56,25 @@ export const authAPI = {
     new_password: newPassword 
   }),
   checkResetCode: (email, code) => api.get('/auth/check-reset-code', { params: { email, code } }),
+  // Employee password setup
+  verifySetupToken: (email, token) => api.get('/auth/verify-setup-token', { params: { email, token } }),
+  setupEmployeePassword: (email, token, newPassword) => 
+    api.post(`/auth/setup-employee-password?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}&new_password=${encodeURIComponent(newPassword)}`),
+  // Account settings (change username/email/password)
+  changeUsername: (newUsername, password) => 
+    api.post('/auth/account/change-username', { new_username: newUsername, password }),
+  requestEmailChange: (newEmail, password) => 
+    api.post('/auth/account/change-email/request', { new_email: newEmail, password }),
+  verifyEmailChange: (code) => 
+    api.post('/auth/account/change-email/verify', { code }),
+  resendEmailChangeCode: () => 
+    api.post('/auth/account/change-email/resend'),
+  getPendingEmailChange: () => 
+    api.get('/auth/account/pending-email-change'),
+  cancelEmailChange: () => 
+    api.delete('/auth/account/pending-email-change'),
+  changePassword: (currentPassword, newPassword) => 
+    api.post('/auth/account/change-password', { current_password: currentPassword, new_password: newPassword }),
 };
 
 // Users APIs
@@ -67,7 +91,7 @@ export const usersAPI = {
   },
   searchUsers: (params) => api.get('/users/search', { params }),
   getUserListings: (userId, params) => api.get(`/users/${userId}/listings`, { params }),
-  getUserReviews: (userId, params) => api.get(`/users/${userId}/reviews`, { params }),
+  getUserReviews: (userId, params) => api.get(`/reviews/user/${userId}`, { params }),
   // Favorites
   getFavorites: (params) => api.get('/users/favorites/list', { params }),
   addFavorite: (listingId) => api.post(`/users/favorites/${listingId}`),
@@ -116,6 +140,11 @@ export const ordersAPI = {
   getById: (id) => api.get(`/orders/${id}`),
   updateStatus: (id, status, trackingNumber) => 
     api.put(`/orders/${id}/status`, { status, tracking_number: trackingNumber }),
+  // Tracking
+  addTracking: (orderId, trackingData) => api.put(`/orders/${orderId}/tracking`, trackingData),
+  getTracking: (orderId) => api.get(`/orders/${orderId}/tracking`),
+  // Delivery confirmation
+  confirmDelivery: (orderId) => api.post(`/orders/${orderId}/confirm-delivery`),
 };
 
 // Offers APIs
@@ -145,7 +174,41 @@ export const messagesAPI = {
 export const reviewsAPI = {
   create: (data) => api.post('/reviews', data),
   getSellerReviews: (sellerId, params) => api.get(`/reviews/seller/${sellerId}`, { params }),
+  getUserReviews: (userId, params) => api.get(`/reviews/user/${userId}`, { params }),
+  getOrderReviews: (orderId) => api.get(`/reviews/order/${orderId}`),
   getById: (id) => api.get(`/reviews/${id}`),
+};
+
+// Trades APIs
+export const tradesAPI = {
+  // Check eligibility for trading
+  checkEligibility: () => api.get('/trades/eligibility'),
+  // Acknowledge trade rules modal
+  acknowledgeRules: () => api.post('/trades/acknowledge-rules'),
+  // Initiate a trade
+  create: (myListingId, theirListingId) => api.post('/trades', {
+    my_listing_id: myListingId,
+    their_listing_id: theirListingId
+  }),
+  // Get all trades for current user
+  getAll: (params) => api.get('/trades', { params }),
+  // Get a specific trade
+  getById: (tradeId) => api.get(`/trades/${tradeId}`),
+  // Respond to trade (accept/decline)
+  respond: (tradeId, action) => api.post(`/trades/${tradeId}/respond`, null, { params: { action } }),
+  // Submit shipping address
+  submitAddress: (tradeId, address) => api.post(`/trades/${tradeId}/shipping-address`, address),
+  // Add tracking
+  addTracking: (tradeId, carrier, trackingNumber, estimatedDelivery) => 
+    api.post(`/trades/${tradeId}/tracking`, null, { 
+      params: { carrier, tracking_number: trackingNumber, estimated_delivery: estimatedDelivery }
+    }),
+  // Confirm receipt
+  confirmReceipt: (tradeId) => api.post(`/trades/${tradeId}/confirm-receipt`),
+  // Cancel trade
+  cancel: (tradeId) => api.post(`/trades/${tradeId}/cancel`),
+  // Open dispute
+  openDispute: (tradeId, reason) => api.post(`/trades/${tradeId}/dispute`, null, { params: { reason } }),
 };
 
 // Admin APIs
@@ -154,10 +217,20 @@ export const adminAPI = {
   getUsers: (params) => api.get('/admin/users', { params }),
   suspendUser: (userId) => api.post(`/admin/users/${userId}/suspend`),
   unsuspendUser: (userId) => api.post(`/admin/users/${userId}/unsuspend`),
+  banUser: (userId, reason) => api.post(`/admin/users/${userId}/ban`, { reason }),
+  unbanUser: (userId) => api.post(`/admin/users/${userId}/unban`),
+  deleteUser: (userId) => api.delete(`/admin/users/${userId}`),
   getListings: (params) => api.get('/admin/listings', { params }),
   removeListing: (listingId) => api.post(`/admin/listings/${listingId}/remove`),
   getOrders: (params) => api.get('/admin/orders', { params }),
   getSettings: () => api.get('/admin/settings'),
+  // Employee management
+  getEmployees: () => api.get('/admin/employees'),
+  createEmployee: (data) => api.post('/admin/employees', data),
+  updateEmployeeDetails: (employeeId, data) => api.put(`/admin/employees/${employeeId}`, data),
+  updateEmployeeRole: (employeeId, role) => api.put(`/admin/employees/${employeeId}/role`, { role }),
+  resendSetupEmail: (employeeId) => api.post(`/admin/employees/${employeeId}/resend-setup`),
+  deleteEmployee: (employeeId) => api.delete(`/admin/employees/${employeeId}`),
 };
 
 // Files API
@@ -169,6 +242,24 @@ export const filesAPI = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
+};
+
+// Payments API (Stripe)
+export const paymentsAPI = {
+  // Get Stripe config (publishable key)
+  getConfig: () => api.get('/payments/config'),
+  
+  // Create checkout session
+  createCheckout: (data) => api.post('/payments/checkout', data),
+  
+  // Get payment status
+  getStatus: (sessionId) => api.get(`/payments/status/${sessionId}`),
+  
+  // Stripe Connect - Seller Onboarding
+  startSellerOnboarding: () => api.post('/payments/connect/onboard'),
+  getConnectStatus: () => api.get('/payments/connect/status'),
+  refreshOnboardingLink: () => api.post('/payments/connect/refresh-link'),
+  getSellerBalance: () => api.get('/payments/connect/balance'),
 };
 
 export default api;

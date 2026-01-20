@@ -18,8 +18,11 @@ import SearchPage from './pages/SearchPage';
 import ListingDetailPage from './pages/ListingDetailPage';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
+import CheckoutSuccessPage from './pages/CheckoutSuccessPage';
+import CheckoutCancelPage from './pages/CheckoutCancelPage';
 import ProfilePage from './pages/ProfilePage';
 import EditProfilePage from './pages/EditProfilePage';
+import AccountSettingsPage from './pages/AccountSettingsPage';
 import FavoritesPage from './pages/FavoritesPage';
 import DashboardPage from './pages/DashboardPage';
 import CreateListingPage from './pages/CreateListingPage';
@@ -35,6 +38,22 @@ import OffersPage from './pages/OffersPage';
 import OrdersPage from './pages/OrdersPage';
 import OrderDetailPage from './pages/OrderDetailPage';
 import ContactSupportPage from './pages/ContactSupportPage';
+import HelpCenterPage from './pages/HelpCenterPage';
+import AdminTicketsPage from './pages/AdminTicketsPage';
+import LegalPage from './pages/LegalPage';
+import TermsOfUsePage from './pages/TermsOfUsePage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import BillingPolicyPage from './pages/BillingPolicyPage';
+import PurchaseProtectionPage from './pages/PurchaseProtectionPage';
+import EmployeeSetupPage from './pages/EmployeeSetupPage';
+import CommunityRulesBuyersPage from './pages/CommunityRulesBuyersPage';
+import CommunityRulesSellersPage from './pages/CommunityRulesSellersPage';
+import TradesPage from './pages/TradesPage';
+import TradeDetailPage from './pages/TradeDetailPage';
+import PayoutsAndCreditsPage from './pages/PayoutsAndCreditsPage';
+import IntellectualPropertyPage from './pages/IntellectualPropertyPage';
+import SearchAndAdRankingPage from './pages/SearchAndAdRankingPage';
+import EUDataPolicyPage from './pages/EUDataPolicyPage';
 
 // Initialize analytics on app load
 analytics.init();
@@ -82,9 +101,14 @@ function AppContent() {
               <Route path="/listing/:id" element={<ListingDetailPage />} />
               <Route path="/cart" element={<CartPage />} />
               <Route path="/checkout" element={<CheckoutPage />} />
+              <Route path="/checkout/success" element={<CheckoutSuccessPage />} />
+              <Route path="/checkout/cancel" element={<CheckoutCancelPage />} />
               <Route path="/profile/:id" element={<ProfilePage />} />
               <Route path="/profile/edit" element={<EditProfilePage />} />
+              <Route path="/profile/:id/edit" element={<EditProfilePage />} />
               <Route path="/settings" element={<EditProfilePage />} />
+              <Route path="/account" element={<AccountSettingsPage />} />
+              <Route path="/account/settings" element={<AccountSettingsPage />} />
               <Route path="/favorites" element={<FavoritesPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/dashboard/listings/:id/edit" element={<EditListingPage />} />
@@ -92,6 +116,8 @@ function AppContent() {
               <Route path="/offers" element={<OffersPage />} />
               <Route path="/orders" element={<OrdersPage />} />
               <Route path="/orders/:id" element={<OrderDetailPage />} />
+              <Route path="/trades" element={<TradesPage />} />
+              <Route path="/trades/:tradeId" element={<TradeDetailPage />} />
               <Route path="/messages" element={<MessagesPage />} />
               <Route path="/admin" element={<AdminPage />} />
               <Route path="/admin/analytics" element={<AnalyticsDashboard />} />
@@ -100,6 +126,21 @@ function AppContent() {
               <Route path="/careers/jobs" element={<JobSearchPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/contact-support" element={<ContactSupportPage />} />
+              <Route path="/help" element={<HelpCenterPage />} />
+              <Route path="/admin/tickets" element={<AdminTicketsPage />} />
+              <Route path="/admin/tickets/:id" element={<AdminTicketsPage />} />
+              <Route path="/legal" element={<LegalPage />} />
+              <Route path="/legal/terms-of-use" element={<TermsOfUsePage />} />
+              <Route path="/legal/privacy-policy" element={<PrivacyPolicyPage />} />
+              <Route path="/legal/billing-policy" element={<BillingPolicyPage />} />
+              <Route path="/legal/purchase-protection" element={<PurchaseProtectionPage />} />
+              <Route path="/legal/buyers" element={<CommunityRulesBuyersPage />} />
+              <Route path="/legal/sellers" element={<CommunityRulesSellersPage />} />
+              <Route path="/legal/payouts" element={<PayoutsAndCreditsPage />} />
+              <Route path="/legal/intellectual-property" element={<IntellectualPropertyPage />} />
+              <Route path="/legal/search-ranking" element={<SearchAndAdRankingPage />} />
+              <Route path="/legal/eu-policy" element={<EUDataPolicyPage />} />
+              <Route path="/employee-setup" element={<EmployeeSetupPage />} />
               {/* Fallback */}
               <Route path="*" element={
                 <div className="min-h-screen flex items-center justify-center">

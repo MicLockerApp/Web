@@ -102,14 +102,6 @@ const LoginPage = () => {
             </Link>
           </p>
         </form>
-
-        {/* Demo credentials */}
-        <div className={`mt-6 p-4 rounded-lg text-center ${isDark ? 'bg-dark-400' : 'bg-gray-100'}`}>
-          <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Demo Credentials:</p>
-          <p className={`text-sm mt-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-            <span className="text-primary">jmcdougall</span> / <span className="text-primary">Eisenhower1212!!</span>
-          </p>
-        </div>
       </div>
     </div>
   );

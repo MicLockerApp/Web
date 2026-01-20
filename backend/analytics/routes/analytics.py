@@ -194,6 +194,32 @@ async def get_top_search_terms(
     }
 
 
+@router.get("/daily-visitors")
+async def get_daily_visitors(
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Get daily unique visitor counts"""
+    if not start_date:
+        start = datetime.utcnow() - timedelta(days=30)
+    else:
+        start = datetime.strptime(start_date, "%Y-%m-%d")
+    
+    if not end_date:
+        end = datetime.utcnow()
+    else:
+        end = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
+    
+    visitors = await AnalyticsService.get_daily_visitors(start, end)
+    
+    return {
+        "start_date": start.isoformat(),
+        "end_date": end.isoformat(),
+        **visitors
+    }
+
+
 @router.get("/events")
 async def get_event_timeline(
     event_types: str = Query(..., description="Comma-separated event types"),

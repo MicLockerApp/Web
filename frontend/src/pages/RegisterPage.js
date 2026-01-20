@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
 import VinylLogo from '../components/VinylLogo';
-import { Check, ChevronRight, ChevronLeft, Info } from 'lucide-react';
+import { Check, ChevronRight, ChevronLeft, Info, Mail, AlertCircle } from 'lucide-react';
 import { COUNTRIES, getStatesForCountry, countryHasStates } from '../data/countries';
 import analytics from '../services/analytics';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
-  const { register, login } = useAuth();
+  const { setUser, setToken } = useAuth();
   const [step, setStep] = useState(1);
   const [categoryOptions, setCategoryOptions] = useState(null);
   const [formData, setFormData] = useState({
@@ -33,7 +33,7 @@ const RegisterPage = () => {
     // Merchant fields
     merchant_products: [],
     business_name: '',
-    // Contact info (Step 5)
+    // Contact info (Step 6)
     phone: '',
     // Mailing address
     address_line1: '',
@@ -53,6 +53,11 @@ const RegisterPage = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // Email verification state
+  const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '']);
+  const [resending, setResending] = useState(false);
+  const inputRefs = useRef([]);
 
   const CATEGORY_OPTIONS = [
     { value: 'musician', label: 'Musician', icon: '🎸', description: 'Play instruments or sing' },
@@ -74,6 +79,27 @@ const RegisterPage = () => {
     fetchCategories();
   }, []);
 
+  // Focus first code input when entering verification step
+  useEffect(() => {
+    if (step === 2 && inputRefs.current[0]) {
+      inputRefs.current[0].focus();
+    }
+  }, [step]);
+
+  // Helper function to extract error message
+  const getErrorMessage = (err, defaultMsg) => {
+    const errorData = err.response?.data?.detail;
+    if (typeof errorData === 'string') {
+      return errorData;
+    } else if (Array.isArray(errorData) && errorData.length > 0) {
+      return errorData[0]?.msg || defaultMsg;
+    } else if (errorData?.msg) {
+      return errorData.msg;
+    }
+    return defaultMsg;
+  };
+
+  // Step 1: Create account directly (email verification disabled but code kept for future use)
   const handleBasicSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -90,34 +116,145 @@ const RegisterPage = () => {
 
     setLoading(true);
     try {
-      await register({
+      // Register user directly without email verification
+      const registerResponse = await authAPI.register({
         username: formData.username,
         email: formData.email,
-        password: formData.password,
+        password: formData.password
       });
-      await login(formData.username, formData.password);
+      
+      // Login immediately after registration
+      const loginResponse = await authAPI.login(formData.username, formData.password);
+      const { access_token } = loginResponse.data;
+      
+      // Get user info
+      localStorage.setItem('token', access_token);
+      const meResponse = await authAPI.getMe();
+      const user = meResponse.data;
+      
+      localStorage.setItem('user', JSON.stringify(user));
+      setToken(access_token);
+      setUser(user);
+      
+      // Skip email verification (step 2) and go directly to category selection (step 2 in new flow)
       setStep(2);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Registration failed');
+      setError(getErrorMessage(err, 'Registration failed. Please try again.'));
     } finally {
       setLoading(false);
     }
   };
 
+  /* 
+   * EMAIL VERIFICATION CODE - KEPT FOR FUTURE USE
+   * To re-enable email verification:
+   * 1. In handleBasicSubmit, replace the register/login calls with:
+   *    await authAPI.sendVerification({ username, email, password });
+   *    setStep(2); // Go to email verification step
+   * 2. Uncomment renderStep2() in the render section
+   * 3. Update step numbers: verification=2, category=3, etc.
+   * 4. Update getStepLabel() to include verification step
+   * 5. Update progress indicator to show 6 steps instead of 5
+   */
+
+  // Handle verification code input (KEPT FOR FUTURE USE)
+  const handleCodeChange = (index, value) => {
+    if (value && !/^\d$/.test(value)) return;
+    
+    const newCode = [...verificationCode];
+    newCode[index] = value;
+    setVerificationCode(newCode);
+    setError('');
+    
+    if (value && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !verificationCode[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+    
+    if (e.key === 'v' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      navigator.clipboard.readText().then(text => {
+        const digits = text.replace(/\D/g, '').slice(0, 6);
+        const newCode = [...verificationCode];
+        digits.split('').forEach((digit, i) => {
+          if (i < 6) newCode[i] = digit;
+        });
+        setVerificationCode(newCode);
+        if (digits.length > 0) {
+          inputRefs.current[Math.min(digits.length, 5)]?.focus();
+        }
+      });
+    }
+  };
+
+  // Verify email and create account (KEPT FOR FUTURE USE)
+  const handleVerifyEmail = async () => {
+    const fullCode = verificationCode.join('');
+    if (fullCode.length !== 6) {
+      setError('Please enter all 6 digits');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await authAPI.verifyEmail({
+        email: formData.email,
+        code: fullCode
+      });
+      
+      // Account created successfully - store token and user
+      const { access_token, user } = response.data;
+      localStorage.setItem('token', access_token);
+      localStorage.setItem('user', JSON.stringify(user));
+      setToken(access_token);
+      setUser(user);
+      
+      // Move to category selection (would be step 3 with verification enabled)
+      setStep(3);
+    } catch (err) {
+      setError(getErrorMessage(err, 'Invalid verification code. Please try again.'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Resend verification code (KEPT FOR FUTURE USE)
+  const handleResendCode = async () => {
+    setResending(true);
+    setError('');
+    
+    try {
+      await authAPI.resendVerification({ email: formData.email });
+      setVerificationCode(['', '', '', '', '', '']);
+      inputRefs.current[0]?.focus();
+    } catch (err) {
+      setError('Failed to resend code. Please try again.');
+    } finally {
+      setResending(false);
+    }
+  };
+
   const handleCategorySubmit = async (e) => {
     e.preventDefault();
-    setStep(3);
+    setStep(3); // Was 4 with email verification
   };
 
   const handleSubCategoriesSubmit = async (e) => {
     e.preventDefault();
-    setStep(4);
+    setStep(4); // Was 5 with email verification
   };
 
   const handleFinalSubmit = async (e) => {
     e.preventDefault();
     // Move to contact info step
-    setStep(5);
+    setStep(5); // Was 6 with email verification
   };
 
   const handleContactInfoSubmit = async (e) => {
@@ -297,6 +434,77 @@ const RegisterPage = () => {
     </form>
   );
 
+  /* 
+   * EMAIL VERIFICATION UI - KEPT FOR FUTURE USE
+   * This renderStep2 function displays the email verification code input.
+   * To re-enable: uncomment the {step === 2 && renderStep2()} line in the render section
+   */
+  // Step 2: Email Verification (DISABLED - kept for future use)
+  const renderEmailVerificationStep = () => (
+    <div>
+      {/* Info Box */}
+      <div className="flex items-start gap-3 p-4 rounded-lg mb-6 bg-blue-500/10 border border-blue-500/20">
+        <Mail className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+        <div className="text-sm text-blue-300">
+          <p className="font-medium mb-1">Check your inbox!</p>
+          <p className="text-blue-400">
+            We&apos;ve sent a 6-digit verification code to <strong className="text-white">{formData.email}</strong>. 
+            Don&apos;t forget to check your <strong>spam folder</strong>. The code expires in 15 minutes.
+          </p>
+        </div>
+      </div>
+
+      {/* Code Input Boxes */}
+      <div className="flex justify-center gap-2 mb-6">
+        {verificationCode.map((digit, index) => (
+          <input
+            key={index}
+            ref={(el) => (inputRefs.current[index] = el)}
+            type="text"
+            inputMode="numeric"
+            maxLength={1}
+            value={digit}
+            onChange={(e) => handleCodeChange(index, e.target.value)}
+            onKeyDown={(e) => handleKeyDown(index, e)}
+            className="w-12 h-14 text-center text-2xl font-bold rounded-lg border-2 transition-all
+              bg-dark-300 border-dark-200 text-white focus:border-primary
+              focus:outline-none focus:ring-2 focus:ring-primary/20"
+            data-testid={`verification-code-${index}`}
+          />
+        ))}
+      </div>
+
+      <div className="flex gap-3 mb-4">
+        <button
+          type="button"
+          onClick={() => setStep(1)}
+          className="btn btn-secondary py-3 px-4"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <button
+          onClick={handleVerifyEmail}
+          className="btn btn-primary flex-1 py-3"
+          disabled={loading || verificationCode.some(d => !d)}
+          data-testid="verify-email-button"
+        >
+          {loading ? 'Verifying...' : 'Verify Email'}
+        </button>
+      </div>
+
+      <div className="text-center">
+        <button
+          onClick={handleResendCode}
+          disabled={resending}
+          className="text-sm text-gray-400 hover:text-primary transition-colors"
+        >
+          {resending ? 'Sending...' : "Didn\u0027t receive a code? Resend"}
+        </button>
+      </div>
+    </div>
+  );
+
+  // Step 2: Category Selection (was Step 3 with email verification)
   const renderStep2 = () => (
     <form onSubmit={handleCategorySubmit}>
       <p className="text-gray-400 mb-6">What best describes you?</p>
@@ -322,25 +530,17 @@ const RegisterPage = () => {
         ))}
       </div>
 
-      <div className="flex gap-3">
-        <button
-          type="button"
-          onClick={() => setStep(1)}
-          className="btn btn-secondary py-3 px-4"
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-        <button
-          type="submit"
-          className="btn btn-primary flex-1 py-3"
-          disabled={!formData.category}
-        >
-          Continue <ChevronRight className="w-4 h-4 inline ml-1" />
-        </button>
-      </div>
+      <button
+        type="submit"
+        className="btn btn-primary w-full py-3"
+        disabled={!formData.category}
+      >
+        Continue <ChevronRight className="w-4 h-4 inline ml-1" />
+      </button>
     </form>
   );
 
+  // Step 3: Sub-categories (was Step 4 with email verification)
   const renderStep3 = () => (
     <form onSubmit={handleSubCategoriesSubmit}>
       <p className="text-gray-400 mb-4">Do you wear multiple hats? Select any additional categories that apply to you.</p>
@@ -392,6 +592,7 @@ const RegisterPage = () => {
     </form>
   );
 
+  // Step 4: Category Details (was Step 5 with email verification)
   const renderStep4 = () => {
     const allCategories = [formData.category, ...formData.sub_categories].filter(Boolean);
 
@@ -619,6 +820,7 @@ const RegisterPage = () => {
     );
   };
 
+  // Step 5: Contact Info (was Step 6 with email verification)
   const renderStep5 = () => {
     const states = getStatesForCountry(formData.country);
     const showStates = countryHasStates(formData.country);
@@ -942,22 +1144,28 @@ const RegisterPage = () => {
     );
   };
 
+  // Get step labels for progress indicator (5 steps without email verification)
+  const getStepLabel = () => {
+    switch (step) {
+      case 1: return 'Create your account';
+      case 2: return 'Choose your primary category';
+      case 3: return 'Add secondary categories (optional)';
+      case 4: return 'Tell us more about yourself';
+      case 5: return 'Contact & shipping information';
+      default: return '';
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12" data-testid="register-page">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <VinylLogo size={80} spinning={true} className="mx-auto mb-4" />
           <h1 className="text-3xl font-bold text-white">Create Account</h1>
-          <p className="text-gray-400 mt-2">
-            {step === 1 && 'Join the MicLocker community'}
-            {step === 2 && 'Choose your primary category'}
-            {step === 3 && 'Add secondary categories (optional)'}
-            {step === 4 && 'Tell us more about yourself'}
-            {step === 5 && 'Contact & shipping information'}
-          </p>
+          <p className="text-gray-400 mt-2">{getStepLabel()}</p>
         </div>
 
-        {/* Progress */}
+        {/* Progress - 5 steps without email verification */}
         <div className="flex items-center justify-center gap-2 mb-8">
           {[1, 2, 3, 4, 5].map(s => (
             <div
@@ -971,7 +1179,8 @@ const RegisterPage = () => {
 
         <div className="bg-dark-400 rounded-xl p-8 max-h-[70vh] overflow-y-auto">
           {error && (
-            <div className="bg-red-500/20 text-red-400 px-4 py-3 rounded-lg mb-6">
+            <div className="bg-red-500/20 text-red-400 px-4 py-3 rounded-lg mb-6 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
               {error}
             </div>
           )}
@@ -981,6 +1190,7 @@ const RegisterPage = () => {
           {step === 3 && renderStep3()}
           {step === 4 && renderStep4()}
           {step === 5 && renderStep5()}
+          {/* Email verification step disabled - to re-enable, add: {step === X && renderEmailVerificationStep()} */}
         </div>
 
         {step === 1 && (

@@ -30,6 +30,20 @@ async def create_listing(
     """Create a new listing"""
     db = get_database()
     
+    # Review Gating Check: If user has made a sale before and has a pending review, block listing
+    if current_user.get("first_sale_completed") and current_user.get("pending_review_order_id"):
+        pending_order = await db.orders.find_one({"id": current_user["pending_review_order_id"]})
+        if pending_order and pending_order.get("status") in ["delivered", "completed"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "error": "review_required",
+                    "message": "You must review your buyer from your last sale before creating a new listing.",
+                    "order_id": current_user["pending_review_order_id"],
+                    "order_number": pending_order.get("order_number")
+                }
+            )
+    
     if listing_data.category not in LISTING_CATEGORIES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -157,11 +171,11 @@ async def get_listing_count():
     active_count = await db.listings.count_documents({"status": "active"})
     total_count = await db.listings.count_documents({})
     
-    # Get total user count for display and promo eligibility
-    total_users = await db.users.count_documents({})
+    # Get total user count for display and promo eligibility (excluding employees)
+    total_users = await db.users.count_documents({"is_employee": {"$ne": True}})
     
-    # Promo: First 100 users get 0% platform fees for life
-    promo_limit = 100
+    # Promo: First 300 users get 0% platform fees for life
+    promo_limit = 300
     promo_eligible = total_users < promo_limit
     promo_spots_remaining = max(0, promo_limit - total_users)
     

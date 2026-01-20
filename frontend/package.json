@@ -4,6 +4,8 @@
   "private": true,
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@stripe/react-stripe-js": "^5.4.1",
+    "@stripe/stripe-js": "^8.6.3",
     "axios": "^1.13.2",
     "http-proxy-middleware": "2.0.6",
     "lucide-react": "^0.562.0",

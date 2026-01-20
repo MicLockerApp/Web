@@ -209,9 +209,9 @@ const MessagesPage = () => {
       <div className="max-w-6xl mx-auto px-4 py-8">
         <h1 className={`text-2xl font-bold mb-8 ${isDark ? 'text-white' : 'text-gray-900'}`}>Messages</h1>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[600px]">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:h-[600px]">
           {/* Threads List */}
-          <div className={`rounded-xl overflow-hidden ${
+          <div className={`rounded-xl overflow-hidden h-[420px] md:h-full ${
             isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'
           }`}>
             <div className={`p-4 border-b flex items-center justify-between ${
@@ -227,23 +227,7 @@ const MessagesPage = () => {
                 <Plus className="w-5 h-5 text-black" />
               </button>
             </div>
-            <div className="overflow-y-auto h-[calc(100%-60px)]">
-              {/* New Conversation Slot */}
-              <button
-                onClick={() => setShowNewMessageModal(true)}
-                className={`w-full p-4 text-left transition-colors border-b flex items-center gap-3 ${
-                  isDark 
-                    ? 'hover:bg-dark-300 border-dark-300' 
-                    : 'hover:bg-gray-50 border-gray-200'
-                }`}
-                data-testid="new-conversation-slot"
-              >
-                <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center border-2 border-dashed border-primary">
-                  <Plus className="w-5 h-5 text-primary" />
-                </div>
-                <span className="text-primary font-medium">Start New Conversation</span>
-              </button>
-              
+            <div className="overflow-y-auto h-[360px] md:h-[calc(100%-60px)]">
               {threads.length > 0 ? (
                 threads.map(thread => (
                   <button
@@ -299,7 +283,7 @@ const MessagesPage = () => {
           </div>
 
           {/* Messages Area */}
-          <div className={`md:col-span-2 rounded-xl overflow-hidden flex flex-col ${
+          <div className={`md:col-span-2 rounded-xl overflow-hidden flex flex-col h-[900px] md:h-full ${
             isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'
           }`}>
             {(selectedThread || newRecipient) ? (
@@ -356,7 +340,7 @@ const MessagesPage = () => {
                                 ? 'bg-dark-300 text-white' 
                                 : 'bg-white text-gray-900 border border-gray-200'
                           }`}>
-                            <p>{msg.content}</p>
+                            <p className="whitespace-pre-wrap">{msg.content}</p>
                           </div>
                           <div className={`flex items-center gap-2 mt-1 text-xs ${
                             isOwnMessage ? 'justify-end' : 'justify-start'

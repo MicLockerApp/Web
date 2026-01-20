@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ShoppingCart, MessageSquare, Heart, Share2, Star, ChevronLeft, ChevronRight, Check, X, Copy, Facebook, Twitter, Mail, Link as LinkIcon } from 'lucide-react';
-import { listingsAPI, offersAPI, cartAPI, usersAPI } from '../services/api';
+import { ShoppingCart, MessageSquare, Heart, Share2, Star, ChevronLeft, ChevronRight, Check, X, Copy, Facebook, Twitter, Mail, Link as LinkIcon, ArrowLeftRight } from 'lucide-react';
+import { listingsAPI, offersAPI, cartAPI, usersAPI, tradesAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -19,12 +19,16 @@ const ListingDetailPage = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showTradeModal, setShowTradeModal] = useState(false);
   const [offerPrice, setOfferPrice] = useState('');
   const [offerMessage, setOfferMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [isFavorited, setIsFavorited] = useState(false);
   const [favLoading, setFavLoading] = useState(false);
+  const [myListings, setMyListings] = useState([]);
+  const [selectedTradeListingId, setSelectedTradeListingId] = useState('');
+  const [tradeEligibility, setTradeEligibility] = useState(null);
 
   useEffect(() => {
     const fetchListing = async () => {
@@ -168,6 +172,56 @@ const ListingDetailPage = () => {
       setMessage({ type: 'success', text: 'Offer submitted!' });
     } catch (error) {
       setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to submit offer' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleOpenTradeModal = async () => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    
+    // Check trade eligibility
+    try {
+      const eligResponse = await tradesAPI.checkEligibility();
+      setTradeEligibility(eligResponse.data);
+      
+      if (!eligResponse.data.eligible) {
+        setMessage({ type: 'error', text: eligResponse.data.reason });
+        return;
+      }
+      
+      // Fetch user's active listings
+      const listingsResponse = await listingsAPI.getSellerListings(user.id, { status: 'active' });
+      setMyListings(listingsResponse.data.listings || []);
+      setShowTradeModal(true);
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to check trade eligibility' });
+    }
+  };
+
+  const handleProposeTrade = async (e) => {
+    e.preventDefault();
+    if (!selectedTradeListingId) {
+      setMessage({ type: 'error', text: 'Please select one of your listings to trade' });
+      return;
+    }
+    
+    setSubmitting(true);
+    try {
+      const response = await tradesAPI.create(selectedTradeListingId, listing.id);
+      setShowTradeModal(false);
+      setSelectedTradeListingId('');
+      setMessage({ type: 'success', text: 'Trade proposal sent!' });
+      
+      // Navigate to trade detail page
+      setTimeout(() => {
+        navigate(`/trades/${response.data.trade_id}`);
+      }, 1500);
+    } catch (error) {
+      setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to propose trade' });
     } finally {
       setSubmitting(false);
     }
@@ -332,15 +386,25 @@ const ListingDetailPage = () => {
                   <ShoppingCart className="w-5 h-5" />
                   Add to Cart
                 </button>
-                {listing.accepts_offers && (
+                <div className="flex gap-3">
+                  {listing.accepts_offers && (
+                    <button
+                      onClick={() => setShowOfferModal(true)}
+                      className="btn btn-outline flex-1 py-3"
+                      data-testid="make-offer-button"
+                    >
+                      Make an Offer
+                    </button>
+                  )}
                   <button
-                    onClick={() => setShowOfferModal(true)}
-                    className="btn btn-outline w-full py-3"
-                    data-testid="make-offer-button"
+                    onClick={handleOpenTradeModal}
+                    className="btn btn-outline flex-1 py-3"
+                    data-testid="propose-trade-button"
                   >
-                    Make an Offer
+                    <ArrowLeftRight className="w-5 h-5 mr-2" />
+                    Trade
                   </button>
-                )}
+                </div>
               </div>
             )}
 
@@ -501,6 +565,109 @@ const ListingDetailPage = () => {
                 <span className="truncate">{window.location.href}</span>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Trade Modal */}
+      {showTradeModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+          <div className="bg-dark-400 rounded-xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-white">Propose a Trade</h2>
+              <button onClick={() => setShowTradeModal(false)} className="text-gray-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Trade Info Banner */}
+            <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 mb-6">
+              <p className="text-sm text-primary">
+                <strong>🎉 Trades are free!</strong> No platform fees. You have {tradeEligibility?.trades_remaining || 1} free trade(s) this month.
+              </p>
+            </div>
+
+            {/* Item you want */}
+            <div className="mb-6">
+              <p className="text-gray-400 text-sm mb-2">You want:</p>
+              <div className="flex items-center gap-3 p-3 bg-dark-300 rounded-lg">
+                {listing.media?.[0]?.url ? (
+                  <img 
+                    src={listing.media[0].url} 
+                    alt={listing.title}
+                    className="w-16 h-16 object-cover rounded-lg"
+                  />
+                ) : (
+                  <div className="w-16 h-16 bg-dark-200 rounded-lg" />
+                )}
+                <div>
+                  <p className="text-white font-medium">{listing.title}</p>
+                  <p className="text-gray-400 text-sm">${listing.price?.toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Select your listing */}
+            <form onSubmit={handleProposeTrade}>
+              <div className="mb-6">
+                <label className="block text-gray-400 mb-2">Select one of your listings to trade:</label>
+                
+                {myListings.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-400 mb-4">You don&apos;t have any active listings to trade.</p>
+                    <Link to="/sell" className="btn btn-primary">
+                      Create a Listing
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {myListings.map(myListing => (
+                      <label 
+                        key={myListing.id}
+                        className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors border ${
+                          selectedTradeListingId === myListing.id 
+                            ? 'bg-primary/10 border-primary' 
+                            : 'bg-dark-300 border-transparent hover:bg-dark-200'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="tradeListing"
+                          value={myListing.id}
+                          checked={selectedTradeListingId === myListing.id}
+                          onChange={(e) => setSelectedTradeListingId(e.target.value)}
+                          className="text-primary"
+                        />
+                        {myListing.media?.[0]?.url ? (
+                          <img 
+                            src={myListing.media[0].url} 
+                            alt={myListing.title}
+                            className="w-12 h-12 object-cover rounded-lg"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-dark-200 rounded-lg" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white font-medium truncate">{myListing.title}</p>
+                          <p className="text-gray-400 text-sm">${myListing.price?.toLocaleString()}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {myListings.length > 0 && (
+                <button
+                  type="submit"
+                  className="btn btn-primary w-full py-3"
+                  disabled={submitting || !selectedTradeListingId}
+                  data-testid="submit-trade-button"
+                >
+                  {submitting ? 'Sending...' : 'Propose Trade'}
+                </button>
+              )}
+            </form>
           </div>
         </div>
       )}

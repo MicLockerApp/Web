@@ -56,7 +56,7 @@ const HomePage = () => {
   const [activeListingsCount, setActiveListingsCount] = useState(0);
   const [totalUsersCount, setTotalUsersCount] = useState(0);
   const [promoEligible, setPromoEligible] = useState(false);
-  const [promoSpotsRemaining, setPromoSpotsRemaining] = useState(100);
+  const [promoSpotsRemaining, setPromoSpotsRemaining] = useState(300);
   const [showPromoModal, setShowPromoModal] = useState(false);
 
   useEffect(() => {
@@ -281,7 +281,7 @@ const HomePage = () => {
             List your gear in minutes and reach thousands of potential buyers. 
             {promoEligible ? (
               <span className="block mt-2 text-primary font-semibold">
-                🎁 Sign up now and get 0% platform fees for LIFE! Only {promoSpotsRemaining} spots remaining!
+                🎁 Sign up now and get 0% Platform Fees For LIFE! Only {promoSpotsRemaining} spots remaining!
               </span>
             ) : (
               ' Only 3% platform fee on completed sales.'

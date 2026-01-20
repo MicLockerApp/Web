@@ -89,6 +89,12 @@ class EventTypes:
     DISPUTE_OPENED = "moderation.dispute_opened"
     DISPUTE_RESOLVED = "moderation.dispute_resolved"
     
+    # Support Ticket Events
+    TICKET_CREATED = "ticket.created"
+    TICKET_REPLIED = "ticket.replied"
+    TICKET_STATUS_CHANGED = "ticket.status_changed"
+    TICKET_RESOLVED = "ticket.resolved"
+    
     # System Events
     SYSTEM_ERROR = "system.error"
     API_REQUEST = "system.api_request"

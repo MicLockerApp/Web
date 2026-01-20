@@ -216,7 +216,7 @@ const ProfilePage = () => {
                     <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
-                    0% Fees For Life
+                    0% Platform Fees For Life
                   </span>
                 )}
               </div>
@@ -450,29 +450,84 @@ const ProfilePage = () => {
 
         {activeTab === 'reviews' && (
           <div>
+            {/* Review Stats Summary */}
+            <div className={`rounded-xl p-6 mb-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="text-center">
+                  <p className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {profile.rating?.toFixed(1) || '0.0'}
+                  </p>
+                  <div className="flex justify-center my-1">
+                    <StarRating rating={profile.rating || 0} size={16} />
+                  </div>
+                  <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Overall ({profile.review_count || 0} reviews)
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className={`text-2xl font-bold text-green-500`}>
+                    {profile.seller_rating?.toFixed(1) || 'N/A'}
+                  </p>
+                  <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                    As Seller ({profile.seller_review_count || 0})
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className={`text-2xl font-bold text-blue-500`}>
+                    {profile.buyer_rating?.toFixed(1) || 'N/A'}
+                  </p>
+                  <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                    As Buyer ({profile.buyer_review_count || 0})
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Reviews List */}
             {reviews.length > 0 ? (
               <div className="space-y-4">
                 {reviews.map(review => (
                   <div key={review.id} className={`rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
                     <div className="flex items-start gap-4">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? 'bg-dark-300' : 'bg-gray-200'}`}>
-                        <span className="font-bold text-primary">
-                          {review.buyer_username?.[0]?.toUpperCase()}
+                      <Link 
+                        to={`/profile/${review.reviewer_id}`}
+                        className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${isDark ? 'bg-dark-300 hover:bg-dark-200' : 'bg-gray-200 hover:bg-gray-300'} transition-colors`}
+                      >
+                        <span className="font-bold text-lg text-primary">
+                          {review.reviewer_username?.[0]?.toUpperCase() || '?'}
                         </span>
-                      </div>
+                      </Link>
                       <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{review.buyer_username}</span>
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <Link 
+                            to={`/profile/${review.reviewer_id}`}
+                            className={`font-medium hover:text-primary ${isDark ? 'text-white' : 'text-gray-900'}`}
+                          >
+                            {review.reviewer_username || 'Unknown'}
+                          </Link>
+                          <span className={`text-xs px-2 py-0.5 rounded ${
+                            review.reviewer_role === 'buyer' 
+                              ? isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600'
+                              : isDark ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-600'
+                          }`}>
+                            {review.reviewer_role === 'buyer' ? 'Buyer' : 'Seller'}
+                          </span>
                           <StarRating rating={review.rating} size={14} />
                         </div>
-                        <p className={`text-sm mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                          For: {review.listing_title}
+                        <p className={`text-sm mb-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                          Transaction: {review.listing_title}
                         </p>
                         {review.comment && (
-                          <p className={isDark ? 'text-gray-300' : 'text-gray-600'}>{review.comment}</p>
+                          <p className={`${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                            &ldquo;{review.comment}&rdquo;
+                          </p>
                         )}
-                        <p className={`text-sm mt-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                          {new Date(review.created_at).toLocaleDateString()}
+                        <p className={`text-sm mt-3 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
+                          {new Date(review.created_at).toLocaleDateString('en-US', { 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                          })}
                         </p>
                       </div>
                     </div>
@@ -483,6 +538,9 @@ const ProfilePage = () => {
               <div className={`text-center py-12 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                 <Star className="w-12 h-12 mx-auto mb-4 opacity-50" />
                 <p>No reviews yet</p>
+                <p className={`text-sm mt-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                  Reviews appear here after completed transactions
+                </p>
               </div>
             )}
           </div>

@@ -1,6 +1,6 @@
 import os
 from pydantic_settings import BaseSettings
-from typing import Optional
+from typing import Optional, List
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -9,13 +9,29 @@ class Settings(BaseSettings):
     # Application
     app_name: str = "MicLocker API"
     environment: str = os.getenv("ENVIRONMENT", "development")
-    secret_key: str = os.getenv("SECRET_KEY", "miclocker-secret-key")
+    secret_key: str = os.getenv("SECRET_KEY", "")  # Must be set in production
     algorithm: str = os.getenv("ALGORITHM", "HS256")
     access_token_expire_minutes: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "10080"))
     
-    # MongoDB
+    # CORS Settings - Read from environment or use defaults
+    cors_origins: List[str] = []
+    
+    @property
+    def get_cors_origins(self) -> List[str]:
+        """Get CORS origins from environment or use defaults"""
+        env_origins = os.getenv("CORS_ORIGINS", "")
+        if env_origins:
+            return [origin.strip() for origin in env_origins.split(",")]
+        # Default origins for development
+        return [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            os.getenv("FRONTEND_URL", ""),
+        ]
+    
+    # MongoDB - Read database name from env
     mongo_url: str = os.getenv("MONGO_URL", "mongodb://localhost:27017")
-    database_name: str = "miclocker"
+    database_name: str = os.getenv("DATABASE_NAME", "miclocker")
     
     # AWS S3
     aws_access_key_id: Optional[str] = os.getenv("AWS_ACCESS_KEY_ID") or None
@@ -40,6 +56,20 @@ class Settings(BaseSettings):
     
     # AI Chatbot (Emergent LLM Key)
     emergent_llm_key: Optional[str] = os.getenv("EMERGENT_LLM_KEY") or None
+    
+    # Stripe Payment Settings
+    stripe_api_key: Optional[str] = os.getenv("STRIPE_API_KEY") or None
+    stripe_publishable_key: Optional[str] = os.getenv("STRIPE_PUBLISHABLE_KEY") or None
+    stripe_webhook_secret: Optional[str] = os.getenv("STRIPE_WEBHOOK_SECRET") or None
+    
+    # Stripe Connect (for seller payouts)
+    stripe_connect_enabled: bool = os.getenv("STRIPE_CONNECT_ENABLED", "true").lower() == "true"
+    
+    # Auto-delivery confirmation (days)
+    auto_delivery_days: int = int(os.getenv("AUTO_DELIVERY_DAYS", "14"))
+    
+    # Frontend URL for webhooks - read from environment
+    frontend_url: str = os.getenv("FRONTEND_URL", "")
     
     # File Upload Restrictions
     max_image_size_mb: int = 10

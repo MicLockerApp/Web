@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 """
-MicLocker Analytics Instrumentation Test Suite
+MicLocker Employee Management System Test Suite
 
-Tests backend analytics instrumentation, API endpoints, and event emission.
+Tests backend employee management APIs and functionality.
 """
 import requests
 import json
 import sys
 import time
+import urllib.parse
 from datetime import datetime
 from typing import Dict, Any, Optional
 
-class AnalyticsTestSuite:
-    def __init__(self, base_url: str = "https://audio-bazaar-6.preview.emergentagent.com"):
+class EmployeeManagementTestSuite:
+    def __init__(self, base_url: str = "https://music-gear-swap.preview.emergentagent.com"):
         self.base_url = base_url
         self.token = None
         self.admin_token = None
@@ -21,9 +22,17 @@ class AnalyticsTestSuite:
         self.tests_passed = 0
         self.test_results = []
         
-        # Test credentials
-        self.test_username = "jmcdougall"
-        self.test_password = "Eisenhower1212!!"
+        # Test employee system
+        self.test_employee_id = None
+        self.test_employee_username = None
+        
+        # Test user management system
+        self.test_user_id = None
+        self.test_user_username = None
+        
+        # Admin credentials for employee management
+        self.admin_username = "miclocker.support"
+        self.admin_password = "Finally2026!!"
 
     def log_result(self, test_name: str, passed: bool, details: str = "", response_data: Any = None):
         """Log test result"""
@@ -72,275 +81,455 @@ class AnalyticsTestSuite:
             print(f"Request failed: {e}")
             raise
 
-    def test_login(self) -> bool:
-        """Test user login and get token"""
+    def test_admin_login(self) -> bool:
+        """Test admin login with special characters"""
         try:
-            # Login endpoint expects query parameters
-            url = f"{self.base_url}/api/auth/login?username={self.test_username}&password={self.test_password}"
+            # URL encode the password with special characters
+            encoded_password = urllib.parse.quote(self.admin_password)
+            url = f"{self.base_url}/api/auth/login?username={self.admin_username}&password={encoded_password}"
+            
             response = requests.post(url, headers={'Content-Type': 'application/json'}, timeout=30)
             
             if response.status_code == 200:
                 data = response.json()
                 self.token = data.get('access_token')
+                self.admin_token = self.token
                 
-                # Get user info to check if admin
-                user_response = self.make_request('GET', '/auth/me')
+                # Get user info
+                user_response = self.make_request('GET', '/auth/me', use_admin=True)
                 if user_response.status_code == 200:
                     user_data = user_response.json()
                     self.user_id = user_data.get('id')
-                    if user_data.get('is_admin'):
-                        self.admin_token = self.token
-                
-                self.log_result("User Login", True, f"Token obtained, Admin: {bool(self.admin_token)}")
-                return True
+                    is_admin = user_data.get('is_admin', False)
+                    
+                    self.log_result("Admin Login", True, f"Admin access: {is_admin}")
+                    return True
+                else:
+                    self.log_result("Admin Login", False, f"Failed to get user info: {user_response.status_code}")
+                    return False
             else:
-                self.log_result("User Login", False, f"Status: {response.status_code}")
+                error_msg = "Unknown error"
+                try:
+                    error_data = response.json()
+                    error_msg = error_data.get('detail', error_msg)
+                except:
+                    error_msg = response.text[:200]
+                
+                self.log_result("Admin Login", False, f"Status {response.status_code}: {error_msg}")
                 return False
+                
         except Exception as e:
-            self.log_result("User Login", False, str(e))
+            self.log_result("Admin Login", False, f"Exception: {str(e)}")
             return False
 
-    def test_analytics_api_endpoints(self):
-        """Test all analytics API endpoints"""
-        if not self.admin_token:
-            self.log_result("Analytics API Access", False, "No admin token available")
-            return
-
-        endpoints = [
-            ('/analytics/realtime', 'Realtime Metrics'),
-            ('/analytics/revenue', 'Revenue Analytics'),
-            ('/analytics/offer-funnel', 'Offer Funnel'),
-            ('/analytics/search-funnel', 'Search Funnel'),
-            ('/analytics/marketplace-health', 'Marketplace Health'),
-            ('/analytics/trust-safety', 'Trust & Safety'),
-            ('/analytics/search-terms', 'Search Terms')
-        ]
-
-        for endpoint, name in endpoints:
-            try:
-                response = self.make_request('GET', endpoint, use_admin=True)
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    # Verify it's valid JSON and has expected structure
-                    if isinstance(data, dict):
-                        self.log_result(f"Analytics API - {name}", True, f"Valid JSON response")
-                    else:
-                        self.log_result(f"Analytics API - {name}", False, "Invalid JSON structure")
-                else:
-                    self.log_result(f"Analytics API - {name}", False, f"Status: {response.status_code}")
-            except Exception as e:
-                self.log_result(f"Analytics API - {name}", False, str(e))
-
-    def test_event_emission_via_actions(self):
-        """Test that backend actions emit analytics events"""
-        if not self.token:
-            self.log_result("Event Emission Test", False, "No authentication token")
-            return
-
-        # Get initial event count
+    def test_admin_analytics_access(self) -> bool:
+        """Test admin can access analytics (required for admin panel)"""
         try:
-            initial_response = self.make_request('GET', '/analytics/realtime', use_admin=True)
-            if initial_response.status_code != 200:
-                self.log_result("Event Emission - Initial Count", False, "Cannot get initial metrics")
-                return
-        except:
-            self.log_result("Event Emission - Initial Count", False, "Cannot access analytics")
-            return
-
-        # Test 1: Search (should emit search event)
-        try:
-            search_response = self.make_request('GET', '/search/global?q=guitar&limit=5')
-            if search_response.status_code == 200:
-                self.log_result("Event Emission - Search", True, "Search performed successfully")
-            else:
-                self.log_result("Event Emission - Search", False, f"Search failed: {search_response.status_code}")
-        except Exception as e:
-            self.log_result("Event Emission - Search", False, str(e))
-
-        # Test 2: View listings (should emit listing view events)
-        try:
-            listings_response = self.make_request('GET', '/listings?limit=5')
-            if listings_response.status_code == 200:
-                listings_data = listings_response.json()
-                listings = listings_data.get('listings', [])
-                
-                if listings:
-                    # View first listing
-                    listing_id = listings[0]['id']
-                    view_response = self.make_request('GET', f'/listings/{listing_id}')
-                    if view_response.status_code == 200:
-                        self.log_result("Event Emission - Listing View", True, f"Viewed listing {listing_id}")
-                    else:
-                        self.log_result("Event Emission - Listing View", False, f"Failed to view listing")
-                else:
-                    self.log_result("Event Emission - Listing View", False, "No listings available")
-            else:
-                self.log_result("Event Emission - Listing View", False, f"Cannot get listings: {listings_response.status_code}")
-        except Exception as e:
-            self.log_result("Event Emission - Listing View", False, str(e))
-
-        # Test 3: Add to favorites (should emit favorite event)
-        try:
-            listings_response = self.make_request('GET', '/listings?limit=1')
-            if listings_response.status_code == 200:
-                listings_data = listings_response.json()
-                listings = listings_data.get('listings', [])
-                
-                if listings:
-                    listing_id = listings[0]['id']
-                    fav_response = self.make_request('POST', f'/users/favorites/{listing_id}')
-                    if fav_response.status_code == 200:
-                        self.log_result("Event Emission - Add Favorite", True, f"Added listing {listing_id} to favorites")
-                        
-                        # Remove from favorites
-                        unfav_response = self.make_request('DELETE', f'/users/favorites/{listing_id}')
-                        if unfav_response.status_code == 200:
-                            self.log_result("Event Emission - Remove Favorite", True, f"Removed listing {listing_id} from favorites")
-                        else:
-                            self.log_result("Event Emission - Remove Favorite", False, f"Failed to remove favorite")
-                    else:
-                        self.log_result("Event Emission - Add Favorite", False, f"Failed to add favorite: {fav_response.status_code}")
-                else:
-                    self.log_result("Event Emission - Add Favorite", False, "No listings available for favoriting")
-        except Exception as e:
-            self.log_result("Event Emission - Add Favorite", False, str(e))
-
-        # Wait a moment for events to be processed
-        time.sleep(2)
-
-    def test_frontend_analytics_endpoint(self):
-        """Test frontend analytics batch endpoint"""
-        try:
-            # Test the batch endpoint that frontend uses
-            test_events = {
-                "events": [
-                    {
-                        "event_type": "page.view",
-                        "session_id": "test_session_123",
-                        "device_type": "desktop",
-                        "metadata": {
-                            "page_name": "test_page"
-                        },
-                        "timestamp": datetime.utcnow().isoformat()
-                    }
-                ],
-                "session_id": "test_session_123"
-            }
-            
-            response = self.make_request('POST', '/events/batch', test_events)
+            response = self.make_request('GET', '/admin/analytics', use_admin=True)
             
             if response.status_code == 200:
-                self.log_result("Frontend Analytics Endpoint", True, "Batch endpoint accepts events")
-            else:
-                self.log_result("Frontend Analytics Endpoint", False, f"Status: {response.status_code}")
-        except Exception as e:
-            self.log_result("Frontend Analytics Endpoint", False, str(e))
-
-    def test_cart_analytics_events(self):
-        """Test cart-related analytics events"""
-        if not self.token:
-            return
-
-        try:
-            # Get a listing to add to cart
-            listings_response = self.make_request('GET', '/listings?limit=1')
-            if listings_response.status_code == 200:
-                listings_data = listings_response.json()
-                listings = listings_data.get('listings', [])
+                data = response.json()
+                user_role = data.get('user_role')
+                is_owner = data.get('is_owner', False)
                 
-                if listings:
-                    listing_id = listings[0]['id']
-                    seller_id = listings[0]['seller_id']
-                    
-                    # Skip if it's our own listing
-                    if seller_id == self.user_id:
-                        self.log_result("Cart Analytics - Add to Cart", True, "Skipped (own listing)")
-                        return
-                    
-                    # Add to cart
-                    cart_response = self.make_request('POST', '/cart/items', {
-                        'listing_id': listing_id,
-                        'quantity': 1
-                    })
-                    
-                    if cart_response.status_code == 200:
-                        self.log_result("Cart Analytics - Add to Cart", True, f"Added listing {listing_id} to cart")
-                        
-                        # Get cart to find item ID
-                        get_cart_response = self.make_request('GET', '/cart')
-                        if get_cart_response.status_code == 200:
-                            cart_data = get_cart_response.json()
-                            items = cart_data.get('items', [])
-                            if items:
-                                item_id = items[0]['id']
-                                
-                                # Remove from cart
-                                remove_response = self.make_request('DELETE', f'/cart/items/{item_id}')
-                                if remove_response.status_code == 200:
-                                    self.log_result("Cart Analytics - Remove from Cart", True, f"Removed item from cart")
-                                else:
-                                    self.log_result("Cart Analytics - Remove from Cart", False, f"Failed to remove: {remove_response.status_code}")
-                    else:
-                        self.log_result("Cart Analytics - Add to Cart", False, f"Failed to add to cart: {cart_response.status_code}")
-                else:
-                    self.log_result("Cart Analytics - Add to Cart", False, "No listings available")
+                self.log_result("Admin Analytics Access", True, f"Role: {user_role}, Owner: {is_owner}")
+                return True
+            else:
+                self.log_result("Admin Analytics Access", False, f"Status: {response.status_code}")
+                return False
+                
         except Exception as e:
-            self.log_result("Cart Analytics - Add to Cart", False, str(e))
-
-    def run_all_tests(self):
-        """Run all analytics tests"""
-        print("🔍 Starting MicLocker Analytics Instrumentation Tests...")
-        print(f"📡 Testing against: {self.base_url}")
-        print("=" * 60)
-
-        # Authentication
-        if not self.test_login():
-            print("❌ Cannot proceed without authentication")
+            self.log_result("Admin Analytics Access", False, f"Exception: {str(e)}")
             return False
 
-        # Test analytics API endpoints
-        print("\n📊 Testing Analytics API Endpoints...")
-        self.test_analytics_api_endpoints()
+    def test_get_employees(self) -> bool:
+        """Test getting employees list"""
+        try:
+            response = self.make_request('GET', '/admin/employees', use_admin=True)
+            
+            if response.status_code == 200:
+                data = response.json()
+                employees = data.get('employees', [])
+                
+                self.log_result("Get Employees List", True, f"Found {len(employees)} employees")
+                return True
+            else:
+                self.log_result("Get Employees List", False, f"Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Get Employees List", False, f"Exception: {str(e)}")
+            return False
 
-        # Test event emission through user actions
-        print("\n🎯 Testing Event Emission via User Actions...")
-        self.test_event_emission_via_actions()
+    def test_create_employee(self) -> bool:
+        """Test creating employee without password"""
+        try:
+            timestamp = datetime.now().strftime('%H%M%S')
+            employee_data = {
+                "username": f"test_employee_{timestamp}",
+                "email": f"test.employee.{timestamp}@example.com",
+                "role": "employee"
+            }
+            
+            response = self.make_request('POST', '/admin/employees', data=employee_data, use_admin=True)
+            
+            if response.status_code == 200:
+                data = response.json()
+                employee = data.get('employee', {})
+                self.test_employee_id = employee.get('id')
+                self.test_employee_username = employee.get('username')
+                
+                message = data.get('message', '')
+                has_password_setup = 'password setup' in message.lower() or 'email' in message.lower()
+                
+                self.log_result("Create Employee (No Password)", True, f"ID: {self.test_employee_id}, Setup email: {has_password_setup}")
+                return True
+            else:
+                error_msg = "Unknown error"
+                try:
+                    error_data = response.json()
+                    error_msg = error_data.get('detail', error_msg)
+                except:
+                    pass
+                
+                self.log_result("Create Employee (No Password)", False, f"Status {response.status_code}: {error_msg}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Create Employee (No Password)", False, f"Exception: {str(e)}")
+            return False
 
-        # Test frontend analytics endpoint
-        print("\n🌐 Testing Frontend Analytics Integration...")
-        self.test_frontend_analytics_endpoint()
+    def test_resend_setup_email(self) -> bool:
+        """Test resending setup email"""
+        if not self.test_employee_id:
+            self.log_result("Resend Setup Email", False, "No test employee ID available")
+            return False
+            
+        try:
+            response = self.make_request('POST', f'/admin/employees/{self.test_employee_id}/resend-setup', use_admin=True)
+            
+            if response.status_code == 200:
+                data = response.json()
+                message = data.get('message', '')
+                
+                self.log_result("Resend Setup Email", True, f"Message: {message}")
+                return True
+            else:
+                self.log_result("Resend Setup Email", False, f"Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Resend Setup Email", False, f"Exception: {str(e)}")
+            return False
 
-        # Test cart analytics
-        print("\n🛒 Testing Cart Analytics Events...")
-        self.test_cart_analytics_events()
+    def test_update_employee_details(self) -> bool:
+        """Test updating employee details"""
+        if not self.test_employee_id:
+            self.log_result("Update Employee Details", False, "No test employee ID available")
+            return False
+            
+        try:
+            timestamp = datetime.now().strftime('%H%M%S')
+            update_data = {
+                "username": f"updated_employee_{timestamp}",
+                "email": f"updated.employee.{timestamp}@example.com"
+            }
+            
+            response = self.make_request('PUT', f'/admin/employees/{self.test_employee_id}', data=update_data, use_admin=True)
+            
+            if response.status_code == 200:
+                data = response.json()
+                message = data.get('message', '')
+                
+                self.log_result("Update Employee Details", True, f"Message: {message}")
+                return True
+            else:
+                self.log_result("Update Employee Details", False, f"Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Update Employee Details", False, f"Exception: {str(e)}")
+            return False
 
-        # Summary
+    def test_update_employee_role(self) -> bool:
+        """Test updating employee role"""
+        if not self.test_employee_id:
+            self.log_result("Update Employee Role", False, "No test employee ID available")
+            return False
+            
+        try:
+            role_data = {"role": "manager"}
+            
+            response = self.make_request('PUT', f'/admin/employees/{self.test_employee_id}/role', data=role_data, use_admin=True)
+            
+            if response.status_code == 200:
+                data = response.json()
+                message = data.get('message', '')
+                
+                self.log_result("Update Employee Role", True, f"Message: {message}")
+                return True
+            else:
+                self.log_result("Update Employee Role", False, f"Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Update Employee Role", False, f"Exception: {str(e)}")
+            return False
+
+    def test_verify_invalid_setup_token(self) -> bool:
+        """Test verifying invalid setup token"""
+        try:
+            params = "?email=invalid@example.com&token=invalid_token"
+            response = self.make_request('GET', f'/auth/verify-setup-token{params}')
+            
+            if response.status_code == 200:
+                data = response.json()
+                is_valid = data.get('valid', True)
+                message = data.get('message', '')
+                
+                if not is_valid:
+                    self.log_result("Verify Invalid Setup Token", True, f"Correctly rejected: {message}")
+                    return True
+                else:
+                    self.log_result("Verify Invalid Setup Token", False, "Should have rejected invalid token")
+                    return False
+            else:
+                self.log_result("Verify Invalid Setup Token", False, f"Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Verify Invalid Setup Token", False, f"Exception: {str(e)}")
+            return False
+
+    def test_setup_password_invalid_token(self) -> bool:
+        """Test setting up password with invalid token"""
+        try:
+            encoded_email = urllib.parse.quote("invalid@example.com")
+            encoded_token = urllib.parse.quote("invalid_token")
+            encoded_password = urllib.parse.quote("TestPassword123!")
+            
+            endpoint = f'/auth/setup-employee-password?email={encoded_email}&token={encoded_token}&new_password={encoded_password}'
+            response = self.make_request('POST', endpoint)
+            
+            if response.status_code == 400:
+                self.log_result("Setup Password Invalid Token", True, "Correctly rejected invalid token")
+                return True
+            else:
+                self.log_result("Setup Password Invalid Token", False, f"Expected 400, got {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Setup Password Invalid Token", False, f"Exception: {str(e)}")
+            return False
+
+    def test_delete_employee(self) -> bool:
+        """Test deleting test employee (cleanup)"""
+        if not self.test_employee_id:
+            self.log_result("Delete Test Employee", True, "No test employee to delete")
+            return True
+            
+        try:
+            response = self.make_request('DELETE', f'/admin/employees/{self.test_employee_id}', use_admin=True)
+            
+            if response.status_code == 200:
+                data = response.json()
+                message = data.get('message', '')
+                
+                self.log_result("Delete Test Employee", True, f"Message: {message}")
+                return True
+            else:
+                self.log_result("Delete Test Employee", False, f"Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Delete Test Employee", False, f"Exception: {str(e)}")
+            return False
+
+    # =====================
+    # User Management Tests
+    # =====================
+
+    def test_get_users(self) -> bool:
+        """Test getting users list for user management"""
+        try:
+            response = self.make_request('GET', '/admin/users?page=1&limit=10', use_admin=True)
+            
+            if response.status_code == 200:
+                data = response.json()
+                users = data.get('users', [])
+                
+                # Find a regular user (not admin/employee) for testing
+                for user in users:
+                    if not user.get('is_admin') and not user.get('is_employee'):
+                        self.test_user_id = user.get('id')
+                        self.test_user_username = user.get('username')
+                        break
+                
+                self.log_result("Get Users List", True, f"Found {len(users)} users, test user: {self.test_user_username}")
+                return True
+            else:
+                self.log_result("Get Users List", False, f"Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Get Users List", False, f"Exception: {str(e)}")
+            return False
+
+    def test_suspend_user(self) -> bool:
+        """Test suspending a user"""
+        if not self.test_user_id:
+            self.log_result("Suspend User", True, "No test user available")
+            return True
+            
+        try:
+            response = self.make_request('POST', f'/admin/users/{self.test_user_id}/suspend', use_admin=True)
+            
+            if response.status_code == 200:
+                data = response.json()
+                message = data.get('message', '')
+                
+                self.log_result("Suspend User", True, f"Message: {message}")
+                return True
+            else:
+                self.log_result("Suspend User", False, f"Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Suspend User", False, f"Exception: {str(e)}")
+            return False
+
+    def test_unsuspend_user(self) -> bool:
+        """Test unsuspending a user"""
+        if not self.test_user_id:
+            self.log_result("Unsuspend User", True, "No test user available")
+            return True
+            
+        try:
+            response = self.make_request('POST', f'/admin/users/{self.test_user_id}/unsuspend', use_admin=True)
+            
+            if response.status_code == 200:
+                data = response.json()
+                message = data.get('message', '')
+                
+                self.log_result("Unsuspend User", True, f"Message: {message}")
+                return True
+            else:
+                self.log_result("Unsuspend User", False, f"Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Unsuspend User", False, f"Exception: {str(e)}")
+            return False
+
+    def test_ban_user(self) -> bool:
+        """Test banning a user with reason"""
+        if not self.test_user_id:
+            self.log_result("Ban User", True, "No test user available")
+            return True
+            
+        try:
+            ban_data = {"reason": "Testing ban functionality"}
+            response = self.make_request('POST', f'/admin/users/{self.test_user_id}/ban', 
+                                      data=ban_data, use_admin=True)
+            
+            if response.status_code == 200:
+                data = response.json()
+                message = data.get('message', '')
+                
+                self.log_result("Ban User", True, f"Message: {message}")
+                return True
+            else:
+                self.log_result("Ban User", False, f"Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Ban User", False, f"Exception: {str(e)}")
+            return False
+
+    def test_unban_user(self) -> bool:
+        """Test unbanning a user"""
+        if not self.test_user_id:
+            self.log_result("Unban User", True, "No test user available")
+            return True
+            
+        try:
+            response = self.make_request('POST', f'/admin/users/{self.test_user_id}/unban', use_admin=True)
+            
+            if response.status_code == 200:
+                data = response.json()
+                message = data.get('message', '')
+                
+                self.log_result("Unban User", True, f"Message: {message}")
+                return True
+            else:
+                self.log_result("Unban User", False, f"Status: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Unban User", False, f"Exception: {str(e)}")
+            return False
+
+    def run_all_tests(self) -> bool:
+        """Run all employee management and user management tests"""
+        print("🚀 Starting Employee Management & User Management System Tests")
+        print("=" * 60)
+        
+        # Test admin login first
+        if not self.test_admin_login():
+            print("❌ Cannot proceed without admin access")
+            return False
+        
+        # Test admin access to analytics
+        self.test_admin_analytics_access()
+        
+        # Test employee management endpoints
+        self.test_get_employees()
+        self.test_create_employee()
+        self.test_resend_setup_email()
+        self.test_update_employee_details()
+        self.test_update_employee_role()
+        
+        # Test employee setup endpoints
+        self.test_verify_invalid_setup_token()
+        self.test_setup_password_invalid_token()
+        
+        # Test user management endpoints
+        print("\n📋 Testing User Management APIs...")
+        self.test_get_users()
+        self.test_suspend_user()
+        self.test_unsuspend_user()
+        self.test_ban_user()
+        self.test_unban_user()
+        
+        # Cleanup
+        self.test_delete_employee()
+        
+        # Print summary
         print("\n" + "=" * 60)
-        print(f"📈 Test Results: {self.tests_passed}/{self.tests_run} passed")
+        print(f"📊 Test Summary: {self.tests_passed}/{self.tests_run} tests passed")
         
         if self.tests_passed == self.tests_run:
-            print("🎉 All analytics tests passed!")
-            return True
+            print("🎉 All backend tests passed!")
         else:
-            print(f"⚠️  {self.tests_run - self.tests_passed} tests failed")
-            return False
+            print("⚠️  Some backend tests failed - check details above")
+        
+        return self.tests_passed == self.tests_run
 
 def main():
     """Main test runner"""
-    tester = AnalyticsTestSuite()
+    tester = EmployeeManagementTestSuite()
     success = tester.run_all_tests()
     
-    # Save detailed results
+    # Save test results
     results = {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now().isoformat(),
         "total_tests": tester.tests_run,
         "passed_tests": tester.tests_passed,
-        "success_rate": (tester.tests_passed / tester.tests_run * 100) if tester.tests_run > 0 else 0,
-        "test_details": tester.test_results
+        "success_rate": f"{(tester.tests_passed/tester.tests_run*100):.1f}%" if tester.tests_run > 0 else "0%",
+        "test_results": tester.test_results
     }
     
-    with open('/tmp/analytics_test_results.json', 'w') as f:
+    with open('/app/backend_test_results.json', 'w') as f:
         json.dump(results, f, indent=2)
     
     return 0 if success else 1

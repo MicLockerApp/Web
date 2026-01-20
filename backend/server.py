@@ -13,6 +13,12 @@ from routes import (
     admin_router, files_router
 )
 from routes.search import router as search_router
+from routes.tickets import router as tickets_router
+from routes.payments import router as payments_router
+from routes.trades import router as trades_router
+
+# Delivery tasks import
+from tasks.delivery_tasks import start_delivery_scheduler
 
 # Analytics imports
 from analytics.routes import analytics_router, events_router
@@ -41,6 +47,10 @@ async def lifespan(app: FastAPI):
     # Create analytics indexes
     await create_analytics_indexes()
     
+    # Ensure support system user exists for in-app messaging
+    from services.message_service import ensure_support_user_exists
+    await ensure_support_user_exists()
+    
     # Run seed data if in development
     if settings.environment == "development":
         from seed_data import seed_database
@@ -49,6 +59,10 @@ async def lifespan(app: FastAPI):
     # Start analytics background scheduler
     start_scheduler()
     logger.info("Analytics scheduler started")
+    
+    # Start delivery confirmation scheduler (checks every hour for auto-delivery)
+    start_delivery_scheduler()
+    logger.info("Delivery confirmation scheduler started")
     
     # Run initial aggregation if needed (in background)
     try:
@@ -121,7 +135,7 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.get_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -139,6 +153,9 @@ app.include_router(reviews_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
 app.include_router(files_router, prefix="/api")
 app.include_router(search_router, prefix="/api")
+app.include_router(tickets_router, prefix="/api")
+app.include_router(payments_router, prefix="/api")
+app.include_router(trades_router, prefix="/api")
 
 # Analytics routes
 app.include_router(analytics_router, prefix="/api")

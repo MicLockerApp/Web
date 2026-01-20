@@ -90,3 +90,40 @@ async def get_admin_user(current_user: dict = Depends(get_current_user)):
             detail="Admin access required"
         )
     return current_user
+
+async def get_staff_user(current_user: dict = Depends(get_current_user)):
+    """Verify current user is admin or employee (any staff member)"""
+    is_admin = current_user.get("is_admin", False)
+    is_employee = current_user.get("is_employee", False)
+    
+    if not is_admin and not is_employee:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Staff access required"
+        )
+    return current_user
+
+async def get_manager_or_admin(current_user: dict = Depends(get_current_user)):
+    """Verify current user is admin or manager (not employee)"""
+    is_admin = current_user.get("is_admin", False)
+    employee_role = current_user.get("employee_role")
+    
+    if not is_admin and employee_role != "manager":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Manager or Admin access required"
+        )
+    return current_user
+
+async def get_owner_admin(current_user: dict = Depends(get_current_user)):
+    """Verify current user is the site owner (admin with 'admin' role)"""
+    is_admin = current_user.get("is_admin", False)
+    employee_role = current_user.get("employee_role")
+    
+    # Owner is an admin with role 'admin' or None (original admin)
+    if not is_admin or employee_role not in [None, "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Owner access required"
+        )
+    return current_user

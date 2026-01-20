@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, User, Menu, X, MessageSquare, LogOut, Package, Edit, Heart, Sun, Moon, Tag, ShoppingBag, LayoutDashboard } from 'lucide-react';
+import { Search, ShoppingCart, User, Menu, X, MessageSquare, LogOut, Package, Edit, Heart, Sun, Moon, Tag, ShoppingBag, LayoutDashboard, Shield, Settings, ArrowLeftRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useTheme } from '../context/ThemeContext';
@@ -306,12 +306,12 @@ const Navbar = () => {
                     <User className="w-5 h-5" />
                   </button>
                   {userMenuOpen && (
-                    <div className={`absolute right-0 mt-2 w-48 rounded-lg shadow-lg overflow-hidden ${
+                    <div className={`absolute right-0 mt-2 w-64 rounded-lg shadow-lg overflow-hidden ${
                       isDark ? 'bg-dark-400 border border-dark-300' : 'bg-white border border-gray-200'
                     }`}>
                       <div className={`px-4 py-3 border-b ${isDark ? 'border-dark-300' : 'border-gray-200'}`}>
                         <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{user?.username}</p>
-                        <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{user?.email}</p>
+                        <p className={`text-sm break-all ${isDark ? 'text-gray-400' : 'text-gray-500'}`} title={user?.email}>{user?.email}</p>
                       </div>
                       <Link
                         to={`/profile/${user?.id}`}
@@ -320,14 +320,6 @@ const Navbar = () => {
                       >
                         <User className="w-4 h-4" />
                         My Profile
-                      </Link>
-                      <Link
-                        to="/edit-profile"
-                        className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-gray-300 hover:bg-dark-300' : 'text-gray-700 hover:bg-gray-50'}`}
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        <Edit className="w-4 h-4" />
-                        Edit Profile
                       </Link>
                       <Link
                         to="/dashboard"
@@ -346,6 +338,14 @@ const Navbar = () => {
                         Orders
                       </Link>
                       <Link
+                        to="/trades"
+                        className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-gray-300 hover:bg-dark-300' : 'text-gray-700 hover:bg-gray-50'}`}
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <ArrowLeftRight className="w-4 h-4" />
+                        Trades
+                      </Link>
+                      <Link
                         to="/offers"
                         className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-gray-300 hover:bg-dark-300' : 'text-gray-700 hover:bg-gray-50'}`}
                         onClick={() => setUserMenuOpen(false)}
@@ -361,6 +361,15 @@ const Navbar = () => {
                         <Heart className="w-4 h-4" />
                         Favorites
                       </Link>
+                      <Link
+                        to="/account"
+                        className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-gray-300 hover:bg-dark-300' : 'text-gray-700 hover:bg-gray-50'}`}
+                        onClick={() => setUserMenuOpen(false)}
+                        data-testid="account-settings-link"
+                      >
+                        <Settings className="w-4 h-4" />
+                        Account Settings
+                      </Link>
                       {/* Theme Toggle */}
                       <button
                         onClick={() => {
@@ -372,7 +381,7 @@ const Navbar = () => {
                         {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                         {isDark ? 'Light Mode' : 'Dark Mode'}
                       </button>
-                      {user?.is_admin && (
+                      {(user?.is_admin || user?.is_employee) && (
                         <Link
                           to="/admin"
                           className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-primary hover:bg-dark-300' : 'text-primary hover:bg-gray-50'}`}
@@ -494,13 +503,23 @@ const Navbar = () => {
                     My Profile
                   </Link>
                   <Link
-                    to="/my-listings"
+                    to="/dashboard"
                     className={`flex items-center gap-2 py-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <Package className="w-5 h-5" />
                     My Listings
                   </Link>
+                  {(user?.is_admin || user?.is_employee) && (
+                    <Link
+                      to="/admin"
+                      className="flex items-center gap-2 py-2 text-primary font-medium"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <Shield className="w-5 h-5" />
+                      Admin Panel
+                    </Link>
+                  )}
                   <button
                     onClick={() => {
                       toggleTheme();

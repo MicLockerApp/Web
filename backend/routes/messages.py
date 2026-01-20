@@ -3,11 +3,16 @@ from models.message import (
     MessageCreate, MessageInDB, MessageThreadInDB,
     MessageResponse, MessageThreadResponse, ThreadWithMessages
 )
+from models.ticket import TicketReply
 from services.auth import get_current_user
+from services.message_service import SUPPORT_SYSTEM_USER_ID
 from database import get_database
 from analytics.services.event_emitter import emit_event, EventTypes, ActorType
 from datetime import datetime
 from typing import Optional
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/messages", tags=["Messages"])
 
@@ -63,6 +68,9 @@ async def send_message(
             detail="Cannot send message to yourself"
         )
     
+    # Check if user is replying to MicLocker Support
+    is_support_reply = message_data.recipient_id == SUPPORT_SYSTEM_USER_ID
+    
     # Get listing info if provided
     listing_title = None
     if message_data.listing_id:
@@ -115,6 +123,57 @@ async def send_message(
     
     record_message(current_user["id"])
     
+    # If this is a reply to MicLocker Support, add it to the user's most recent open ticket
+    if is_support_reply:
+        try:
+            # Find the user's most recent open/in-progress ticket
+            latest_ticket = await db.support_tickets.find_one(
+                {
+                    "user_id": current_user["id"],
+                    "status": {"$in": ["open", "in_progress", "waiting_on_customer"]}
+                },
+                sort=[("updated_at", -1)]
+            )
+            
+            if latest_ticket:
+                # Create a ticket reply from the user
+                ticket_reply = TicketReply(
+                    sender_type="customer",
+                    sender_id=current_user["id"],
+                    sender_name=current_user.get("username", "User"),
+                    message=message_data.content
+                )
+                
+                # Update the ticket with the new reply
+                await db.support_tickets.update_one(
+                    {"id": latest_ticket["id"]},
+                    {
+                        "$push": {"replies": ticket_reply.model_dump()},
+                        "$set": {
+                            "updated_at": datetime.utcnow(),
+                            "status": "in_progress" if latest_ticket["status"] == "waiting_on_customer" else latest_ticket["status"]
+                        }
+                    }
+                )
+                
+                logger.info(f"User reply added to ticket {latest_ticket['ticket_number']} from messaging inbox")
+                
+                # Emit analytics event
+                emit_event(
+                    EventTypes.TICKET_REPLIED,
+                    actor_type=ActorType.BUYER,
+                    actor_id=current_user["id"],
+                    actor_username=current_user.get("username"),
+                    metadata={
+                        "ticket_id": latest_ticket["id"],
+                        "ticket_number": latest_ticket["ticket_number"],
+                        "is_staff_reply": False,
+                        "source": "messaging_inbox"
+                    }
+                )
+        except Exception as e:
+            logger.error(f"Failed to sync message to ticket: {e}")
+    
     # Emit analytics event for message sent
     is_first_message = not thread.get("last_message")
     emit_event(
@@ -128,7 +187,8 @@ async def send_message(
         metadata={
             "is_first_message": is_first_message,
             "has_listing_context": message_data.listing_id is not None,
-            "listing_title": listing_title
+            "listing_title": listing_title,
+            "is_support_reply": is_support_reply
         }
     )
     

@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import {
   BarChart3, TrendingUp, DollarSign, Package, Users, Search, MessageSquare,
   ShoppingCart, Tag, AlertTriangle, RefreshCw, Calendar, Clock, ArrowUp, ArrowDown,
-  Activity, Target, Percent, Shield, Eye
+  Activity, Target, Percent, Shield, Eye, Ticket, ChevronRight, Globe, ArrowLeft
 } from 'lucide-react';
 
 const AnalyticsDashboard = () => {
@@ -21,6 +21,9 @@ const AnalyticsDashboard = () => {
   const [marketplaceHealth, setMarketplaceHealth] = useState(null);
   const [trustSafety, setTrustSafety] = useState(null);
   const [topSearchTerms, setTopSearchTerms] = useState([]);
+  const [ticketStats, setTicketStats] = useState(null);
+  const [recentTickets, setRecentTickets] = useState([]);
+  const [dailyVisitors, setDailyVisitors] = useState(null);
   const [lastRefresh, setLastRefresh] = useState(new Date());
 
   const getDateParams = useCallback(() => {
@@ -54,14 +57,17 @@ const AnalyticsDashboard = () => {
     const { start_date, end_date } = getDateParams();
     
     try {
-      const [realtime, revenue, offers, search, health, safety, terms] = await Promise.all([
+      const [realtime, revenue, offers, search, health, safety, terms, tickets, ticketList, visitors] = await Promise.all([
         api.get('/analytics/realtime'),
         api.get(`/analytics/revenue?start_date=${start_date}&end_date=${end_date}`),
         api.get(`/analytics/offer-funnel?start_date=${start_date}&end_date=${end_date}`),
         api.get(`/analytics/search-funnel?start_date=${start_date}&end_date=${end_date}`),
         api.get(`/analytics/marketplace-health?start_date=${start_date}&end_date=${end_date}`),
         api.get(`/analytics/trust-safety?start_date=${start_date}&end_date=${end_date}`),
-        api.get(`/analytics/search-terms?start_date=${start_date}&end_date=${end_date}&limit=10`)
+        api.get(`/analytics/search-terms?start_date=${start_date}&end_date=${end_date}&limit=10`),
+        api.get('/tickets/admin/stats').catch(() => ({ data: null })),
+        api.get('/tickets/admin/all?limit=5').catch(() => ({ data: { tickets: [] } })),
+        api.get(`/analytics/daily-visitors?start_date=${start_date}&end_date=${end_date}`)
       ]);
       
       setRealtimeMetrics(realtime.data);
@@ -71,6 +77,9 @@ const AnalyticsDashboard = () => {
       setMarketplaceHealth(health.data);
       setTrustSafety(safety.data);
       setTopSearchTerms(terms.data.terms || []);
+      setTicketStats(tickets.data);
+      setRecentTickets(ticketList.data?.tickets || []);
+      setDailyVisitors(visitors.data);
       setLastRefresh(new Date());
     } catch (error) {
       console.error('Error fetching analytics:', error);
@@ -117,13 +126,23 @@ const AnalyticsDashboard = () => {
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div className="flex items-center gap-3">
-            <BarChart3 className="w-8 h-8 text-primary" />
-            <div>
-              <h1 className="text-2xl font-bold text-white">Analytics Dashboard</h1>
-              <p className="text-gray-400 text-sm">
-                Last updated: {lastRefresh.toLocaleTimeString()}
-              </p>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate('/admin')}
+              className="p-2 bg-dark-400 rounded-lg hover:bg-dark-300 transition-colors"
+              data-testid="back-to-admin-btn"
+              title="Back to Admin Panel"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-400" />
+            </button>
+            <div className="flex items-center gap-3">
+              <BarChart3 className="w-8 h-8 text-primary" />
+              <div>
+                <h1 className="text-2xl font-bold text-white">Analytics Dashboard</h1>
+                <p className="text-gray-400 text-sm">
+                  Last updated: {lastRefresh.toLocaleTimeString()}
+                </p>
+              </div>
             </div>
           </div>
           
@@ -157,7 +176,7 @@ const AnalyticsDashboard = () => {
         </div>
 
         {/* Real-time Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <div className="bg-dark-400 rounded-xl p-4 border-l-4 border-green-500">
             <div className="flex items-center gap-2 mb-2">
               <Activity className="w-4 h-4 text-green-400" />
@@ -178,6 +197,15 @@ const AnalyticsDashboard = () => {
               <span className="text-gray-400 text-sm">GMV Today</span>
             </div>
             <p className="text-2xl font-bold text-white">{formatCurrency(realtimeMetrics?.gmv_today)}</p>
+          </div>
+          
+          <div className="bg-dark-400 rounded-xl p-4 border-l-4 border-cyan-500">
+            <div className="flex items-center gap-2 mb-2">
+              <Globe className="w-4 h-4 text-cyan-400" />
+              <span className="text-gray-400 text-sm">Visitors Today</span>
+            </div>
+            <p className="text-2xl font-bold text-white">{realtimeMetrics?.visitors_today || 0}</p>
+            <p className="text-xs text-gray-500">Unique sessions</p>
           </div>
           
           <div className="bg-dark-400 rounded-xl p-4 border-l-4 border-blue-500">
@@ -227,6 +255,76 @@ const AnalyticsDashboard = () => {
               <p className="text-gray-500 text-xs">AOV: {formatCurrency(revenueData?.totals?.average_order_value)}</p>
             </div>
           </div>
+        </div>
+
+        {/* Daily Visitors Section */}
+        <div className="bg-dark-400 rounded-xl p-6 mb-8" data-testid="daily-visitors-section">
+          <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+            <Globe className="w-5 h-5 text-cyan-400" />
+            Daily Visitors ({dateRange})
+          </h2>
+          
+          {/* Summary Stats */}
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="bg-dark-500 rounded-lg p-4 text-center">
+              <p className="text-3xl font-bold text-cyan-400">{dailyVisitors?.total_visitors || 0}</p>
+              <p className="text-gray-500 text-sm">Total Visitors</p>
+            </div>
+            <div className="bg-dark-500 rounded-lg p-4 text-center">
+              <p className="text-3xl font-bold text-blue-400">{dailyVisitors?.avg_daily_visitors || 0}</p>
+              <p className="text-gray-500 text-sm">Avg Daily</p>
+            </div>
+            <div className="bg-dark-500 rounded-lg p-4 text-center">
+              <p className="text-3xl font-bold text-purple-400">{dailyVisitors?.days_with_data || 0}</p>
+              <p className="text-gray-500 text-sm">Days Tracked</p>
+            </div>
+          </div>
+          
+          {/* Visitor Chart */}
+          {dailyVisitors?.timeline && dailyVisitors.timeline.length > 0 ? (
+            <div className="mt-4">
+              <h3 className="text-white font-medium mb-4">Daily Breakdown</h3>
+              <div className="overflow-x-auto pb-4">
+                <div className="flex items-end gap-2 min-w-fit h-64 pt-8 relative">
+                  {dailyVisitors.timeline.map((day, index) => {
+                    const maxVisitors = Math.max(...dailyVisitors.timeline.map(d => d.visitors), 1);
+                    const height = (day.visitors / maxVisitors) * 100;
+                    return (
+                      <div key={index} className="flex flex-col items-center flex-1 min-w-[50px] max-w-[80px]">
+                        {/* Visitor count label above bar */}
+                        <span className="text-cyan-400 text-sm font-bold mb-1">
+                          {day.visitors}
+                        </span>
+                        {/* Bar */}
+                        <div 
+                          className="w-full bg-gradient-to-t from-cyan-600 to-cyan-400 rounded-t-md hover:from-cyan-500 hover:to-cyan-300 transition-all cursor-pointer relative"
+                          style={{ height: `${Math.max(height, 8)}%`, minHeight: '20px' }}
+                          title={`${day.visitors} visitors on ${new Date(day.date).toLocaleDateString()}`}
+                        />
+                        {/* Date label below bar */}
+                        <div className="mt-2 text-center">
+                          <span className="text-gray-400 text-xs block">
+                            {new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              {/* Y-axis reference line */}
+              <div className="flex justify-between text-gray-500 text-xs mt-2 border-t border-dark-300 pt-2">
+                <span>0 visitors</span>
+                <span>{Math.max(...dailyVisitors.timeline.map(d => d.visitors))} visitors (max)</span>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-dark-500 rounded-lg p-8 text-center">
+              <Globe className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+              <p className="text-gray-500">No visitor data available yet</p>
+              <p className="text-gray-600 text-sm">Visitor tracking requires page view events</p>
+            </div>
+          )}
         </div>
 
         {/* Funnels */}
@@ -422,6 +520,114 @@ const AnalyticsDashboard = () => {
               </div>
             ) : (
               <p className="text-gray-500 text-sm">No search data available</p>
+            )}
+          </div>
+        </div>
+
+        {/* Support Tickets Section */}
+        <div className="mt-6">
+          <div className="bg-dark-400 rounded-xl p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Ticket className="w-5 h-5 text-orange-400" />
+                Pending Customer Tickets
+              </h2>
+              <Link 
+                to="/admin/tickets" 
+                className="text-primary hover:text-yellow-400 text-sm flex items-center gap-1"
+              >
+                View All <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+
+            {/* Ticket Stats */}
+            {ticketStats && (
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+                <div className="bg-dark-500 rounded-lg p-4 text-center">
+                  <p className="text-3xl font-bold text-orange-400">{ticketStats.pending_total || 0}</p>
+                  <p className="text-gray-500 text-sm">Pending</p>
+                </div>
+                <div className="bg-dark-500 rounded-lg p-4 text-center">
+                  <p className="text-3xl font-bold text-red-400">{ticketStats.urgent_tickets || 0}</p>
+                  <p className="text-gray-500 text-sm">Urgent</p>
+                </div>
+                <div className="bg-dark-500 rounded-lg p-4 text-center">
+                  <p className="text-3xl font-bold text-yellow-400">{ticketStats.high_priority || 0}</p>
+                  <p className="text-gray-500 text-sm">High Priority</p>
+                </div>
+                <div className="bg-dark-500 rounded-lg p-4 text-center">
+                  <p className="text-3xl font-bold text-blue-400">{ticketStats.tickets_today || 0}</p>
+                  <p className="text-gray-500 text-sm">Today</p>
+                </div>
+                <div className="bg-dark-500 rounded-lg p-4 text-center">
+                  <p className="text-3xl font-bold text-green-400">{ticketStats.resolved || 0}</p>
+                  <p className="text-gray-500 text-sm">Resolved</p>
+                </div>
+              </div>
+            )}
+
+            {/* Recent Tickets */}
+            <h3 className="text-white font-medium mb-3">Recent Tickets</h3>
+            {recentTickets.length > 0 ? (
+              <div className="space-y-2">
+                {recentTickets.map((ticket) => (
+                  <div 
+                    key={ticket.id} 
+                    className="bg-dark-500 rounded-lg p-4 flex items-center justify-between hover:bg-dark-300 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/admin/tickets/${ticket.id}`)}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-primary font-mono text-sm">{ticket.ticket_number}</span>
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                          ticket.priority === 'urgent' ? 'bg-red-500/20 text-red-400' :
+                          ticket.priority === 'high' ? 'bg-orange-500/20 text-orange-400' :
+                          ticket.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                          'bg-gray-500/20 text-gray-400'
+                        }`}>
+                          {ticket.priority}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                          ticket.status === 'open' ? 'bg-blue-500/20 text-blue-400' :
+                          ticket.status === 'in_progress' ? 'bg-purple-500/20 text-purple-400' :
+                          ticket.status === 'waiting_on_customer' ? 'bg-yellow-500/20 text-yellow-400' :
+                          'bg-green-500/20 text-green-400'
+                        }`}>
+                          {ticket.status.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                      <p className="text-white font-medium">{ticket.subject}</p>
+                      <p className="text-gray-500 text-sm">{ticket.category} • {ticket.customer_name}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-gray-500 text-sm">
+                        {new Date(ticket.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-dark-500 rounded-lg p-8 text-center">
+                <Ticket className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-500">No support tickets yet</p>
+                <p className="text-gray-600 text-sm">Customer tickets will appear here</p>
+              </div>
+            )}
+
+            {/* Category Breakdown */}
+            {ticketStats?.top_categories?.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-dark-300">
+                <h3 className="text-white font-medium mb-3">Top Categories (Open Tickets)</h3>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                  {ticketStats.top_categories.map((cat, index) => (
+                    <div key={index} className="bg-dark-500 rounded-lg p-3 text-center">
+                      <p className="text-white font-bold">{cat.count}</p>
+                      <p className="text-gray-500 text-xs truncate">{cat.category}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         </div>

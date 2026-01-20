@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from models.order import (
     OrderCreate, OrderInDB, OrderResponse, OrderItem,
-    ShippingAddress, PaymentInfo, OrderStatusUpdate
+    ShippingAddress, PaymentInfo, OrderStatusUpdate, TrackingInfo, TrackingUpdate
 )
 from services.auth import get_current_user
 from database import get_database
@@ -109,7 +109,7 @@ async def create_order(
         await db.cart_items.delete_many({"user_id": current_user["id"]})
     
     # Calculate fees
-    # Check if buyer has lifetime free platform fees (first 100 users perk)
+    # Check if buyer has lifetime free platform fees (first 300 users perk)
     has_free_fees = current_user.get("has_lifetime_free_fees", False)
     
     # Platform fee: 3% of subtotal (goes to MicLocker) - 0% for lifetime free users
@@ -321,3 +321,305 @@ async def update_order_status(
     await db.orders.update_one({"id": order_id}, {"$set": update_data})
     
     return {"message": "Order status updated", "status": status_update.status}
+
+
+# Tracking carrier URLs for generating tracking links
+CARRIER_TRACKING_URLS = {
+    "USPS": "https://tools.usps.com/go/TrackConfirmAction?tLabels=",
+    "UPS": "https://www.ups.com/track?tracknum=",
+    "FedEx": "https://www.fedex.com/fedextrack/?trknbr=",
+    "DHL": "https://www.dhl.com/en/express/tracking.html?AWB=",
+    "Other": None
+}
+
+
+@router.put("/{order_id}/tracking")
+async def add_tracking_info(
+    order_id: str,
+    tracking: TrackingUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Add or update tracking information for an order (seller only)
+    
+    This is required for the seller to receive their funds after delivery.
+    """
+    db = get_database()
+    
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Order not found"
+        )
+    
+    # Verify seller owns items in this order
+    is_seller = any(item["seller_id"] == current_user["id"] for item in order["items"])
+    if not is_seller:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the seller can add tracking information"
+        )
+    
+    # Only allow tracking for paid orders
+    if order["status"] not in ["paid", "shipped"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Can only add tracking to paid orders"
+        )
+    
+    # Generate tracking URL
+    tracking_url = None
+    if tracking.carrier in CARRIER_TRACKING_URLS and CARRIER_TRACKING_URLS[tracking.carrier]:
+        tracking_url = CARRIER_TRACKING_URLS[tracking.carrier] + tracking.tracking_number
+    
+    tracking_info = TrackingInfo(
+        carrier=tracking.carrier,
+        tracking_number=tracking.tracking_number,
+        tracking_url=tracking_url,
+        shipped_at=datetime.utcnow(),
+        estimated_delivery=tracking.estimated_delivery
+    )
+    
+    # Update order
+    await db.orders.update_one(
+        {"id": order_id},
+        {"$set": {
+            "tracking_info": tracking_info.model_dump(),
+            "status": "shipped",
+            "shipped_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        }}
+    )
+    
+    # Notify buyer about shipment
+    system_user = await db.users.find_one({"is_system_user": True})
+    system_user_id = system_user["id"] if system_user else "system-support"
+    
+    # Get or create message thread with buyer
+    thread = await db.message_threads.find_one({
+        "participants": {"$all": [system_user_id, order["buyer_id"]], "$size": 2}
+    })
+    
+    if not thread:
+        thread = {
+            "id": str(uuid.uuid4()),
+            "participants": [system_user_id, order["buyer_id"]],
+            "created_at": datetime.utcnow(),
+            "last_message_at": datetime.utcnow()
+        }
+        await db.message_threads.insert_one(thread)
+    
+    # Build tracking message
+    tracking_msg = f"""📦 **Your Order Has Shipped!**
+
+**Order #{order['order_number']}** is on its way!
+
+**Carrier:** {tracking.carrier}
+**Tracking Number:** `{tracking.tracking_number}`
+{f"**Estimated Delivery:** {tracking.estimated_delivery}" if tracking.estimated_delivery else ""}
+
+{f"🔗 [Track Your Package]({tracking_url})" if tracking_url else f"Track your package at {tracking.carrier}'s website using the tracking number above."}
+
+Once you receive your package, please mark the order as delivered to release the funds to the seller.
+
+Thank you for shopping on MicLocker!
+"""
+    
+    message = {
+        "id": str(uuid.uuid4()),
+        "thread_id": thread["id"],
+        "sender_id": system_user_id,
+        "content": tracking_msg,
+        "created_at": datetime.utcnow(),
+        "read_at": None
+    }
+    await db.messages.insert_one(message)
+    
+    await db.message_threads.update_one(
+        {"id": thread["id"]},
+        {"$set": {"last_message_at": datetime.utcnow()}}
+    )
+    
+    return {
+        "message": "Tracking information added successfully",
+        "tracking_info": tracking_info.model_dump()
+    }
+
+
+@router.post("/{order_id}/confirm-delivery")
+async def confirm_delivery(
+    order_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Buyer confirms delivery of the order
+    
+    This releases the held funds to the seller and sets up review gating.
+    """
+    db = get_database()
+    
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Order not found"
+        )
+    
+    # Only buyer can confirm delivery
+    if order["buyer_id"] != current_user["id"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the buyer can confirm delivery"
+        )
+    
+    # Must be in shipped status
+    if order["status"] != "shipped":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Order must be shipped before confirming delivery"
+        )
+    
+    # Update order status and release funds
+    await db.orders.update_one(
+        {"id": order_id},
+        {"$set": {
+            "status": "delivered",
+            "delivered_at": datetime.utcnow(),
+            "payment_info.funds_status": "released",
+            "seller_payout_status": "released",
+            "funds_released_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        }}
+    )
+    
+    # Set review gating for buyer (if they've made purchases before, or mark first purchase complete)
+    buyer_update = {
+        "first_purchase_completed": True,
+        "pending_review_order_id": order_id,
+        "pending_review_type": "buyer",
+        "updated_at": datetime.utcnow()
+    }
+    # Increment total_purchases
+    await db.users.update_one(
+        {"id": order["buyer_id"]},
+        {"$set": buyer_update, "$inc": {"total_purchases": 1}}
+    )
+    
+    # Set review gating for seller(s)
+    seller_ids = list(set(item["seller_id"] for item in order["items"]))
+    for seller_id in seller_ids:
+        await db.users.update_one(
+            {"id": seller_id},
+            {"$set": {
+                "first_sale_completed": True,
+                "pending_review_order_id": order_id,
+                "pending_review_type": "seller",
+                "updated_at": datetime.utcnow()
+            }}
+        )
+    
+    # Notify seller that funds are released
+    for item in order["items"]:
+        seller_id = item["seller_id"]
+        
+        system_user = await db.users.find_one({"is_system_user": True})
+        system_user_id = system_user["id"] if system_user else "system-support"
+        
+        thread = await db.message_threads.find_one({
+            "participants": {"$all": [system_user_id, seller_id], "$size": 2}
+        })
+        
+        if not thread:
+            thread = {
+                "id": str(uuid.uuid4()),
+                "participants": [system_user_id, seller_id],
+                "created_at": datetime.utcnow(),
+                "last_message_at": datetime.utcnow()
+            }
+            await db.message_threads.insert_one(thread)
+        
+        payout_msg = f"""💰 **Payment Released!**
+
+Great news! The buyer has confirmed delivery for **Order #{order['order_number']}**.
+
+**Your payout of ${order['seller_payout_amount']:.2f} has been released!**
+
+The funds will be transferred to your account according to Stripe's standard payout schedule.
+
+⭐ **Please review the buyer** - Don't forget to leave a review for {order.get('buyer_username', 'the buyer')}!
+
+Thank you for selling on MicLocker!
+"""
+        
+        message = {
+            "id": str(uuid.uuid4()),
+            "thread_id": thread["id"],
+            "sender_id": system_user_id,
+            "content": payout_msg,
+            "created_at": datetime.utcnow(),
+            "read_at": None
+        }
+        await db.messages.insert_one(message)
+        
+        await db.message_threads.update_one(
+            {"id": thread["id"]},
+            {"$set": {"last_message_at": datetime.utcnow()}}
+        )
+    
+    # Emit analytics event
+    emit_event(
+        EventTypes.ORDER_DELIVERED,
+        actor_type=ActorType.BUYER,
+        actor_id=current_user["id"],
+        actor_username=current_user["username"],
+        order_id=order_id,
+        metadata={
+            "seller_payout": order["seller_payout_amount"],
+            "platform_fee": order["platform_fee"]
+        }
+    )
+    
+    return {
+        "message": "Delivery confirmed and funds released to seller",
+        "status": "delivered",
+        "funds_status": "released"
+    }
+
+
+@router.get("/{order_id}/tracking")
+async def get_tracking_info(
+    order_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get tracking information for an order"""
+    db = get_database()
+    
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Order not found"
+        )
+    
+    # Check authorization
+    is_buyer = order["buyer_id"] == current_user["id"]
+    is_seller = any(item["seller_id"] == current_user["id"] for item in order["items"])
+    is_admin = current_user.get("is_admin", False)
+    
+    if not (is_buyer or is_seller or is_admin):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view this order"
+        )
+    
+    tracking_info = order.get("tracking_info")
+    
+    return {
+        "order_id": order_id,
+        "order_number": order["order_number"],
+        "status": order["status"],
+        "tracking_info": tracking_info,
+        "funds_status": order.get("payment_info", {}).get("funds_status", "pending")
+    }
+
