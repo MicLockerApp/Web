@@ -284,7 +284,7 @@ MicLocker Support System
         return False
 
 
-async def send_ticket_reply_notification(ticket, reply, is_staff_reply: bool, frontend_url: str = "https://audio-bazaar-6.preview.emergentagent.com") -> bool:
+async def send_ticket_reply_notification(ticket, reply, is_staff_reply: bool, frontend_url: str = "https://music-gear-swap.preview.emergentagent.com") -> bool:
     """
     Send email notification when a reply is added to a ticket
     
@@ -433,7 +433,7 @@ MicLocker Support System
         return False
 
 
-async def send_password_setup_email(to_email: str, username: str, setup_token: str, role: str, frontend_url: str = "https://audio-bazaar-6.preview.emergentagent.com") -> bool:
+async def send_password_setup_email(to_email: str, username: str, setup_token: str, role: str, frontend_url: str = "https://music-gear-swap.preview.emergentagent.com") -> bool:
     """
     Send email to new employee to set up their password
     

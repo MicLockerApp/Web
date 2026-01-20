@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     cors_origins: List[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "https://audio-bazaar-6.preview.emergentagent.com",
+        "https://music-gear-swap.preview.emergentagent.com",
     ]
     
     # MongoDB
@@ -60,7 +60,7 @@ class Settings(BaseSettings):
     auto_delivery_days: int = int(os.getenv("AUTO_DELIVERY_DAYS", "14"))
     
     # Frontend URL for webhooks
-    frontend_url: str = os.getenv("FRONTEND_URL", "https://audio-bazaar-6.preview.emergentagent.com")
+    frontend_url: str = os.getenv("FRONTEND_URL", "https://music-gear-swap.preview.emergentagent.com")
     
     # File Upload Restrictions
     max_image_size_mb: int = 10
