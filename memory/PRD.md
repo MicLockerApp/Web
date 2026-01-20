@@ -133,6 +133,61 @@ MicLocker is a production-ready full-stack marketplace where musicians, audio en
 
 ## Completed This Session (January 20, 2026)
 
+### Trading System (NEW - January 2026)
+1. **Full Trading API** - Direct item swaps with no platform fees
+   - `/api/trades/eligibility` - Check if user can trade
+   - `/api/trades/acknowledge-rules` - Accept trade rules modal
+   - `/api/trades` POST - Propose a trade
+   - `/api/trades` GET - List user's trades
+   - `/api/trades/{id}/respond` - Accept/decline trade
+   - `/api/trades/{id}/shipping-address` - Submit shipping address
+   - `/api/trades/{id}/tracking` - Add tracking info
+   - `/api/trades/{id}/confirm-receipt` - Confirm item received
+   - `/api/trades/{id}/cancel` - Cancel trade
+   - `/api/trades/{id}/dispute` - Open support ticket for dispute
+
+2. **Trade Rules**:
+   - 1 free trade per user per month (resets on 1st)
+   - No platform fees on trades
+   - First-time modal explaining rules
+   - Both parties must ship and confirm receipt
+
+3. **Files Created**:
+   - `/app/backend/routes/trades.py` - All trading endpoints
+   - `/app/backend/models/trade.py` - Trade model
+   - `/app/frontend/src/pages/TradesPage.js` - Trades list view
+   - `/app/frontend/src/pages/TradeDetailPage.js` - Trade detail/flow view
+
+### Review Gating System (NEW - January 2026)
+1. **After first transaction, users must review counterparty before next action**:
+   - Buyers must review sellers before making another purchase
+   - Sellers must review buyers before creating another listing
+   - First-time buyers/sellers are exempt
+
+2. **User Model Fields Added**:
+   - `pending_review_order_id` - Order that needs review
+   - `pending_review_type` - "buyer" or "seller"
+   - `first_purchase_completed` - Has made at least one purchase
+   - `first_sale_completed` - Has made at least one sale
+
+3. **Blocking Logic Added**:
+   - `/api/payments/checkout` - Blocks if buyer has pending review
+   - `/api/listings` POST - Blocks if seller has pending review
+
+### Item Condition Reporting (NEW - January 2026)
+1. Buyers can report item condition during review:
+   - `as_described` - Item exactly as described
+   - `minor_issues` - Small cosmetic/minor differences
+   - `significantly_different` - Major differences from description
+   - `damaged` - Item arrived damaged
+2. Optional condition notes field for details
+3. Added to review model and frontend review modal
+
+### Auto-Payout & Reminders (Enhanced - January 2026)
+1. **14-Day Auto-Payout**: If buyer doesn't confirm delivery within 14 days, funds auto-release
+2. **5-Day Review Reminders**: Automated in-app messages to both parties
+3. **Dashboard Message**: Sellers see info about 14-day auto-release
+
 ### Bidirectional Reviews & Ratings System (NEW)
 1. Enhanced review model to support buyer-to-seller AND seller-to-buyer reviews
 2. Added `reviewer_id`, `reviewee_id`, `reviewer_role`, `reviewee_role`, `review_type` fields
