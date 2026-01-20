@@ -338,6 +338,14 @@ const Navbar = () => {
                         Orders
                       </Link>
                       <Link
+                        to="/trades"
+                        className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-gray-300 hover:bg-dark-300' : 'text-gray-700 hover:bg-gray-50'}`}
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <ArrowLeftRight className="w-4 h-4" />
+                        Trades
+                      </Link>
+                      <Link
                         to="/offers"
                         className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-gray-300 hover:bg-dark-300' : 'text-gray-700 hover:bg-gray-50'}`}
                         onClick={() => setUserMenuOpen(false)}
