@@ -350,6 +350,10 @@ const DashboardPage = () => {
                       <CheckCircle className="w-4 h-4 text-green-400" />
                       Automatic payouts after delivery confirmation
                     </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-400" />
+                      <strong>14-day auto-release:</strong> Funds released automatically if buyer doesn&apos;t confirm
+                    </li>
                   </ul>
                   <button 
                     onClick={handleStripeConnect}
