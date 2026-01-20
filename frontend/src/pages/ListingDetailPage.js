@@ -177,6 +177,56 @@ const ListingDetailPage = () => {
     }
   };
 
+  const handleOpenTradeModal = async () => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    
+    // Check trade eligibility
+    try {
+      const eligResponse = await tradesAPI.checkEligibility();
+      setTradeEligibility(eligResponse.data);
+      
+      if (!eligResponse.data.eligible) {
+        setMessage({ type: 'error', text: eligResponse.data.reason });
+        return;
+      }
+      
+      // Fetch user's active listings
+      const listingsResponse = await listingsAPI.getSellerListings(user.id, { status: 'active' });
+      setMyListings(listingsResponse.data.listings || []);
+      setShowTradeModal(true);
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to check trade eligibility' });
+    }
+  };
+
+  const handleProposeTrade = async (e) => {
+    e.preventDefault();
+    if (!selectedTradeListingId) {
+      setMessage({ type: 'error', text: 'Please select one of your listings to trade' });
+      return;
+    }
+    
+    setSubmitting(true);
+    try {
+      const response = await tradesAPI.create(selectedTradeListingId, listing.id);
+      setShowTradeModal(false);
+      setSelectedTradeListingId('');
+      setMessage({ type: 'success', text: 'Trade proposal sent!' });
+      
+      // Navigate to trade detail page
+      setTimeout(() => {
+        navigate(`/trades/${response.data.trade_id}`);
+      }, 1500);
+    } catch (error) {
+      setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to propose trade' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const isOwnListing = user?.id === listing?.seller_id;
   const images = listing?.media?.filter(m => m.media_type === 'image') || [];
   const currentImage = images[currentImageIndex]?.url || 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=800';
