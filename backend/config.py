@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     @property
     def get_cors_origins(self) -> List[str]:
         """Get CORS origins from environment or use defaults"""
-        env_origins = os.getenv("CORS_ORIGINS", "")
+        env_origins = os.getenv("CORS_ALLOWED_ORIGINS", "")
         
         # Handle wildcard
         if env_origins == "*":
@@ -25,14 +25,9 @@ class Settings(BaseSettings):
         if env_origins:
             return [origin.strip() for origin in env_origins.split(",") if origin.strip()]
         
-        # Default origins for development and production
-        return [
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
-            "https://miclockerapp.com",
-            "https://www.miclockerapp.com",
-            os.getenv("FRONTEND_URL", ""),
-        ]
+        # Default: allow all origins for easier deployment
+        # In production, set CORS_ALLOWED_ORIGINS to specific domains
+        return ["*"]
     
     # MongoDB - Read database name from env
     mongo_url: str = os.getenv("MONGO_URL", "mongodb://localhost:27017")
