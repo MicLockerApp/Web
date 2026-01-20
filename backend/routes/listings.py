@@ -30,6 +30,20 @@ async def create_listing(
     """Create a new listing"""
     db = get_database()
     
+    # Review Gating Check: If user has made a sale before and has a pending review, block listing
+    if current_user.get("first_sale_completed") and current_user.get("pending_review_order_id"):
+        pending_order = await db.orders.find_one({"id": current_user["pending_review_order_id"]})
+        if pending_order and pending_order.get("status") in ["delivered", "completed"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "error": "review_required",
+                    "message": "You must review your buyer from your last sale before creating a new listing.",
+                    "order_id": current_user["pending_review_order_id"],
+                    "order_number": pending_order.get("order_number")
+                }
+            )
+    
     if listing_data.category not in LISTING_CATEGORIES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
