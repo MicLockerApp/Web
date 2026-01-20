@@ -4,6 +4,7 @@ Scheduled Tasks for MicLocker
 Handles:
 - Auto-delivery confirmation after 14 days
 - Fund release automation
+- 5-day review reminders
 - Cleanup tasks
 """
 
@@ -18,6 +19,149 @@ from config import settings
 from services.stripe_connect import stripe_connect_service
 
 logger = logging.getLogger(__name__)
+
+
+async def send_five_day_review_reminders():
+    """
+    Send review reminder messages to buyers and sellers 5 days after purchase.
+    
+    This encourages both parties to leave reviews for completed transactions.
+    """
+    db = get_database()
+    cutoff_date = datetime.utcnow() - timedelta(days=5)
+    cutoff_date_end = cutoff_date - timedelta(hours=1)  # 1-hour window to avoid duplicates
+    
+    logger.info(f"Running 5-day review reminders for orders paid around {cutoff_date}")
+    
+    # Find paid orders from ~5 days ago that haven't had reminders sent
+    orders = await db.orders.find({
+        "status": {"$in": ["paid", "shipped", "delivered", "completed"]},
+        "paid_at": {"$lt": cutoff_date, "$gt": cutoff_date_end},
+        "five_day_reminder_sent": {"$ne": True}
+    }).to_list(length=100)
+    
+    reminder_count = 0
+    system_user = await db.users.find_one({"is_system_user": True})
+    system_user_id = system_user["id"] if system_user else "system-support"
+    
+    for order in orders:
+        try:
+            # Get frontend URL for direct links
+            frontend_url = settings.frontend_url
+            order_link = f"{frontend_url}/orders/{order['id']}"
+            
+            # Send reminder to buyer
+            await send_review_reminder_message(
+                db, system_user_id, 
+                order["buyer_id"],
+                order,
+                is_buyer=True,
+                order_link=order_link
+            )
+            
+            # Send reminder to seller(s)
+            seller_ids = list(set(item["seller_id"] for item in order["items"]))
+            for seller_id in seller_ids:
+                await send_review_reminder_message(
+                    db, system_user_id,
+                    seller_id,
+                    order,
+                    is_buyer=False,
+                    order_link=order_link
+                )
+            
+            # Mark reminder as sent
+            await db.orders.update_one(
+                {"id": order["id"]},
+                {"$set": {"five_day_reminder_sent": True, "updated_at": datetime.utcnow()}}
+            )
+            
+            reminder_count += 1
+            logger.info(f"Sent 5-day review reminders for order {order['order_number']}")
+            
+        except Exception as e:
+            logger.error(f"Error sending review reminder for order {order['id']}: {e}")
+    
+    logger.info(f"Sent {reminder_count} review reminder sets")
+    return reminder_count
+
+
+async def send_review_reminder_message(db, system_user_id: str, user_id: str, order: dict, is_buyer: bool, order_link: str):
+    """Send an in-app review reminder message to a user"""
+    
+    # Get or create message thread
+    thread = await db.message_threads.find_one({
+        "participants": {"$all": [system_user_id, user_id], "$size": 2}
+    })
+    
+    if not thread:
+        thread = {
+            "id": str(uuid.uuid4()),
+            "participants": [system_user_id, user_id],
+            "created_at": datetime.utcnow(),
+            "last_message_at": datetime.utcnow()
+        }
+        await db.message_threads.insert_one(thread)
+    
+    # Check if user has already reviewed
+    review_type = "buyer_to_seller" if is_buyer else "seller_to_buyer"
+    existing_review = await db.reviews.find_one({
+        "order_id": order["id"],
+        "review_type": review_type
+    })
+    
+    if existing_review:
+        # Already reviewed, skip
+        return
+    
+    if is_buyer:
+        other_party = order["items"][0]["seller_username"]
+        message_content = f"""⭐ **Time to Leave a Review!**
+
+It's been 5 days since your purchase of **Order #{order['order_number']}**.
+
+We'd love to hear about your experience! Your review helps:
+- Other buyers make informed decisions
+- Sellers build their reputation
+- Keep our community trustworthy
+
+**[Click here to review your seller]({order_link})**
+
+Thank you for being part of the MicLocker community!
+
+---
+*If you haven't received your item yet, no worries! You can leave a review once it arrives.*
+"""
+    else:
+        other_party = order.get("buyer_username", "the buyer")
+        message_content = f"""⭐ **Time to Leave a Review!**
+
+It's been 5 days since your sale on **Order #{order['order_number']}**.
+
+Please take a moment to review your buyer, {other_party}. Your feedback helps:
+- Build trust in our community
+- Help other sellers know who they're dealing with
+- Complete the transaction cycle
+
+**[Click here to review your buyer]({order_link})**
+
+Thank you for selling on MicLocker!
+"""
+    
+    message = {
+        "id": str(uuid.uuid4()),
+        "thread_id": thread["id"],
+        "sender_id": system_user_id,
+        "content": message_content,
+        "created_at": datetime.utcnow(),
+        "read_at": None
+    }
+    await db.messages.insert_one(message)
+    
+    await db.message_threads.update_one(
+        {"id": thread["id"]},
+        {"$set": {"last_message_at": datetime.utcnow()}}
+    )
 
 
 async def auto_confirm_deliveries():
