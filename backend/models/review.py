@@ -53,6 +53,10 @@ class ReviewInDB(BaseModel):
     comment: Optional[str] = None
     review_type: str = "buyer_to_seller"  # "buyer_to_seller" or "seller_to_buyer"
     
+    # Item condition reporting (only for buyer_to_seller reviews)
+    item_condition: Optional[str] = None  # as_described, minor_issues, significantly_different, damaged
+    condition_notes: Optional[str] = None
+    
     # Reviews are always public and cannot be hidden
     is_public: bool = True
     
