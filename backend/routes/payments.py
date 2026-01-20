@@ -66,15 +66,30 @@ async def create_checkout(
     Create a Stripe checkout session for the user's cart
     
     Flow:
-    1. Get items from cart (or accepted offer)
-    2. Calculate totals and fees
-    3. Create order in pending state
-    4. Create Stripe checkout session
-    5. Return checkout URL
+    1. Check review gating
+    2. Get items from cart (or accepted offer)
+    3. Calculate totals and fees
+    4. Create order in pending state
+    5. Create Stripe checkout session
+    6. Return checkout URL
     
     Funds are held until delivery is confirmed.
     """
     db = get_database()
+    
+    # Review Gating Check: If user has made a purchase before and has a pending review, block checkout
+    if current_user.get("first_purchase_completed") and current_user.get("pending_review_order_id"):
+        pending_order = await db.orders.find_one({"id": current_user["pending_review_order_id"]})
+        if pending_order and pending_order.get("status") in ["delivered", "completed"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "error": "review_required",
+                    "message": "You must review your seller from your last purchase before making a new purchase.",
+                    "order_id": current_user["pending_review_order_id"],
+                    "order_number": pending_order.get("order_number")
+                }
+            )
     
     # Initialize Stripe with the request's base URL
     base_url = str(request.base_url).rstrip('/')
