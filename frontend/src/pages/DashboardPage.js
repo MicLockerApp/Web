@@ -440,9 +440,17 @@ const DashboardPage = () => {
                       Active
                     </span>
                   </div>
-                  <p className="text-gray-400 mb-4">
+                  <p className="text-gray-400 mb-2">
                     Your Stripe account is fully set up. You&apos;ll receive payouts automatically when buyers confirm delivery.
                   </p>
+                  
+                  {/* Auto-payout info */}
+                  <div className="bg-dark-500/50 rounded-lg p-3 mb-4">
+                    <p className="text-sm text-blue-400">
+                      💡 <strong>Auto-Payout:</strong> If a buyer doesn&apos;t confirm delivery within 14 days of shipment, 
+                      funds are automatically released to your account. No action needed on your part!
+                    </p>
+                  </div>
                   
                   {/* Balance Display */}
                   {stripeBalance && (
