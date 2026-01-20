@@ -42,13 +42,14 @@ const CommunityRulesBuyersPage = () => {
     },
     {
       icon: Star,
-      title: 'Leave Honest Reviews',
-      description: 'Your reviews help the community make informed decisions. Be fair, accurate, and constructive in your feedback.',
+      title: 'Complete Reviews After Purchases',
+      description: 'After your first purchase, you must review your seller before making another purchase. This helps maintain community trust and accountability.',
       tips: [
         'Rate based on the actual transaction experience',
         'Be specific about what went well or poorly',
-        'Never threaten negative reviews to get discounts',
-        'Update reviews if issues are resolved'
+        'Report item condition (as described, minor issues, damaged, etc.)',
+        'You\'ll receive a reminder 5 days after purchase to leave a review',
+        'First-time buyers are exempt from this requirement'
       ]
     },
     {
