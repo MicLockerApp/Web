@@ -23,6 +23,10 @@ const OrderDetailPage = () => {
   const [trackingNumber, setTrackingNumber] = useState('');
   const [message, setMessage] = useState({ type: '', text: '' });
   
+  // Item condition state (for buyer reviews)
+  const [itemCondition, setItemCondition] = useState('');
+  const [conditionNotes, setConditionNotes] = useState('');
+  
   // Reviews state
   const [orderReviews, setOrderReviews] = useState({
     buyer_to_seller: null,
