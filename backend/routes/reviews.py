@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Query
-from models.review import ReviewCreate, ReviewInDB, ReviewResponse
+from models.review import ReviewCreate, ReviewInDB, ReviewResponse, ITEM_CONDITION_OPTIONS
 from services.auth import get_current_user
 from database import get_database
 from datetime import datetime
@@ -17,6 +17,9 @@ async def create_review(
     - Buyers can review sellers (buyer_to_seller)
     - Sellers can review buyers (seller_to_buyer)
     Reviews are public and displayed on user profiles.
+    
+    After submitting a review, the user's pending_review_order_id is cleared,
+    allowing them to perform their next action (buy/list).
     """
     db = get_database()
     
@@ -70,6 +73,19 @@ async def create_review(
             detail=f"You have already submitted a {review_data.review_type.replace('_', ' ')} review for this order"
         )
     
+    # Validate item condition if provided (only for buyer_to_seller)
+    item_condition = None
+    condition_notes = None
+    if review_data.review_type == "buyer_to_seller":
+        if review_data.item_condition:
+            if review_data.item_condition not in ITEM_CONDITION_OPTIONS:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid item condition. Must be one of: {ITEM_CONDITION_OPTIONS}"
+                )
+            item_condition = review_data.item_condition
+            condition_notes = review_data.condition_notes
+    
     # Determine reviewer and reviewee
     if review_data.review_type == "buyer_to_seller":
         reviewer_id = order["buyer_id"]
@@ -104,10 +120,30 @@ async def create_review(
         rating=review_data.rating,
         comment=review_data.comment,
         review_type=review_data.review_type,
+        item_condition=item_condition,
+        condition_notes=condition_notes,
         is_public=True
     )
     
     await db.reviews.insert_one(review.model_dump())
+    
+    # Update order to mark review submitted
+    review_field = "buyer_review_submitted" if is_buyer else "seller_review_submitted"
+    await db.orders.update_one(
+        {"id": order["id"]},
+        {"$set": {review_field: True, "updated_at": datetime.utcnow()}}
+    )
+    
+    # Clear the user's pending review if this was the order they needed to review
+    if current_user.get("pending_review_order_id") == order["id"]:
+        await db.users.update_one(
+            {"id": current_user["id"]},
+            {"$set": {
+                "pending_review_order_id": None,
+                "pending_review_type": None,
+                "updated_at": datetime.utcnow()
+            }}
+        )
     
     # Update reviewee's rating statistics
     await update_user_rating(db, reviewee_id, reviewee_role)
