@@ -327,6 +327,19 @@ class UserPublicProfile(BaseModel):
     rating: float = 0.0
     review_count: int = 0
     total_sales: int = 0
+    total_purchases: int = 0
+    # Review gating
+    pending_review_order_id: Optional[str] = None
+    pending_review_type: Optional[str] = None
+    first_purchase_completed: bool = False
+    first_sale_completed: bool = False
+    # Trading
+    last_trade_date: Optional[datetime] = None
+    trades_this_month: int = 0
+    has_seen_trade_rules: bool = False
+    # Stripe Connect
+    stripe_connect_account_id: Optional[str] = None
+    stripe_connect_status: Optional[str] = None
     created_at: datetime
 
 class Token(BaseModel):
