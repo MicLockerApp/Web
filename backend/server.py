@@ -42,27 +42,47 @@ async def lifespan(app: FastAPI):
     logger.info(f"Environment: {settings.environment}")
     logger.info(f"Storage mode: {'S3' if settings.use_s3 else 'Local'}")
     
-    await connect_to_mongo()
+    try:
+        await connect_to_mongo()
+    except Exception as e:
+        logger.error(f"Failed to connect to MongoDB: {e}")
+        # Continue startup even if DB connection fails initially
+        # The connection might recover
     
     # Create analytics indexes
-    await create_analytics_indexes()
+    try:
+        await create_analytics_indexes()
+    except Exception as e:
+        logger.warning(f"Failed to create analytics indexes: {e}")
     
     # Ensure support system user exists for in-app messaging
-    from services.message_service import ensure_support_user_exists
-    await ensure_support_user_exists()
+    try:
+        from services.message_service import ensure_support_user_exists
+        await ensure_support_user_exists()
+    except Exception as e:
+        logger.warning(f"Failed to create support user: {e}")
     
     # Run seed data if in development
     if settings.environment == "development":
-        from seed_data import seed_database
-        await seed_database()
+        try:
+            from seed_data import seed_database
+            await seed_database()
+        except Exception as e:
+            logger.warning(f"Failed to seed database: {e}")
     
     # Start analytics background scheduler
-    start_scheduler()
-    logger.info("Analytics scheduler started")
+    try:
+        start_scheduler()
+        logger.info("Analytics scheduler started")
+    except Exception as e:
+        logger.warning(f"Failed to start analytics scheduler: {e}")
     
     # Start delivery confirmation scheduler (checks every hour for auto-delivery)
-    start_delivery_scheduler()
-    logger.info("Delivery confirmation scheduler started")
+    try:
+        start_delivery_scheduler()
+        logger.info("Delivery confirmation scheduler started")
+    except Exception as e:
+        logger.warning(f"Failed to start delivery scheduler: {e}")
     
     # Run initial aggregation if needed (in background)
     try:
@@ -70,11 +90,21 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Initial aggregation skipped: {e}")
     
+    logger.info("Application startup complete")
+    
     yield
     
     # Shutdown
-    stop_scheduler()
-    await close_mongo_connection()
+    try:
+        stop_scheduler()
+    except Exception as e:
+        logger.warning(f"Error stopping scheduler: {e}")
+    
+    try:
+        await close_mongo_connection()
+    except Exception as e:
+        logger.warning(f"Error closing MongoDB connection: {e}")
+    
     logger.info("Application shutdown complete")
 
 
