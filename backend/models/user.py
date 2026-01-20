@@ -197,6 +197,22 @@ class UserInDB(BaseModel):
     rating: float = 0.0
     review_count: int = 0
     total_sales: int = 0
+    total_purchases: int = 0  # Track completed purchases
+    
+    # Review Gating - After first transaction, users must review before next action
+    pending_review_order_id: Optional[str] = None  # Order that needs to be reviewed
+    pending_review_type: Optional[str] = None  # "buyer" or "seller" - which role needs review
+    first_purchase_completed: bool = False  # Has made at least one purchase
+    first_sale_completed: bool = False  # Has made at least one sale
+    
+    # Trading System - 1 free trade per month
+    last_trade_date: Optional[datetime] = None  # Last trade completed
+    trades_this_month: int = 0  # Counter reset monthly
+    has_seen_trade_rules: bool = False  # Shown the rules modal
+    
+    # Stripe Connect for seller payouts
+    stripe_connect_account_id: Optional[str] = None
+    stripe_connect_status: Optional[str] = None  # pending, complete, disabled
     
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
