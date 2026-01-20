@@ -9,20 +9,29 @@ class Settings(BaseSettings):
     # Application
     app_name: str = "MicLocker API"
     environment: str = os.getenv("ENVIRONMENT", "development")
-    secret_key: str = os.getenv("SECRET_KEY", "miclocker-secret-key")
+    secret_key: str = os.getenv("SECRET_KEY", "")  # Must be set in production
     algorithm: str = os.getenv("ALGORITHM", "HS256")
     access_token_expire_minutes: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "10080"))
     
-    # CORS Settings
-    cors_origins: List[str] = [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "https://music-gear-swap.preview.emergentagent.com",
-    ]
+    # CORS Settings - Read from environment or use defaults
+    cors_origins: List[str] = []
     
-    # MongoDB
+    @property
+    def get_cors_origins(self) -> List[str]:
+        """Get CORS origins from environment or use defaults"""
+        env_origins = os.getenv("CORS_ORIGINS", "")
+        if env_origins:
+            return [origin.strip() for origin in env_origins.split(",")]
+        # Default origins for development
+        return [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            os.getenv("FRONTEND_URL", ""),
+        ]
+    
+    # MongoDB - Read database name from env
     mongo_url: str = os.getenv("MONGO_URL", "mongodb://localhost:27017")
-    database_name: str = "miclocker"
+    database_name: str = os.getenv("DB_NAME", "miclocker")
     
     # AWS S3
     aws_access_key_id: Optional[str] = os.getenv("AWS_ACCESS_KEY_ID") or None
@@ -59,8 +68,8 @@ class Settings(BaseSettings):
     # Auto-delivery confirmation (days)
     auto_delivery_days: int = int(os.getenv("AUTO_DELIVERY_DAYS", "14"))
     
-    # Frontend URL for webhooks
-    frontend_url: str = os.getenv("FRONTEND_URL", "https://music-gear-swap.preview.emergentagent.com")
+    # Frontend URL for webhooks - read from environment
+    frontend_url: str = os.getenv("FRONTEND_URL", "")
     
     # File Upload Restrictions
     max_image_size_mb: int = 10
