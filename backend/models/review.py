@@ -80,6 +80,8 @@ class ReviewResponse(BaseModel):
     rating: int
     comment: Optional[str] = None
     review_type: str
+    item_condition: Optional[str] = None
+    condition_notes: Optional[str] = None
     is_public: bool = True
     created_at: datetime
 
