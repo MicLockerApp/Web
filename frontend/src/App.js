@@ -48,6 +48,8 @@ import PurchaseProtectionPage from './pages/PurchaseProtectionPage';
 import EmployeeSetupPage from './pages/EmployeeSetupPage';
 import CommunityRulesBuyersPage from './pages/CommunityRulesBuyersPage';
 import CommunityRulesSellersPage from './pages/CommunityRulesSellersPage';
+import TradesPage from './pages/TradesPage';
+import TradeDetailPage from './pages/TradeDetailPage';
 import PayoutsAndCreditsPage from './pages/PayoutsAndCreditsPage';
 import IntellectualPropertyPage from './pages/IntellectualPropertyPage';
 import SearchAndAdRankingPage from './pages/SearchAndAdRankingPage';
