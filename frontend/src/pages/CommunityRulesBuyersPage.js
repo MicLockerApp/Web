@@ -73,6 +73,18 @@ const CommunityRulesBuyersPage = () => {
         'Report any requests for off-platform transactions',
         'Help other buyers by sharing legitimate concerns'
       ]
+    },
+    {
+      icon: Users,
+      title: 'Trading Rules',
+      description: 'MicLocker allows direct trades between users with no platform fees! Each user gets 1 free trade per month.',
+      tips: [
+        'You can propose a trade for any active listing',
+        'Trades are direct swaps with no money exchanged',
+        'Both parties must ship their items after accepting',
+        'Confirm receipt when you receive your traded item',
+        'Open a dispute ticket if there are any issues'
+      ]
     }
   ];
 
@@ -84,7 +96,8 @@ const CommunityRulesBuyersPage = () => {
     'Returning items that have been modified or damaged',
     'Attempting to purchase stolen or counterfeit goods knowingly',
     'Using automated tools to snipe listings unfairly',
-    'Sharing seller personal information publicly'
+    'Sharing seller personal information publicly',
+    'Abusing the trade system to circumvent monthly limits'
   ];
 
   return (
