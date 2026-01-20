@@ -574,7 +574,7 @@ MicLocker Support System
         return False
 
 
-async def send_password_setup_email(to_email: str, username: str, setup_token: str, role: str, frontend_url: str = "https://music-gear-swap.preview.emergentagent.com") -> bool:
+async def send_password_setup_email(to_email: str, username: str, setup_token: str, role: str, frontend_url: str = None) -> bool:
     """
     Send email to new employee to set up their password
     
@@ -583,11 +583,15 @@ async def send_password_setup_email(to_email: str, username: str, setup_token: s
         username: Employee username
         setup_token: Password setup token
         role: Employee role (admin, manager, employee)
-        frontend_url: Base URL for the frontend app
+        frontend_url: Base URL for the frontend app (uses settings if not provided)
         
     Returns:
         True if email sent successfully, False otherwise
     """
+    from config import settings
+    if frontend_url is None:
+        frontend_url = settings.frontend_url or "https://miclockerapp.com"
+    
     if not email_service.client:
         logger.warning(f"SES client not available - logging setup token instead: {setup_token}")
         return False
