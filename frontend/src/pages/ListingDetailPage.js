@@ -386,15 +386,25 @@ const ListingDetailPage = () => {
                   <ShoppingCart className="w-5 h-5" />
                   Add to Cart
                 </button>
-                {listing.accepts_offers && (
+                <div className="flex gap-3">
+                  {listing.accepts_offers && (
+                    <button
+                      onClick={() => setShowOfferModal(true)}
+                      className="btn btn-outline flex-1 py-3"
+                      data-testid="make-offer-button"
+                    >
+                      Make an Offer
+                    </button>
+                  )}
                   <button
-                    onClick={() => setShowOfferModal(true)}
-                    className="btn btn-outline w-full py-3"
-                    data-testid="make-offer-button"
+                    onClick={handleOpenTradeModal}
+                    className="btn btn-outline flex-1 py-3"
+                    data-testid="propose-trade-button"
                   >
-                    Make an Offer
+                    <ArrowLeftRight className="w-5 h-5 mr-2" />
+                    Trade
                   </button>
-                )}
+                </div>
               </div>
             )}
 
