@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ShoppingCart, MessageSquare, Heart, Share2, Star, ChevronLeft, ChevronRight, Check, X, Copy, Facebook, Twitter, Mail, Link as LinkIcon } from 'lucide-react';
-import { listingsAPI, offersAPI, cartAPI, usersAPI } from '../services/api';
+import { ShoppingCart, MessageSquare, Heart, Share2, Star, ChevronLeft, ChevronRight, Check, X, Copy, Facebook, Twitter, Mail, Link as LinkIcon, ArrowLeftRight } from 'lucide-react';
+import { listingsAPI, offersAPI, cartAPI, usersAPI, tradesAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -19,12 +19,16 @@ const ListingDetailPage = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showTradeModal, setShowTradeModal] = useState(false);
   const [offerPrice, setOfferPrice] = useState('');
   const [offerMessage, setOfferMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [isFavorited, setIsFavorited] = useState(false);
   const [favLoading, setFavLoading] = useState(false);
+  const [myListings, setMyListings] = useState([]);
+  const [selectedTradeListingId, setSelectedTradeListingId] = useState('');
+  const [tradeEligibility, setTradeEligibility] = useState(null);
 
   useEffect(() => {
     const fetchListing = async () => {
