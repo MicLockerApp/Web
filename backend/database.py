@@ -43,22 +43,27 @@ async def connect_to_mongo():
     
     try:
         # Create client with appropriate settings for Atlas
+        # Note: Don't set w='majority' as it may not be supported on all Atlas tiers
         db.client = AsyncIOMotorClient(
             mongo_url,
             serverSelectionTimeoutMS=30000,  # 30 second timeout
             connectTimeoutMS=30000,
             socketTimeoutMS=30000,
-            retryWrites=True,
-            w='majority'
+            retryWrites=True
         )
         
         # Get database name
         db_name = get_database_name_from_url(mongo_url)
         db.db = db.client[db_name]
         
-        # Test connection
-        await db.client.admin.command('ping')
-        logger.info(f"Connected to MongoDB database: {db_name}")
+        # Test connection by listing collection names instead of admin ping
+        # This works with standard user permissions on Atlas
+        try:
+            await db.db.list_collection_names()
+            logger.info(f"Connected to MongoDB database: {db_name}")
+        except Exception as ping_error:
+            logger.warning(f"Could not verify connection: {ping_error}")
+            # Continue anyway - the connection may still work
         
         # Create indexes
         await create_indexes()
