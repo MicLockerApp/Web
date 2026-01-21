@@ -96,5 +96,5 @@ class AdminAnalytics(BaseModel):
     recent_orders: int
     recent_signups: int
     platform_fee_percent: float = 3.0
-    payment_processing_percent: float = 3.19
-    payment_processing_fixed: float = 0.49
+    payment_processing_percent: float = 2.9
+    payment_processing_fixed: float = 0.30
