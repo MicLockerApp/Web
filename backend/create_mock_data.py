@@ -91,8 +91,8 @@ async def create_mock_orders():
             subtotal=listing["price"],
             shipping_total=listing.get("shipping", {}).get("price", 15.00),
             platform_fee=round(listing["price"] * 0.03, 2),  # 3% platform fee
-            payment_processing_fee=round(listing["price"] * 0.0319 + 0.49, 2),  # Payment processor fee
-            total=round(listing["price"] + listing.get("shipping", {}).get("price", 15.00) + listing["price"] * 0.0319 + 0.49, 2),
+            payment_processing_fee=round(listing["price"] * 0.029 + 0.30, 2),  # Payment processor fee
+            total=round(listing["price"] + listing.get("shipping", {}).get("price", 15.00) + listing["price"] * 0.029 + 0.30, 2),
             status=status,
             created_at=datetime.utcnow() - timedelta(days=random.randint(1, 30)),
             paid_at=datetime.utcnow() - timedelta(days=random.randint(1, 30))
