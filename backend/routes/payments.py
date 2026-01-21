@@ -901,7 +901,8 @@ async def start_seller_onboarding(
     # Create onboarding link
     onboarding_url = await stripe_connect_service.create_account_link(
         account["account_id"],
-        current_user["id"]
+        current_user["id"],
+        origin_url
     )
     
     if not onboarding_url:
