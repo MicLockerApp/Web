@@ -13,23 +13,29 @@ db = Database()
 
 def get_database_name() -> str:
     """
-    Get database name based on ENVIRONMENT only.
+    Get database name.
     
-    IMPORTANT: We IGNORE the DB_NAME environment variable because Emergent's 
-    production was pointing to an old database with seed data.
+    CRITICAL: If we detect MongoDB Atlas (mongodb+srv://), we're in PRODUCTION
+    regardless of what ENVIRONMENT variable says.
     
-    PRODUCTION = DB_PROD (clean database)
-    DEVELOPMENT = DB_DEVELOP (local testing)
+    Production = DB_PROD
+    Development = DB_DEVELOP
     """
-    env = os.getenv("ENVIRONMENT", "development").lower()
+    mongo_url = os.getenv("MONGO_URL", "mongodb://localhost:27017")
     
+    # If using Atlas (mongodb+srv://), this is PRODUCTION - ignore ENVIRONMENT variable
+    if "mongodb+srv://" in mongo_url or "mongodb.net" in mongo_url:
+        logger.info("ATLAS DETECTED: Forcing PRODUCTION mode with DB_PROD")
+        return "DB_PROD"
+    
+    # For local MongoDB, check ENVIRONMENT
+    env = os.getenv("ENVIRONMENT", "development").lower()
     if env in ["production", "prod"]:
         db_name = "DB_PROD"
-        logger.info(f"PRODUCTION MODE: Using database DB_PROD")
     else:
         db_name = "DB_DEVELOP"
-        logger.info(f"DEVELOPMENT MODE: Using database DB_DEVELOP")
     
+    logger.info(f"Using database: {db_name} (environment: {env})")
     return db_name
 
 async def connect_to_mongo():
@@ -52,7 +58,7 @@ async def connect_to_mongo():
             retryWrites=True
         )
         
-        # Get database name (DB_PROD or DB_DEVELOP based on ENVIRONMENT)
+        # Get database name (DB_PROD for Atlas, DB_DEVELOP for local)
         db_name = get_database_name()
         db.db = db.client[db_name]
         
