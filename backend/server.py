@@ -54,75 +54,91 @@ async def ensure_admin_user_exists():
     - Password: Eisenhower1212!!
     - Role: owner
     """
-    db = get_database()
-    mongo_url = os.getenv("MONGO_URL", "mongodb://localhost:27017")
-    
-    # Detect if we're on Atlas (production) - ignore ENVIRONMENT variable
-    is_production = "mongodb+srv://" in mongo_url or "mongodb.net" in mongo_url
-    
-    # In PRODUCTION (Atlas), check if there's seed data and clear it
-    if is_production:
-        user_count = await db.users.count_documents({})
-        listing_count = await db.listings.count_documents({})
+    try:
+        db = get_database()
+        mongo_url = os.getenv("MONGO_URL", "mongodb://localhost:27017")
         
-        logger.info(f"PRODUCTION CHECK: {user_count} users, {listing_count} listings")
+        logger.info("=" * 60)
+        logger.info("ADMIN USER CHECK - STARTING")
+        logger.info(f"MONGO_URL type: {'ATLAS' if 'mongodb+srv' in mongo_url or 'mongodb.net' in mongo_url else 'LOCAL'}")
+        logger.info("=" * 60)
         
-        # If there are multiple users or any listings, this is seed data - CLEAR IT
-        if user_count > 1 or listing_count > 0:
-            logger.warning(f"SEED DATA DETECTED ON PRODUCTION: {user_count} users, {listing_count} listings")
-            logger.warning("CLEARING ALL SEED DATA NOW...")
-            
-            # Get all collection names and clear them
-            collections = await db.list_collection_names()
-            for coll_name in collections:
-                await db[coll_name].delete_many({})
-                logger.info(f"Cleared collection: {coll_name}")
-            
-            logger.info("ALL SEED DATA CLEARED - Database is now clean")
-    
-    # Check if admin user exists
-    existing_user = await db.users.find_one({"username": "miclocker.support"})
-    
-    if existing_user:
-        logger.info("Admin user miclocker.support already exists")
-        return
-    
-    # Create admin user
-    admin_password = "Eisenhower1212!!"
-    hashed_password = pwd_context.hash(admin_password)
-    
-    admin_user = {
-        "id": "admin-miclocker-support",
-        "username": "miclocker.support",
-        "email": "info@miclockerapp.com",
-        "hashed_password": hashed_password,
-        "full_name": "MicLocker Support",
-        "bio": "Official MicLocker Support Account",
-        "location": "United States",
-        "profile_picture": None,
-        "role": "owner",
-        "is_active": True,
-        "is_verified": True,
-        "is_approved_seller": True,
-        "seller_verified_at": datetime.now(timezone.utc),
-        "rating": 5.0,
-        "total_reviews": 0,
-        "total_sales": 0,
-        "member_since": datetime.now(timezone.utc),
-        "last_login": datetime.now(timezone.utc),
-        "created_at": datetime.now(timezone.utc),
-        "updated_at": datetime.now(timezone.utc),
-        "stripe_connect_account_id": None,
-        "stripe_customer_id": None,
-        "pending_review_for_order_id": None,
-        "preferences": {
-            "email_notifications": True,
-            "push_notifications": True
+        # Detect if we're on Atlas (production)
+        is_atlas = "mongodb+srv://" in mongo_url or "mongodb.net" in mongo_url
+        
+        # Check current database state
+        try:
+            user_count = await db.users.count_documents({})
+            listing_count = await db.listings.count_documents({})
+            logger.info(f"Current DB state: {user_count} users, {listing_count} listings")
+        except Exception as e:
+            logger.error(f"Error counting documents: {e}")
+            user_count = 0
+            listing_count = 0
+        
+        # On Atlas, clear seed data if detected
+        if is_atlas and (user_count > 1 or listing_count > 0):
+            logger.warning("SEED DATA DETECTED ON ATLAS - CLEARING ALL DATA")
+            try:
+                collections = await db.list_collection_names()
+                for coll_name in collections:
+                    await db[coll_name].delete_many({})
+                    logger.info(f"Cleared: {coll_name}")
+                logger.info("ALL SEED DATA CLEARED")
+            except Exception as e:
+                logger.error(f"Error clearing seed data: {e}")
+        
+        # Check if admin user exists
+        existing_user = await db.users.find_one({"username": "miclocker.support"})
+        
+        if existing_user:
+            logger.info("Admin user miclocker.support ALREADY EXISTS")
+            logger.info("=" * 60)
+            return
+        
+        # Create admin user
+        logger.info("Creating admin user miclocker.support...")
+        admin_password = "Eisenhower1212!!"
+        hashed_password = pwd_context.hash(admin_password)
+        
+        admin_user = {
+            "id": "admin-miclocker-support",
+            "username": "miclocker.support",
+            "email": "info@miclockerapp.com",
+            "hashed_password": hashed_password,
+            "full_name": "MicLocker Support",
+            "bio": "Official MicLocker Support Account",
+            "location": "United States",
+            "profile_picture": None,
+            "role": "owner",
+            "is_active": True,
+            "is_verified": True,
+            "is_approved_seller": True,
+            "seller_verified_at": datetime.now(timezone.utc),
+            "rating": 5.0,
+            "total_reviews": 0,
+            "total_sales": 0,
+            "member_since": datetime.now(timezone.utc),
+            "last_login": datetime.now(timezone.utc),
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
+            "stripe_connect_account_id": None,
+            "stripe_customer_id": None,
+            "pending_review_for_order_id": None,
+            "preferences": {
+                "email_notifications": True,
+                "push_notifications": True
+            }
         }
-    }
-    
-    await db.users.insert_one(admin_user)
-    logger.info("CREATED admin user: miclocker.support (owner)")
+        
+        result = await db.users.insert_one(admin_user)
+        logger.info(f"ADMIN USER CREATED: miclocker.support (inserted_id: {result.inserted_id})")
+        logger.info("=" * 60)
+        
+    except Exception as e:
+        logger.error(f"CRITICAL ERROR in ensure_admin_user_exists: {e}")
+        logger.error("Admin user may not have been created!")
+        raise
 
 
 @asynccontextmanager
