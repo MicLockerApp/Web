@@ -64,13 +64,20 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Failed to create support user: {e}")
     
-    # Run seed data if in development
-    if settings.environment == "development":
+    # Run seed data ONLY if explicitly in development environment
+    # IMPORTANT: Never seed in production - check multiple ways to be safe
+    env = settings.environment.lower() if settings.environment else ""
+    is_production = env in ["production", "prod"] or "miclockerapp.com" in (settings.frontend_url or "")
+    
+    if env == "development" and not is_production:
         try:
             from seed_data import seed_database
             await seed_database()
+            logger.info("Seed data loaded (development mode)")
         except Exception as e:
             logger.warning(f"Failed to seed database: {e}")
+    else:
+        logger.info(f"Skipping seed data (environment: {settings.environment})")
     
     # Start analytics background scheduler
     try:
