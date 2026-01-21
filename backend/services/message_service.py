@@ -101,28 +101,24 @@ Keep Rockin! 🎸"""
 
 async def ensure_support_user_exists():
     """
-    Ensure the support system user exists in the database.
+    Verify the support/admin user exists in the database.
     This is called during app startup.
+    
+    Note: In production, the admin user (miclocker.support) is used for support messages.
+    We don't create a separate system user anymore.
     """
     db = get_database()
     
+    # Check if the admin support user exists
     support_user = await db.users.find_one({"id": SUPPORT_SYSTEM_USER_ID})
     
     if not support_user:
-        # Create system support user
-        support_user_doc = {
-            "id": SUPPORT_SYSTEM_USER_ID,
-            "username": SUPPORT_SYSTEM_USERNAME,
-            "email": "support@miclockerapp.com",
-            "hashed_password": "",  # System user cannot login
-            "role": "system",
-            "is_admin": True,
-            "is_system_user": True,
-            "profile_image": None,
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow()
-        }
-        await db.users.insert_one(support_user_doc)
-        logger.info("Created MicLocker Support system user")
+        # Also check by username as fallback
+        support_user = await db.users.find_one({"username": SUPPORT_SYSTEM_USERNAME})
     
-    return True
+    if support_user:
+        logger.info(f"Support user exists: {support_user.get('username')}")
+        return True
+    else:
+        logger.warning("Support user (miclocker.support) not found in database!")
+        return False
