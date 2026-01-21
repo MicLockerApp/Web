@@ -17,6 +17,7 @@ from routes.tickets import router as tickets_router
 from routes.payments import router as payments_router
 from routes.trades import router as trades_router
 from routes.stats import router as stats_router
+from routes.stripe_connect_v2_sample import router as stripe_connect_v2_sample_router
 
 # Delivery tasks import
 from tasks.delivery_tasks import start_delivery_scheduler
