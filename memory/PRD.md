@@ -290,7 +290,8 @@ MicLocker is a production-ready full-stack marketplace where musicians, audio en
 - Add more comprehensive error handling
 
 ## Test Credentials
-- **Admin**: miclocker.support / Finally2026!!
+- **Admin**: miclocker.support / Eisenhower1212!!
+  - **Note**: These credentials will only work on production AFTER redeployment
 
 ## Environment Variables Required
 ```env
