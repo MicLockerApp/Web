@@ -187,6 +187,7 @@ app.include_router(search_router, prefix="/api")
 app.include_router(tickets_router, prefix="/api")
 app.include_router(payments_router, prefix="/api")
 app.include_router(trades_router, prefix="/api")
+app.include_router(stats_router, prefix="/api")
 
 # Analytics routes
 app.include_router(analytics_router, prefix="/api")
