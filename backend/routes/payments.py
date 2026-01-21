@@ -959,9 +959,13 @@ async def get_connect_status(
 
 @router.post("/connect/refresh-link")
 async def refresh_onboarding_link(
+    request: Request,
     current_user: dict = Depends(get_current_user)
 ):
     """Generate a new onboarding link if the previous one expired"""
+    
+    # Get origin URL from request for dynamic redirect URLs
+    origin_url = request.headers.get("origin") or request.headers.get("referer", "").rstrip("/")
     
     stripe_account_id = current_user.get("stripe_connect_account_id")
     
@@ -973,7 +977,8 @@ async def refresh_onboarding_link(
     
     onboarding_url = await stripe_connect_service.create_account_link(
         stripe_account_id,
-        current_user["id"]
+        current_user["id"],
+        origin_url
     )
     
     if not onboarding_url:
