@@ -8,9 +8,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# System user ID for support messages
-SUPPORT_SYSTEM_USER_ID = "system-support"
-SUPPORT_SYSTEM_USERNAME = "MicLocker Support"
+# System user ID for support messages - uses the admin account
+SUPPORT_SYSTEM_USER_ID = "admin-miclocker-support"
+SUPPORT_SYSTEM_USERNAME = "miclocker.support"
 
 
 async def send_support_message_to_user(
