@@ -30,8 +30,9 @@ class Settings(BaseSettings):
         return ["*"]
     
     # MongoDB - Read database name from env
+    # Emergent deployments provide DB_NAME, local dev uses DATABASE_NAME
     mongo_url: str = os.getenv("MONGO_URL", "mongodb://localhost:27017")
-    database_name: str = os.getenv("DATABASE_NAME", "miclocker")
+    database_name: str = os.getenv("DB_NAME") or os.getenv("DATABASE_NAME", "miclocker")
     
     # AWS S3
     aws_access_key_id: Optional[str] = os.getenv("AWS_ACCESS_KEY_ID") or None
