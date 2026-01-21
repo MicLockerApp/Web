@@ -2,6 +2,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from config import settings
 import logging
 import os
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -12,22 +13,58 @@ class Database:
 db = Database()
 
 def get_database_name_from_url(mongo_url: str) -> str:
-    """Extract database name from MongoDB URL or use settings"""
-    # For Atlas URLs like: mongodb+srv://user:pass@cluster.mongodb.net/dbname?...
-    # Try to extract database name from URL
-    if '/' in mongo_url:
-        # Get the part after the last / and before any ?
-        path_part = mongo_url.split('/')[-1]
-        if '?' in path_part:
-            db_name = path_part.split('?')[0]
-        else:
-            db_name = path_part
-        
-        # If we got a valid db name from URL, use it
-        if db_name and db_name not in ['', 'admin', 'local']:
-            return db_name
+    """
+    Extract database name from MongoDB URL.
     
-    # Fall back to settings
+    For Emergent deployments with Atlas, the database name is typically
+    embedded in the MONGO_URL and should be extracted from there.
+    The DATABASE_NAME env var is a fallback for local development.
+    
+    Atlas URL formats:
+    - mongodb+srv://user:pass@cluster.mongodb.net/dbname?retryWrites=true
+    - mongodb+srv://user:pass@cluster.mongodb.net/?retryWrites=true (no db name)
+    - mongodb://localhost:27017/dbname
+    """
+    # First, check if DATABASE_NAME is explicitly set in environment (not the default)
+    env_db_name = os.getenv("DB_NAME") or os.getenv("DATABASE_NAME")
+    
+    # For Atlas URLs, try to extract database name from the URL path
+    # This handles: mongodb+srv://user:pass@host/dbname?params
+    try:
+        # Handle mongodb+srv:// URLs
+        if mongo_url.startswith("mongodb+srv://") or mongo_url.startswith("mongodb://"):
+            # Find the part after the host and before query params
+            # Pattern: ...@host/dbname?... or ...@host/dbname
+            match = re.search(r'@[^/]+/([^?/]+)', mongo_url)
+            if match:
+                url_db_name = match.group(1)
+                if url_db_name and url_db_name not in ['', 'admin', 'local', 'test']:
+                    logger.info(f"Using database name from URL: {url_db_name}")
+                    return url_db_name
+        
+        # Try simple path extraction as fallback
+        if '/' in mongo_url:
+            # Get the part after the last / and before any ?
+            path_part = mongo_url.split('/')[-1]
+            if '?' in path_part:
+                db_name = path_part.split('?')[0]
+            else:
+                db_name = path_part
+            
+            # If we got a valid db name from URL, use it
+            if db_name and db_name not in ['', 'admin', 'local']:
+                logger.info(f"Using database name from URL path: {db_name}")
+                return db_name
+    except Exception as e:
+        logger.warning(f"Error parsing database name from URL: {e}")
+    
+    # Use environment variable if set
+    if env_db_name:
+        logger.info(f"Using database name from environment: {env_db_name}")
+        return env_db_name
+    
+    # Final fallback to settings (which reads from DATABASE_NAME env var)
+    logger.info(f"Using database name from settings: {settings.database_name}")
     return settings.database_name
 
 async def connect_to_mongo():
