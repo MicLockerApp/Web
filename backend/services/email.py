@@ -594,7 +594,11 @@ async def send_password_setup_email(to_email: str, username: str, setup_token: s
     """
     from config import settings
     if frontend_url is None:
-        frontend_url = settings.frontend_url or "https://miclockerapp.com"
+        frontend_url = settings.frontend_url
+    
+    if not frontend_url:
+        logger.warning("FRONTEND_URL not configured - cannot send employee setup email")
+        return False
     
     if not email_service.client:
         logger.warning(f"SES client not available - logging setup token instead: {setup_token}")
