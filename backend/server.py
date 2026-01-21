@@ -4,9 +4,10 @@ from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import logging
 import os
+from datetime import datetime, timezone
 
 from config import settings
-from database import connect_to_mongo, close_mongo_connection
+from database import connect_to_mongo, close_mongo_connection, get_database
 from routes import (
     auth_router, users_router, listings_router, cart_router,
     orders_router, offers_router, messages_router, reviews_router,
@@ -29,12 +30,76 @@ from analytics.tasks import start_scheduler, stop_scheduler, run_initial_aggrega
 # Chatbot imports
 from chatbot.routes import chatbot_router
 
+# Password hashing
+from passlib.context import CryptContext
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+
+async def ensure_admin_user_exists():
+    """
+    CRITICAL: Ensure the admin user exists in the database.
+    This runs on EVERY startup to guarantee the admin user exists
+    on ANY MongoDB server (local development OR production Atlas).
+    
+    Admin credentials:
+    - Username: miclocker.support
+    - Email: info@miclockerapp.com
+    - Password: Eisenhower1212!!
+    - Role: owner
+    """
+    db = get_database()
+    
+    # Check if admin user already exists
+    existing_user = await db.users.find_one({"username": "miclocker.support"})
+    
+    if existing_user:
+        logger.info("Admin user miclocker.support already exists")
+        return
+    
+    # Create admin user
+    admin_password = "Eisenhower1212!!"
+    hashed_password = pwd_context.hash(admin_password)
+    
+    admin_user = {
+        "id": "admin-miclocker-support",
+        "username": "miclocker.support",
+        "email": "info@miclockerapp.com",
+        "hashed_password": hashed_password,
+        "full_name": "MicLocker Support",
+        "bio": "Official MicLocker Support Account",
+        "location": "United States",
+        "profile_picture": None,
+        "role": "owner",
+        "is_active": True,
+        "is_verified": True,
+        "is_approved_seller": True,
+        "seller_verified_at": datetime.now(timezone.utc),
+        "rating": 5.0,
+        "total_reviews": 0,
+        "total_sales": 0,
+        "member_since": datetime.now(timezone.utc),
+        "last_login": datetime.now(timezone.utc),
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+        "stripe_connect_account_id": None,
+        "stripe_customer_id": None,
+        "pending_review_for_order_id": None,
+        "preferences": {
+            "email_notifications": True,
+            "push_notifications": True
+        }
+    }
+    
+    await db.users.insert_one(admin_user)
+    logger.info("CREATED admin user: miclocker.support (owner)")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
