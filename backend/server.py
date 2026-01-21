@@ -4,9 +4,10 @@ from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import logging
 import os
+from datetime import datetime, timezone
 
 from config import settings
-from database import connect_to_mongo, close_mongo_connection
+from database import connect_to_mongo, close_mongo_connection, get_database
 from routes import (
     auth_router, users_router, listings_router, cart_router,
     orders_router, offers_router, messages_router, reviews_router,
@@ -16,6 +17,8 @@ from routes.search import router as search_router
 from routes.tickets import router as tickets_router
 from routes.payments import router as payments_router
 from routes.trades import router as trades_router
+from routes.stats import router as stats_router
+from routes.stripe_connect_v2_sample import router as stripe_connect_v2_sample_router
 
 # Delivery tasks import
 from tasks.delivery_tasks import start_delivery_scheduler
@@ -27,12 +30,116 @@ from analytics.tasks import start_scheduler, stop_scheduler, run_initial_aggrega
 # Chatbot imports
 from chatbot.routes import chatbot_router
 
+# Password hashing
+from passlib.context import CryptContext
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+
+async def ensure_admin_user_exists():
+    """
+    CRITICAL: Ensure the admin user exists in the database.
+    This runs on EVERY startup to guarantee the admin user exists
+    on ANY MongoDB server (local development OR production Atlas).
+    
+    Admin credentials:
+    - Username: miclocker.support
+    - Email: info@miclockerapp.com
+    - Password: Eisenhower1212!!
+    - Role: owner
+    """
+    try:
+        db = get_database()
+        mongo_url = os.getenv("MONGO_URL", "mongodb://localhost:27017")
+        
+        logger.info("=" * 60)
+        logger.info("ADMIN USER CHECK - STARTING")
+        logger.info(f"MONGO_URL type: {'ATLAS' if 'mongodb+srv' in mongo_url or 'mongodb.net' in mongo_url else 'LOCAL'}")
+        logger.info("=" * 60)
+        
+        # Detect if we're on Atlas (production)
+        is_atlas = "mongodb+srv://" in mongo_url or "mongodb.net" in mongo_url
+        
+        # Check current database state
+        try:
+            user_count = await db.users.count_documents({})
+            listing_count = await db.listings.count_documents({})
+            logger.info(f"Current DB state: {user_count} users, {listing_count} listings")
+        except Exception as e:
+            logger.error(f"Error counting documents: {e}")
+            user_count = 0
+            listing_count = 0
+        
+        # On Atlas, clear seed data if detected
+        if is_atlas and (user_count > 1 or listing_count > 0):
+            logger.warning("SEED DATA DETECTED ON ATLAS - CLEARING ALL DATA")
+            try:
+                collections = await db.list_collection_names()
+                for coll_name in collections:
+                    await db[coll_name].delete_many({})
+                    logger.info(f"Cleared: {coll_name}")
+                logger.info("ALL SEED DATA CLEARED")
+            except Exception as e:
+                logger.error(f"Error clearing seed data: {e}")
+        
+        # Check if admin user exists
+        existing_user = await db.users.find_one({"username": "miclocker.support"})
+        
+        if existing_user:
+            logger.info("Admin user miclocker.support ALREADY EXISTS")
+            logger.info("=" * 60)
+            return
+        
+        # Create admin user
+        logger.info("Creating admin user miclocker.support...")
+        admin_password = "Eisenhower1212!!"
+        hashed_password = pwd_context.hash(admin_password)
+        
+        admin_user = {
+            "id": "admin-miclocker-support",
+            "username": "miclocker.support",
+            "email": "info@miclockerapp.com",
+            "hashed_password": hashed_password,
+            "full_name": "MicLocker Support",
+            "bio": "Official MicLocker Support Account",
+            "location": "United States",
+            "profile_picture": None,
+            "role": "owner",
+            "is_active": True,
+            "is_verified": True,
+            "is_approved_seller": True,
+            "seller_verified_at": datetime.now(timezone.utc),
+            "rating": 5.0,
+            "total_reviews": 0,
+            "total_sales": 0,
+            "member_since": datetime.now(timezone.utc),
+            "last_login": datetime.now(timezone.utc),
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
+            "stripe_connect_account_id": None,
+            "stripe_customer_id": None,
+            "pending_review_for_order_id": None,
+            "preferences": {
+                "email_notifications": True,
+                "push_notifications": True
+            }
+        }
+        
+        result = await db.users.insert_one(admin_user)
+        logger.info(f"ADMIN USER CREATED: miclocker.support (inserted_id: {result.inserted_id})")
+        logger.info("=" * 60)
+        
+    except Exception as e:
+        logger.error(f"CRITICAL ERROR in ensure_admin_user_exists: {e}")
+        logger.error("Admin user may not have been created!")
+        raise
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -42,27 +149,48 @@ async def lifespan(app: FastAPI):
     logger.info(f"Environment: {settings.environment}")
     logger.info(f"Storage mode: {'S3' if settings.use_s3 else 'Local'}")
     
-    await connect_to_mongo()
+    try:
+        await connect_to_mongo()
+    except Exception as e:
+        logger.error(f"Failed to connect to MongoDB: {e}")
+        # Continue startup even if DB connection fails initially
+        # The connection might recover
     
     # Create analytics indexes
-    await create_analytics_indexes()
+    try:
+        await create_analytics_indexes()
+    except Exception as e:
+        logger.warning(f"Failed to create analytics indexes: {e}")
+    
+    # CRITICAL: Create admin user if it doesn't exist
+    # This ensures the admin user exists on ANY MongoDB server (local or production Atlas)
+    try:
+        await ensure_admin_user_exists()
+    except Exception as e:
+        logger.error(f"Failed to create admin user: {e}")
     
     # Ensure support system user exists for in-app messaging
-    from services.message_service import ensure_support_user_exists
-    await ensure_support_user_exists()
+    try:
+        from services.message_service import ensure_support_user_exists
+        await ensure_support_user_exists()
+    except Exception as e:
+        logger.warning(f"Failed to create support user: {e}")
     
-    # Run seed data if in development
-    if settings.environment == "development":
-        from seed_data import seed_database
-        await seed_database()
+    logger.info(f"Using database: {settings.database_name} (environment: {settings.environment})")
     
     # Start analytics background scheduler
-    start_scheduler()
-    logger.info("Analytics scheduler started")
+    try:
+        start_scheduler()
+        logger.info("Analytics scheduler started")
+    except Exception as e:
+        logger.warning(f"Failed to start analytics scheduler: {e}")
     
     # Start delivery confirmation scheduler (checks every hour for auto-delivery)
-    start_delivery_scheduler()
-    logger.info("Delivery confirmation scheduler started")
+    try:
+        start_delivery_scheduler()
+        logger.info("Delivery confirmation scheduler started")
+    except Exception as e:
+        logger.warning(f"Failed to start delivery scheduler: {e}")
     
     # Run initial aggregation if needed (in background)
     try:
@@ -70,11 +198,21 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Initial aggregation skipped: {e}")
     
+    logger.info("Application startup complete")
+    
     yield
     
     # Shutdown
-    stop_scheduler()
-    await close_mongo_connection()
+    try:
+        stop_scheduler()
+    except Exception as e:
+        logger.warning(f"Error stopping scheduler: {e}")
+    
+    try:
+        await close_mongo_connection()
+    except Exception as e:
+        logger.warning(f"Error closing MongoDB connection: {e}")
+    
     logger.info("Application shutdown complete")
 
 
@@ -156,6 +294,7 @@ app.include_router(search_router, prefix="/api")
 app.include_router(tickets_router, prefix="/api")
 app.include_router(payments_router, prefix="/api")
 app.include_router(trades_router, prefix="/api")
+app.include_router(stats_router, prefix="/api")
 
 # Analytics routes
 app.include_router(analytics_router, prefix="/api")
@@ -164,15 +303,27 @@ app.include_router(events_router, prefix="/api")
 # Chatbot routes
 app.include_router(chatbot_router, prefix="/api")
 
-# Health check
+# Stripe Connect V2 Sample routes (demonstration integration)
+app.include_router(stripe_connect_v2_sample_router, prefix="/api")
+
+# Health check endpoints
 @app.get("/api/health")
-async def health_check():
+async def api_health_check():
     return {
         "status": "healthy",
         "app": settings.app_name,
         "environment": settings.environment,
         "storage": "S3" if settings.use_s3 else "Local",
         "analytics": "enabled"
+    }
+
+# Root health check for Kubernetes/deployment health probes
+@app.get("/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "app": settings.app_name,
+        "environment": settings.environment
     }
 
 @app.get("/")

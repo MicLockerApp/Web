@@ -118,19 +118,48 @@ async def search_listings(
     # Get total count
     total = await db.listings.count_documents(filter_query)
     
-    # Get listings
-    cursor = db.listings.find(filter_query)
+    # Build aggregation pipeline for efficient seller rating lookup
+    pipeline = [
+        {"$match": filter_query},
+    ]
+    
+    # Add sorting
+    sort_stage = {}
     for sort_field, sort_dir in sort_options:
-        cursor = cursor.sort(sort_field, sort_dir)
-    cursor = cursor.skip(skip).limit(limit)
+        sort_stage[sort_field] = sort_dir
+    if sort_stage:
+        pipeline.append({"$sort": sort_stage})
     
-    listings = await cursor.to_list(length=limit)
+    # Add pagination
+    pipeline.append({"$skip": skip})
+    pipeline.append({"$limit": limit})
     
-    # Enrich with seller ratings
-    for listing in listings:
-        seller = await db.users.find_one({"id": listing["seller_id"]})
-        if seller:
-            listing["seller_rating"] = seller.get("rating", 0)
+    # Join with users collection to get seller ratings (avoids N+1 queries)
+    pipeline.append({
+        "$lookup": {
+            "from": "users",
+            "localField": "seller_id",
+            "foreignField": "id",
+            "as": "seller_info"
+        }
+    })
+    
+    # Extract seller rating from the lookup result
+    pipeline.append({
+        "$addFields": {
+            "seller_rating": {
+                "$ifNull": [
+                    {"$arrayElemAt": ["$seller_info.rating", 0]},
+                    0
+                ]
+            }
+        }
+    })
+    
+    # Remove the seller_info array (we only needed the rating)
+    pipeline.append({"$project": {"seller_info": 0}})
+    
+    listings = await db.listings.aggregate(pipeline).to_list(length=limit)
     
     return {
         "listings": serialize_docs(listings),

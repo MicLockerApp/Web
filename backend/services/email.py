@@ -338,7 +338,7 @@ async def send_ticket_notification(ticket) -> bool:
         logger.warning("SES client not available - ticket notification not sent")
         return False
     
-    staff_email = "info@miclockerapp.com"
+    staff_email = settings.ses_sender_email  # Use the configured sender email
     subject = f"[MicLocker Support] New Ticket #{ticket.ticket_number}: {ticket.subject}"
     
     html_body = f"""
@@ -421,7 +421,7 @@ MicLocker Support System
         return False
 
 
-async def send_ticket_reply_notification(ticket, reply, is_staff_reply: bool, frontend_url: str = "https://music-gear-swap.preview.emergentagent.com") -> bool:
+async def send_ticket_reply_notification(ticket, reply, is_staff_reply: bool, frontend_url: str = None) -> bool:
     """
     Send email notification when a reply is added to a ticket
     
@@ -429,11 +429,19 @@ async def send_ticket_reply_notification(ticket, reply, is_staff_reply: bool, fr
         ticket: Ticket dict
         reply: TicketReply object
         is_staff_reply: True if staff replied, False if customer
-        frontend_url: Base URL for the frontend app
+        frontend_url: Base URL for the frontend app (uses settings if not provided)
         
     Returns:
         True if email sent successfully
     """
+    from config import settings
+    if frontend_url is None:
+        frontend_url = settings.frontend_url
+    
+    if not frontend_url:
+        logger.warning("FRONTEND_URL not configured - cannot send ticket reply email")
+        return False
+    
     if not email_service.client:
         return False
     
@@ -447,7 +455,7 @@ async def send_ticket_reply_notification(ticket, reply, is_staff_reply: bool, fr
         cta_text = "View Message in Your Inbox"
         show_cta = True
     else:
-        to_email = "info@miclockerapp.com"
+        to_email = settings.ses_sender_email  # Use the configured sender email
         subject = f"[MicLocker Support] Customer Reply - Ticket #{ticket['ticket_number']}"
         intro = f"Customer {ticket['customer_name']} has replied to their ticket."
         cta_url = ""
@@ -570,7 +578,7 @@ MicLocker Support System
         return False
 
 
-async def send_password_setup_email(to_email: str, username: str, setup_token: str, role: str, frontend_url: str = "https://music-gear-swap.preview.emergentagent.com") -> bool:
+async def send_password_setup_email(to_email: str, username: str, setup_token: str, role: str, frontend_url: str = None) -> bool:
     """
     Send email to new employee to set up their password
     
@@ -579,11 +587,19 @@ async def send_password_setup_email(to_email: str, username: str, setup_token: s
         username: Employee username
         setup_token: Password setup token
         role: Employee role (admin, manager, employee)
-        frontend_url: Base URL for the frontend app
+        frontend_url: Base URL for the frontend app (uses settings if not provided)
         
     Returns:
         True if email sent successfully, False otherwise
     """
+    from config import settings
+    if frontend_url is None:
+        frontend_url = settings.frontend_url
+    
+    if not frontend_url:
+        logger.warning("FRONTEND_URL not configured - cannot send employee setup email")
+        return False
+    
     if not email_service.client:
         logger.warning(f"SES client not available - logging setup token instead: {setup_token}")
         return False

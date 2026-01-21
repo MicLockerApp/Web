@@ -1,9 +1,45 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Music, Users, Globe, Heart } from 'lucide-react';
 import VinylLogo from '../components/VinylLogo';
+import api from '../services/api';
 
 const AboutPage = () => {
+  const [stats, setStats] = useState({
+    users: 0,
+    listings: 0,
+    countries: 0,
+    loading: true
+  });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await api.get('/stats/public');
+        setStats({
+          users: response.data.total_users || 0,
+          listings: response.data.total_listings || 0,
+          countries: response.data.total_countries || 0,
+          loading: false
+        });
+      } catch (error) {
+        console.error('Failed to fetch stats:', error);
+        setStats(prev => ({ ...prev, loading: false }));
+      }
+    };
+
+    fetchStats();
+  }, []);
+
+  const formatNumber = (num) => {
+    if (num >= 1000000) {
+      return (num / 1000000).toFixed(1) + 'M+';
+    } else if (num >= 1000) {
+      return (num / 1000).toFixed(1) + 'K+';
+    }
+    return num.toString();
+  };
+
   return (
     <div className="min-h-screen" data-testid="about-page">
       {/* Hero Section */}
@@ -44,30 +80,8 @@ const AboutPage = () => {
         </div>
       </section>
 
-      {/* Our Story */}
-      <section className="py-20 px-4">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold text-white text-center mb-12">Our Story</h2>
-          
-          <div className="bg-dark-400 rounded-2xl p-8 md:p-12">
-            <p className="text-gray-300 text-lg leading-relaxed mb-6">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-            </p>
-            <p className="text-gray-300 text-lg leading-relaxed mb-6">
-              Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-            </p>
-            <p className="text-gray-300 text-lg leading-relaxed mb-6">
-              Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
-            </p>
-            <p className="text-gray-300 text-lg leading-relaxed">
-              Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.
-            </p>
-          </div>
-        </div>
-      </section>
-
       {/* What We Offer */}
-      <section className="py-20 px-4 bg-dark-500">
+      <section className="py-20 px-4">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-bold text-white text-center mb-12">What We Offer</h2>
           
@@ -117,27 +131,38 @@ const AboutPage = () => {
         </div>
       </section>
 
-      {/* Stats */}
-      <section className="py-20 px-4">
+      {/* Dynamic Stats */}
+      <section className="py-20 px-4 bg-dark-500">
         <div className="max-w-5xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {[
-              { number: '2026', label: 'Founded' },
-              { number: '100K+', label: 'Community Members' },
-              { number: '50K+', label: 'Items Listed' },
-              { number: '180+', label: 'Countries' },
-            ].map((stat, index) => (
-              <div key={index} className="text-center">
-                <p className="text-4xl md:text-5xl font-bold text-primary mb-2">{stat.number}</p>
-                <p className="text-gray-400">{stat.label}</p>
-              </div>
-            ))}
+            <div className="text-center">
+              <p className="text-4xl md:text-5xl font-bold text-primary mb-2">2026</p>
+              <p className="text-gray-400">Founded</p>
+            </div>
+            <div className="text-center">
+              <p className="text-4xl md:text-5xl font-bold text-primary mb-2">
+                {stats.loading ? '...' : formatNumber(stats.users)}
+              </p>
+              <p className="text-gray-400">Community Members</p>
+            </div>
+            <div className="text-center">
+              <p className="text-4xl md:text-5xl font-bold text-primary mb-2">
+                {stats.loading ? '...' : formatNumber(stats.listings)}
+              </p>
+              <p className="text-gray-400">Items Listed</p>
+            </div>
+            <div className="text-center">
+              <p className="text-4xl md:text-5xl font-bold text-primary mb-2">
+                {stats.loading ? '...' : stats.countries}
+              </p>
+              <p className="text-gray-400">Countries</p>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Values */}
-      <section className="py-20 px-4 bg-dark-500">
+      <section className="py-20 px-4">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-bold text-white text-center mb-12">Our Values</h2>
           
@@ -177,13 +202,13 @@ const AboutPage = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 px-4">
+      <section className="py-24 px-4 bg-dark-500">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-3xl font-bold text-white mb-6">
             Join MicLocker to Buy, Sell, and Connect
           </h2>
           <p className="text-gray-400 text-lg mb-10">
-            Become part of the world's most musical marketplace.
+            Become part of the world&apos;s most musical marketplace.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/register" className="btn btn-primary px-8 py-3 inline-flex items-center gap-2">

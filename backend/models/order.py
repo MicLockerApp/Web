@@ -68,7 +68,7 @@ class OrderInDB(BaseModel):
     subtotal: float
     shipping_total: float
     platform_fee: float  # 3% of subtotal (goes to MicLocker) - 0% for trades
-    payment_processing_fee: float = 0.0  # 3.19% + $0.49 (goes to payment processor)
+    payment_processing_fee: float = 0.0  # 2.9% + $0.30 (goes to payment processor)
     total: float
     
     # Trade order flag
