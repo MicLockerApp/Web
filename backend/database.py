@@ -44,27 +44,23 @@ async def connect_to_mongo():
         # Create client with appropriate settings for Atlas
         db.client = AsyncIOMotorClient(
             mongo_url,
-            serverSelectionTimeoutMS=30000,  # 30 second timeout
+            serverSelectionTimeoutMS=30000,
             connectTimeoutMS=30000,
             socketTimeoutMS=30000,
             retryWrites=True
         )
         
-        # Get database name - this is critical for Atlas authorization
-        db_name = get_database_name_from_url(mongo_url)
-        logger.info(f"Selected database name: {db_name}")
+        # Get database name based on environment (DB_DEVELOP or DB_PROD)
+        db_name = get_database_name()
         db.db = db.client[db_name]
         
-        # Test connection by listing collection names
-        # This verifies we have authorization on the selected database
+        # Test connection
         try:
             collections = await db.db.list_collection_names()
             logger.info(f"Connected to MongoDB database: {db_name} (collections: {len(collections)})")
         except Exception as ping_error:
-            # Log the full error for debugging authorization issues
-            logger.error(f"Database authorization failed for '{db_name}': {ping_error}")
-            logger.error("MONGO_URL database extraction may have failed. Check if DB_NAME env var is set correctly.")
-            raise  # Re-raise to prevent app from starting with broken DB
+            logger.error(f"Database connection failed for '{db_name}': {ping_error}")
+            raise
         
         # Create indexes
         await create_indexes()
