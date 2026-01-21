@@ -102,7 +102,7 @@ async def connect_to_mongo():
         except Exception as ping_error:
             # Log the full error for debugging authorization issues
             logger.error(f"Database authorization failed for '{db_name}': {ping_error}")
-            logger.error(f"MONGO_URL database extraction may have failed. Check if DB_NAME env var is set correctly.")
+            logger.error("MONGO_URL database extraction may have failed. Check if DB_NAME env var is set correctly.")
             raise  # Re-raise to prevent app from starting with broken DB
         
         # Create indexes
