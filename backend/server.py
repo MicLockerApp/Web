@@ -197,6 +197,9 @@ app.include_router(events_router, prefix="/api")
 # Chatbot routes
 app.include_router(chatbot_router, prefix="/api")
 
+# Stripe Connect V2 Sample routes (demonstration integration)
+app.include_router(stripe_connect_v2_sample_router, prefix="/api")
+
 # Health check endpoints
 @app.get("/api/health")
 async def api_health_check():
