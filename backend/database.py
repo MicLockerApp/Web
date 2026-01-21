@@ -13,34 +13,33 @@ db = Database()
 
 def get_database_name() -> str:
     """
-    Get database name:
-    1. If DB_NAME is set (Emergent production), use it
-    2. Otherwise use DB_DEVELOP (local) or DB_PROD (production) based on ENVIRONMENT
-    """
-    # First check if Emergent provided a DB_NAME (production Atlas)
-    db_name = os.getenv("DB_NAME")
-    if db_name:
-        logger.info(f"Using Emergent-provided database: {db_name}")
-        return db_name
+    Get database name based on ENVIRONMENT only.
     
-    # Fall back to our naming convention
+    IMPORTANT: We IGNORE the DB_NAME environment variable because Emergent's 
+    production was pointing to an old database with seed data.
+    
+    PRODUCTION = DB_PROD (clean database)
+    DEVELOPMENT = DB_DEVELOP (local testing)
+    """
     env = os.getenv("ENVIRONMENT", "development").lower()
+    
     if env in ["production", "prod"]:
         db_name = "DB_PROD"
+        logger.info(f"PRODUCTION MODE: Using database DB_PROD")
     else:
         db_name = "DB_DEVELOP"
+        logger.info(f"DEVELOPMENT MODE: Using database DB_DEVELOP")
     
-    logger.info(f"Using database: {db_name} (environment: {env})")
     return db_name
 
 async def connect_to_mongo():
     """Connect to MongoDB"""
-    mongo_url = settings.mongo_url
+    mongo_url = os.getenv("MONGO_URL", "mongodb://localhost:27017")
     
-    # Log connection attempt (mask credentials)
+    # Log connection (mask credentials)
     if '@' in mongo_url:
-        masked_url = mongo_url.split('@')[1] if '@' in mongo_url else mongo_url
-        logger.info(f"Connecting to MongoDB at ...@{masked_url}")
+        masked = mongo_url.split('@')[1]
+        logger.info(f"Connecting to MongoDB at ...@{masked}")
     else:
         logger.info(f"Connecting to MongoDB at {mongo_url}")
     
@@ -53,15 +52,16 @@ async def connect_to_mongo():
             retryWrites=True
         )
         
+        # Get database name (DB_PROD or DB_DEVELOP based on ENVIRONMENT)
         db_name = get_database_name()
         db.db = db.client[db_name]
         
         # Test connection
         try:
             collections = await db.db.list_collection_names()
-            logger.info(f"Connected to MongoDB database: {db_name} (collections: {len(collections)})")
-        except Exception as ping_error:
-            logger.error(f"Database connection failed for '{db_name}': {ping_error}")
+            logger.info(f"Connected to database: {db_name} ({len(collections)} collections)")
+        except Exception as e:
+            logger.error(f"Database connection failed: {e}")
             raise
         
         await create_indexes()
@@ -71,10 +71,9 @@ async def connect_to_mongo():
         raise
 
 async def close_mongo_connection():
-    """Close MongoDB connection"""
     if db.client:
         db.client.close()
-        logger.info("Closed MongoDB connection")
+        logger.info("MongoDB connection closed")
 
 async def create_indexes():
     """Create database indexes"""
