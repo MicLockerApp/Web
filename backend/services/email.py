@@ -338,7 +338,7 @@ async def send_ticket_notification(ticket) -> bool:
         logger.warning("SES client not available - ticket notification not sent")
         return False
     
-    staff_email = "info@miclockerapp.com"
+    staff_email = settings.ses_sender_email  # Use the configured sender email
     subject = f"[MicLocker Support] New Ticket #{ticket.ticket_number}: {ticket.subject}"
     
     html_body = f"""
@@ -436,7 +436,11 @@ async def send_ticket_reply_notification(ticket, reply, is_staff_reply: bool, fr
     """
     from config import settings
     if frontend_url is None:
-        frontend_url = settings.frontend_url or "https://miclockerapp.com"
+        frontend_url = settings.frontend_url
+    
+    if not frontend_url:
+        logger.warning("FRONTEND_URL not configured - cannot send ticket reply email")
+        return False
     
     if not email_service.client:
         return False
@@ -451,7 +455,7 @@ async def send_ticket_reply_notification(ticket, reply, is_staff_reply: bool, fr
         cta_text = "View Message in Your Inbox"
         show_cta = True
     else:
-        to_email = "info@miclockerapp.com"
+        to_email = settings.ses_sender_email  # Use the configured sender email
         subject = f"[MicLocker Support] Customer Reply - Ticket #{ticket['ticket_number']}"
         intro = f"Customer {ticket['customer_name']} has replied to their ticket."
         cta_url = ""
@@ -590,7 +594,11 @@ async def send_password_setup_email(to_email: str, username: str, setup_token: s
     """
     from config import settings
     if frontend_url is None:
-        frontend_url = settings.frontend_url or "https://miclockerapp.com"
+        frontend_url = settings.frontend_url
+    
+    if not frontend_url:
+        logger.warning("FRONTEND_URL not configured - cannot send employee setup email")
+        return False
     
     if not email_service.client:
         logger.warning(f"SES client not available - logging setup token instead: {setup_token}")

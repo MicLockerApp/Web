@@ -29,9 +29,22 @@ class Settings(BaseSettings):
         # In production, set CORS_ALLOWED_ORIGINS to specific domains
         return ["*"]
     
-    # MongoDB - Read database name from env
+    # MongoDB Configuration
+    # DEVELOPMENT: Uses DB_DEVELOP
+    # PRODUCTION: Uses DB_PROD
     mongo_url: str = os.getenv("MONGO_URL", "mongodb://localhost:27017")
-    database_name: str = os.getenv("DATABASE_NAME", "miclocker")
+    
+    @property
+    def database_name(self) -> str:
+        """
+        Get database name based on environment:
+        - Production: DB_PROD
+        - Development: DB_DEVELOP
+        """
+        env = os.getenv("ENVIRONMENT", "development").lower()
+        if env in ["production", "prod"]:
+            return "DB_PROD"
+        return "DB_DEVELOP"
     
     # AWS S3
     aws_access_key_id: Optional[str] = os.getenv("AWS_ACCESS_KEY_ID") or None
@@ -50,9 +63,9 @@ class Settings(BaseSettings):
     # Platform Settings
     platform_fee_percent: float = float(os.getenv("PLATFORM_FEE_PERCENT", "3"))
     
-    # Payment Processing Fee (Stripe-like: 3.19% + $0.49)
-    payment_processing_percent: float = float(os.getenv("PAYMENT_PROCESSING_PERCENT", "3.19"))
-    payment_processing_fixed: float = float(os.getenv("PAYMENT_PROCESSING_FIXED", "0.49"))
+    # Payment Processing Fee (Stripe standard: 2.9% + $0.30)
+    payment_processing_percent: float = float(os.getenv("PAYMENT_PROCESSING_PERCENT", "2.9"))
+    payment_processing_fixed: float = float(os.getenv("PAYMENT_PROCESSING_FIXED", "0.30"))
     
     # AI Chatbot (Emergent LLM Key)
     emergent_llm_key: Optional[str] = os.getenv("EMERGENT_LLM_KEY") or None
