@@ -18,53 +18,54 @@ def get_database_name_from_url(mongo_url: str) -> str:
     
     For Emergent deployments with Atlas, the database name is typically
     embedded in the MONGO_URL and should be extracted from there.
-    The DATABASE_NAME env var is a fallback for local development.
+    The DB_NAME / DATABASE_NAME env vars are fallbacks.
     
     Atlas URL formats:
     - mongodb+srv://user:pass@cluster.mongodb.net/dbname?retryWrites=true
     - mongodb+srv://user:pass@cluster.mongodb.net/?retryWrites=true (no db name)
     - mongodb://localhost:27017/dbname
+    - mongodb://localhost:27017 (no db name)
     """
-    # First, check if DATABASE_NAME is explicitly set in environment (not the default)
-    env_db_name = os.getenv("DB_NAME") or os.getenv("DATABASE_NAME")
+    # First, check if DB_NAME is explicitly set in environment
+    env_db_name = os.getenv("DB_NAME")
+    if env_db_name:
+        logger.info(f"Using database name from DB_NAME env var: {env_db_name}")
+        return env_db_name
     
     # For Atlas URLs, try to extract database name from the URL path
-    # This handles: mongodb+srv://user:pass@host/dbname?params
     try:
-        # Handle mongodb+srv:// URLs
-        if mongo_url.startswith("mongodb+srv://") or mongo_url.startswith("mongodb://"):
-            # Find the part after the host and before query params
-            # Pattern: ...@host/dbname?... or ...@host/dbname
+        # Handle mongodb+srv:// URLs (Atlas)
+        if mongo_url.startswith("mongodb+srv://"):
+            # Pattern: mongodb+srv://user:pass@host/dbname?params
             match = re.search(r'@[^/]+/([^?/]+)', mongo_url)
             if match:
                 url_db_name = match.group(1)
                 if url_db_name and url_db_name not in ['', 'admin', 'local', 'test']:
-                    logger.info(f"Using database name from URL: {url_db_name}")
+                    logger.info(f"Using database name from Atlas URL: {url_db_name}")
                     return url_db_name
         
-        # Try simple path extraction as fallback
-        if '/' in mongo_url:
-            # Get the part after the last / and before any ?
-            path_part = mongo_url.split('/')[-1]
-            if '?' in path_part:
-                db_name = path_part.split('?')[0]
-            else:
-                db_name = path_part
-            
-            # If we got a valid db name from URL, use it
-            if db_name and db_name not in ['', 'admin', 'local']:
-                logger.info(f"Using database name from URL path: {db_name}")
-                return db_name
+        # Handle mongodb:// URLs (standard format)
+        elif mongo_url.startswith("mongodb://"):
+            # Pattern: mongodb://host:port/dbname or mongodb://user:pass@host:port/dbname
+            # Extract the path after the host:port
+            match = re.search(r'mongodb://[^/]+/([^?/]+)', mongo_url)
+            if match:
+                url_db_name = match.group(1)
+                if url_db_name and url_db_name not in ['', 'admin', 'local']:
+                    logger.info(f"Using database name from MongoDB URL: {url_db_name}")
+                    return url_db_name
+                    
     except Exception as e:
         logger.warning(f"Error parsing database name from URL: {e}")
     
-    # Use environment variable if set
-    if env_db_name:
-        logger.info(f"Using database name from environment: {env_db_name}")
-        return env_db_name
+    # Check DATABASE_NAME env var as fallback
+    env_database_name = os.getenv("DATABASE_NAME")
+    if env_database_name:
+        logger.info(f"Using database name from DATABASE_NAME env var: {env_database_name}")
+        return env_database_name
     
-    # Final fallback to settings (which reads from DATABASE_NAME env var)
-    logger.info(f"Using database name from settings: {settings.database_name}")
+    # Final fallback to settings default
+    logger.info(f"Using default database name from settings: {settings.database_name}")
     return settings.database_name
 
 async def connect_to_mongo():
