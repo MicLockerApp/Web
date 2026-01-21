@@ -55,8 +55,26 @@ async def ensure_admin_user_exists():
     - Role: owner
     """
     db = get_database()
+    env = os.getenv("ENVIRONMENT", "development").lower()
     
-    # Check if admin user already exists
+    # In PRODUCTION, check if there's seed data and clear it
+    if env in ["production", "prod"]:
+        user_count = await db.users.count_documents({})
+        listing_count = await db.listings.count_documents({})
+        
+        # If there are multiple users or any listings, this is seed data - CLEAR IT
+        if user_count > 1 or listing_count > 0:
+            logger.warning(f"SEED DATA DETECTED: {user_count} users, {listing_count} listings - CLEARING ALL DATA")
+            
+            # Get all collection names and clear them
+            collections = await db.list_collection_names()
+            for coll_name in collections:
+                await db[coll_name].delete_many({})
+                logger.info(f"Cleared collection: {coll_name}")
+            
+            logger.info("ALL SEED DATA CLEARED - Database is now clean")
+    
+    # Check if admin user exists
     existing_user = await db.users.find_one({"username": "miclocker.support"})
     
     if existing_user:
