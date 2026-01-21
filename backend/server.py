@@ -57,6 +57,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Failed to create analytics indexes: {e}")
     
+    # CRITICAL: Create admin user if it doesn't exist
+    # This ensures the admin user exists on ANY MongoDB server (local or production Atlas)
+    try:
+        await ensure_admin_user_exists()
+    except Exception as e:
+        logger.error(f"Failed to create admin user: {e}")
+    
     # Ensure support system user exists for in-app messaging
     try:
         from services.message_service import ensure_support_user_exists
@@ -64,8 +71,6 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Failed to create support user: {e}")
     
-    # SEED DATA COMPLETELY DISABLED
-    # Both DB_DEVELOP and DB_PROD should remain clean with only admin user
     logger.info(f"Using database: {settings.database_name} (environment: {settings.environment})")
     
     # Start analytics background scheduler
