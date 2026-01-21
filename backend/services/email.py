@@ -436,7 +436,11 @@ async def send_ticket_reply_notification(ticket, reply, is_staff_reply: bool, fr
     """
     from config import settings
     if frontend_url is None:
-        frontend_url = settings.frontend_url or "https://miclockerapp.com"
+        frontend_url = settings.frontend_url
+    
+    if not frontend_url:
+        logger.warning("FRONTEND_URL not configured - cannot send ticket reply email")
+        return False
     
     if not email_service.client:
         return False
