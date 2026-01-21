@@ -71,7 +71,7 @@ async def connect_to_mongo():
     """Connect to MongoDB"""
     mongo_url = settings.mongo_url
     
-    # Mask credentials in log
+    # Log connection attempt (mask credentials)
     if '@' in mongo_url:
         masked_url = mongo_url.split('@')[1] if '@' in mongo_url else mongo_url
         logger.info(f"Connecting to MongoDB at ...@{masked_url}")
@@ -80,7 +80,6 @@ async def connect_to_mongo():
     
     try:
         # Create client with appropriate settings for Atlas
-        # Note: Don't set w='majority' as it may not be supported on all Atlas tiers
         db.client = AsyncIOMotorClient(
             mongo_url,
             serverSelectionTimeoutMS=30000,  # 30 second timeout
@@ -89,18 +88,21 @@ async def connect_to_mongo():
             retryWrites=True
         )
         
-        # Get database name
+        # Get database name - this is critical for Atlas authorization
         db_name = get_database_name_from_url(mongo_url)
+        logger.info(f"Selected database name: {db_name}")
         db.db = db.client[db_name]
         
-        # Test connection by listing collection names instead of admin ping
-        # This works with standard user permissions on Atlas
+        # Test connection by listing collection names
+        # This verifies we have authorization on the selected database
         try:
-            await db.db.list_collection_names()
-            logger.info(f"Connected to MongoDB database: {db_name}")
+            collections = await db.db.list_collection_names()
+            logger.info(f"Connected to MongoDB database: {db_name} (collections: {len(collections)})")
         except Exception as ping_error:
-            logger.warning(f"Could not verify connection: {ping_error}")
-            # Continue anyway - the connection may still work
+            # Log the full error for debugging authorization issues
+            logger.error(f"Database authorization failed for '{db_name}': {ping_error}")
+            logger.error(f"MONGO_URL database extraction may have failed. Check if DB_NAME env var is set correctly.")
+            raise  # Re-raise to prevent app from starting with broken DB
         
         # Create indexes
         await create_indexes()
