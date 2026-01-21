@@ -270,6 +270,7 @@ MicLocker is a production-ready full-stack marketplace where musicians, audio en
 ## Pending Tasks
 
 ### P0 (Critical)
+- **PRODUCTION DEPLOYMENT REQUIRED** - Login/registration on live site is failing because the deployment is out-of-sync with code changes. Redeploy to fix.
 - **Enable Stripe Connect in Stripe Dashboard** - Required before sellers can onboard
   - Go to: https://dashboard.stripe.com/connect/onboarding
   - Complete platform profile
