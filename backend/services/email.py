@@ -455,7 +455,7 @@ async def send_ticket_reply_notification(ticket, reply, is_staff_reply: bool, fr
         cta_text = "View Message in Your Inbox"
         show_cta = True
     else:
-        to_email = "info@miclockerapp.com"
+        to_email = settings.ses_sender_email  # Use the configured sender email
         subject = f"[MicLocker Support] Customer Reply - Ticket #{ticket['ticket_number']}"
         intro = f"Customer {ticket['customer_name']} has replied to their ticket."
         cta_url = ""
