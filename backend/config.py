@@ -51,9 +51,9 @@ class Settings(BaseSettings):
     # Platform Settings
     platform_fee_percent: float = float(os.getenv("PLATFORM_FEE_PERCENT", "3"))
     
-    # Payment Processing Fee (Stripe-like: 3.19% + $0.49)
-    payment_processing_percent: float = float(os.getenv("PAYMENT_PROCESSING_PERCENT", "3.19"))
-    payment_processing_fixed: float = float(os.getenv("PAYMENT_PROCESSING_FIXED", "0.49"))
+    # Payment Processing Fee (Stripe standard: 2.9% + $0.30)
+    payment_processing_percent: float = float(os.getenv("PAYMENT_PROCESSING_PERCENT", "2.9"))
+    payment_processing_fixed: float = float(os.getenv("PAYMENT_PROCESSING_FIXED", "0.30"))
     
     # AI Chatbot (Emergent LLM Key)
     emergent_llm_key: Optional[str] = os.getenv("EMERGENT_LLM_KEY") or None
