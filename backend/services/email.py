@@ -338,7 +338,7 @@ async def send_ticket_notification(ticket) -> bool:
         logger.warning("SES client not available - ticket notification not sent")
         return False
     
-    staff_email = "info@miclockerapp.com"
+    staff_email = settings.ses_sender_email  # Use the configured sender email
     subject = f"[MicLocker Support] New Ticket #{ticket.ticket_number}: {ticket.subject}"
     
     html_body = f"""
