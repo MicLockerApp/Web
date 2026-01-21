@@ -13,12 +13,17 @@ db = Database()
 
 def get_database_name() -> str:
     """
-    Get database name based on environment:
-    - PRODUCTION: DB_PROD
-    - DEVELOPMENT: DB_DEVELOP
-    
-    Simple and direct - no env variables needed.
+    Get database name:
+    1. If DB_NAME is set (Emergent production), use it
+    2. Otherwise use DB_DEVELOP (local) or DB_PROD (production) based on ENVIRONMENT
     """
+    # First check if Emergent provided a DB_NAME (production Atlas)
+    db_name = os.getenv("DB_NAME")
+    if db_name:
+        logger.info(f"Using Emergent-provided database: {db_name}")
+        return db_name
+    
+    # Fall back to our naming convention
     env = os.getenv("ENVIRONMENT", "development").lower()
     if env in ["production", "prod"]:
         db_name = "DB_PROD"
@@ -40,7 +45,6 @@ async def connect_to_mongo():
         logger.info(f"Connecting to MongoDB at {mongo_url}")
     
     try:
-        # Create client with appropriate settings for Atlas
         db.client = AsyncIOMotorClient(
             mongo_url,
             serverSelectionTimeoutMS=30000,
@@ -49,7 +53,6 @@ async def connect_to_mongo():
             retryWrites=True
         )
         
-        # Get database name based on environment (DB_DEVELOP or DB_PROD)
         db_name = get_database_name()
         db.db = db.client[db_name]
         
@@ -61,7 +64,6 @@ async def connect_to_mongo():
             logger.error(f"Database connection failed for '{db_name}': {ping_error}")
             raise
         
-        # Create indexes
         await create_indexes()
         
     except Exception as e:
@@ -75,42 +77,28 @@ async def close_mongo_connection():
         logger.info("Closed MongoDB connection")
 
 async def create_indexes():
-    """Create database indexes for better query performance"""
-    # Users collection indexes
+    """Create database indexes"""
     await db.db.users.create_index("username", unique=True)
     await db.db.users.create_index("email", unique=True)
-    
-    # Listings collection indexes
     await db.db.listings.create_index([("title", "text"), ("description", "text"), ("brand", "text"), ("model", "text")])
     await db.db.listings.create_index("seller_id")
     await db.db.listings.create_index("category")
     await db.db.listings.create_index("status")
     await db.db.listings.create_index("price")
     await db.db.listings.create_index("created_at")
-    
-    # Orders collection indexes
     await db.db.orders.create_index("buyer_id")
     await db.db.orders.create_index("seller_id")
     await db.db.orders.create_index("status")
-    
-    # Offers collection indexes
     await db.db.offers.create_index("listing_id")
     await db.db.offers.create_index("buyer_id")
     await db.db.offers.create_index("seller_id")
-    
-    # Messages collection indexes
     await db.db.messages.create_index("thread_id")
     await db.db.message_threads.create_index("participants")
-    
-    # Reviews collection indexes - allows bidirectional reviews (buyer->seller & seller->buyer)
     await db.db.reviews.create_index("seller_id")
     await db.db.reviews.create_index("reviewee_id")
     await db.db.reviews.create_index("reviewer_id")
     await db.db.reviews.create_index([("order_id", 1), ("review_type", 1)], unique=True)
-    
-    # Cart items indexes
     await db.db.cart_items.create_index("user_id")
-    
     logger.info("Database indexes created")
 
 def get_database():
