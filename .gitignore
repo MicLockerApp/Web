@@ -36,3 +36,7 @@ uploads/
 *.tmp
 *.temp
 .cache/
+-e 
+# Environment files
+*.env
+*.env.*
