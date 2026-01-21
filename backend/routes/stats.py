@@ -26,37 +26,56 @@ async def get_public_stats():
     db = get_database()
     
     try:
-        # Count users (exclude system users)
+        # Count users (exclude system users and employees)
         total_users = await db.users.count_documents({
-            "is_system_user": {"$ne": True}
+            "is_system_user": {"$ne": True},
+            "is_employee": {"$ne": True}
         })
         
         # Count all listings ever created (active, sold, traded, etc.)
         total_listings = await db.listings.count_documents({})
         
-        # Get unique countries from users
-        # Users store location as a string, we need to extract unique values
-        pipeline = [
-            {"$match": {"is_system_user": {"$ne": True}}},
-            {"$match": {"country": {"$exists": True, "$ne": None, "$ne": ""}}},
-            {"$group": {"_id": "$country"}},
+        # Get unique countries from shipping_address.country
+        pipeline_shipping = [
+            {"$match": {
+                "is_system_user": {"$ne": True},
+                "is_employee": {"$ne": True}
+            }},
+            {"$match": {"shipping_address.country": {"$exists": True, "$ne": None, "$ne": ""}}},
+            {"$group": {"_id": "$shipping_address.country"}},
             {"$count": "total"}
         ]
+        shipping_result = await db.users.aggregate(pipeline_shipping).to_list(length=1)
+        total_countries = shipping_result[0]["total"] if shipping_result else 0
         
-        countries_result = await db.users.aggregate(pipeline).to_list(length=1)
-        total_countries = countries_result[0]["total"] if countries_result else 0
-        
-        # If no countries tracked yet, also check shipping addresses for country data
+        # If no countries from shipping address, try to get from location field
         if total_countries == 0:
-            # Try to get countries from shipping_address.country field
-            pipeline_shipping = [
-                {"$match": {"is_system_user": {"$ne": True}}},
-                {"$match": {"shipping_address.country": {"$exists": True, "$ne": None, "$ne": ""}}},
-                {"$group": {"_id": "$shipping_address.country"}},
+            # Get unique locations (might contain city, state, country)
+            pipeline_location = [
+                {"$match": {
+                    "is_system_user": {"$ne": True},
+                    "is_employee": {"$ne": True},
+                    "location": {"$exists": True, "$ne": None, "$ne": ""}
+                }},
+                {"$group": {"_id": "$location"}},
                 {"$count": "total"}
             ]
-            shipping_result = await db.users.aggregate(pipeline_shipping).to_list(length=1)
-            total_countries = shipping_result[0]["total"] if shipping_result else 0
+            location_result = await db.users.aggregate(pipeline_location).to_list(length=1)
+            # Use locations as a rough proxy for geographic diversity
+            total_countries = min(location_result[0]["total"] if location_result else 0, 50)
+        
+        # Ensure we show at least 1 if we have any users with location data
+        if total_countries == 0 and total_users > 0:
+            # Check if any user has any location-related data
+            user_with_location = await db.users.find_one({
+                "is_system_user": {"$ne": True},
+                "$or": [
+                    {"location": {"$exists": True, "$ne": None, "$ne": ""}},
+                    {"shipping_address.country": {"$exists": True, "$ne": None, "$ne": ""}}
+                ]
+            })
+            if user_with_location:
+                total_countries = 1
         
         return {
             "total_users": total_users,
