@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ShoppingCart, MessageSquare, Heart, Share2, Star, ChevronLeft, ChevronRight, Check, X, Copy, Facebook, Twitter, Mail, Link as LinkIcon, ArrowLeftRight } from 'lucide-react';
+import { ShoppingCart, MessageSquare, Heart, Share2, Star, ChevronLeft, ChevronRight, Check, X, Copy, Facebook, Twitter, Mail, Link as LinkIcon, ArrowLeftRight, Flag } from 'lucide-react';
 import { listingsAPI, offersAPI, cartAPI, usersAPI, tradesAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import StarRating from '../components/StarRating';
 import analytics from '../services/analytics';
+import ReportListingModal from '../components/ReportListingModal';
 
 const ListingDetailPage = () => {
   const { id } = useParams();
@@ -20,6 +21,7 @@ const ListingDetailPage = () => {
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showTradeModal, setShowTradeModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const [offerPrice, setOfferPrice] = useState('');
   const [offerMessage, setOfferMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -325,6 +327,17 @@ const ListingDetailPage = () => {
                 >
                   <Share2 className="w-5 h-5 text-gray-400" />
                 </button>
+                {/* Report/Flag Button - only show if not own listing */}
+                {user?.id !== listing.seller_id && (
+                  <button 
+                    onClick={() => isAuthenticated ? setShowReportModal(true) : navigate('/login')}
+                    className="p-2 bg-dark-400 rounded-lg hover:bg-dark-300 hover:text-red-400 transition-colors"
+                    data-testid="report-button"
+                    title="Report this listing"
+                  >
+                    <Flag className="w-5 h-5 text-gray-400" />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -671,6 +684,13 @@ const ListingDetailPage = () => {
           </div>
         </div>
       )}
+
+      {/* Report Listing Modal */}
+      <ReportListingModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        listing={listing}
+      />
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
-import { ArrowLeft, Search, TrendingUp, DollarSign, Sparkles, Filter, Info, HelpCircle, BarChart3, Eye, Tag } from 'lucide-react';
+import { ArrowLeft, Search, Filter, HelpCircle, BarChart3, Eye } from 'lucide-react';
 
 const SearchAndAdRankingPage = () => {
   const { isDark } = useTheme();
@@ -41,21 +41,6 @@ const SearchAndAdRankingPage = () => {
       factor: 'Location',
       weight: 'Low',
       description: 'When relevant, items located closer to the searcher may be prioritized for faster delivery.'
-    }
-  ];
-
-  const promotedFeatures = [
-    {
-      icon: Sparkles,
-      name: 'Bump',
-      description: 'Temporarily boost your listing to appear at the top of relevant search results and category pages.',
-      howItWorks: 'Pay a small fee to increase visibility for 24-48 hours. Bumped listings are labeled as "Featured" for transparency.'
-    },
-    {
-      icon: Tag,
-      name: 'Sale Events',
-      description: 'Participate in marketplace-wide sales events that get additional homepage placement and email promotion.',
-      howItWorks: 'Opt in to sale events and set discounts. Participating listings receive a "Sale" badge and priority placement.'
     }
   ];
 
@@ -186,70 +171,11 @@ const SearchAndAdRankingPage = () => {
           </div>
         </section>
 
-        {/* Promoted Listings */}
-        <section className="mb-12">
-          <h2 className={`text-2xl font-bold mb-6 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            <TrendingUp className="w-6 h-6 text-primary" />
-            Promoted & Featured Listings
-          </h2>
-          <p className={`mb-6 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-            Sellers can choose to promote their listings for additional visibility. Promoted content is always clearly labeled.
-          </p>
-          <div className="space-y-4">
-            {promotedFeatures.map((feature, index) => (
-              <div key={index} className={`rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white shadow-md'}`}>
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
-                    <feature.icon className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className={`text-lg font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      {feature.name}
-                    </h3>
-                    <p className={`mb-2 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-                      {feature.description}
-                    </p>
-                    <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                      <strong>How it works:</strong> {feature.howItWorks}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Labels and Disclosure */}
-        <section className="mb-12">
-          <h2 className={`text-2xl font-bold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            How We Label Promoted Content
-          </h2>
-          <div className={`rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white shadow-md'}`}>
-            <p className={`mb-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-              All promoted content on MicLocker is clearly marked so you always know when a listing has paid for increased visibility:
-            </p>
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-sm font-medium">Featured</span>
-                <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>Listings that have used the Bump feature</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="px-3 py-1 rounded-full bg-red-500/20 text-red-400 text-sm font-medium">Sale</span>
-                <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>Listings participating in a sale event with discounted pricing</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-sm font-medium">Sponsored</span>
-                <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>Content promoted by a brand or shop partnership</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
         {/* Tips for Sellers */}
         <section className="mb-12">
           <h2 className={`text-2xl font-bold mb-6 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
             <HelpCircle className="w-6 h-6 text-primary" />
-            Tips for Better Visibility (Without Paying)
+            Tips for Better Visibility
           </h2>
           <div className={`rounded-xl p-6 ${isDark ? 'bg-green-500/10 border border-green-500/20' : 'bg-green-50 border border-green-200'}`}>
             <p className={`mb-4 ${isDark ? 'text-green-300/90' : 'text-green-800'}`}>

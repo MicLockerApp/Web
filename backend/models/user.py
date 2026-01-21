@@ -144,6 +144,9 @@ class UserInDB(BaseModel):
     email_verified: bool = False  # Email verification status
     # Lifetime 0% platform fee for first 300 users
     has_lifetime_free_fees: bool = False
+    # Gold Member badge for first 300 users
+    is_gold_member: bool = False
+    signup_number: Optional[int] = None  # Track signup order
     # Employee system - employees don't count toward user count
     is_employee: bool = False
     # Employee role: 'admin', 'manager', 'employee' (only applies if is_admin or is_employee)
@@ -199,6 +202,10 @@ class UserInDB(BaseModel):
     total_sales: int = 0
     total_purchases: int = 0  # Track completed purchases
     
+    # Special badges
+    is_founder: bool = False
+    is_gold_member: bool = False
+    
     # Review Gating - After first transaction, users must review before next action
     pending_review_order_id: Optional[str] = None  # Order that needs to be reviewed
     pending_review_type: Optional[str] = None  # "buyer" or "seller" - which role needs review
@@ -229,6 +236,9 @@ class UserResponse(BaseModel):
     profile_completed: bool = False
     email_verified: bool = False
     has_lifetime_free_fees: bool = False
+    is_gold_member: bool = False
+    is_founder: bool = False
+    signup_number: Optional[int] = None
     bio: Optional[str] = None
     location: Optional[str] = None
     profile_image: Optional[str] = None
@@ -328,6 +338,9 @@ class UserPublicProfile(BaseModel):
     review_count: int = 0
     total_sales: int = 0
     total_purchases: int = 0
+    # Special badges
+    is_founder: bool = False
+    is_gold_member: bool = False
     # Review gating
     pending_review_order_id: Optional[str] = None
     pending_review_type: Optional[str] = None

@@ -7,6 +7,8 @@ import { useTheme } from '../context/ThemeContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ListingCard from '../components/ListingCard';
 import StarRating from '../components/StarRating';
+import GoldMemberBadge from '../components/GoldMemberBadge';
+import VinylLogo from '../components/VinylLogo';
 
 // Social media icons component
 const SocialIcon = ({ platform }) => {
@@ -182,7 +184,16 @@ const ProfilePage = () => {
             {/* Info */}
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2 flex-wrap">
-                <h1 className={`text-2xl md:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{profile.username}</h1>
+                <h1 className={`text-2xl md:text-3xl font-bold flex items-center gap-1.5 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  {profile.username}
+                  {/* Founder badge - only for the founder */}
+                  {profile.is_founder && (
+                    <span title="MicLocker Founder" className="inline-flex">
+                      <VinylLogo size={24} spinning={true} />
+                    </span>
+                  )}
+                  {profile.is_gold_member && <GoldMemberBadge size="md" />}
+                </h1>
                 {profile.category && (
                   <span className="badge badge-primary flex items-center gap-1">
                     <CategoryIcon className="w-3 h-3" />

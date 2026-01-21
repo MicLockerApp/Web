@@ -193,7 +193,7 @@ const TermsOfUsePage = () => {
             </h2>
             <p className={`${isDark ? 'text-gray-300' : 'text-gray-700'} leading-relaxed`}>
               Joining and setting up a shop on MicLocker is free. MicLocker does not charge fees to list an item for sale. 
-              MicLocker charges a 5% platform fee of the sale price when the item sells. This fee helps us maintain the 
+              MicLocker charges a 3% platform fee of the sale price when the item sells. This fee helps us maintain the 
               marketplace, provide customer support, and continue developing new features for our community.
             </p>
             
@@ -203,7 +203,7 @@ const TermsOfUsePage = () => {
               </p>
               <ul className={`list-disc list-inside space-y-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 <li>Listing Fee: Free</li>
-                <li>Platform Fee: 5% of sale price (charged to seller)</li>
+                <li>Platform Fee: 3% of sale price (charged to seller)</li>
                 <li>Payment Processing: Standard payment processor fees may apply</li>
               </ul>
             </div>
@@ -264,9 +264,12 @@ const TermsOfUsePage = () => {
             </h2>
             <p className={`${isDark ? 'text-gray-300' : 'text-gray-700'} leading-relaxed`}>
               MicLocker does not control the Content provided by users that is made available on MicLocker. You may find 
-              some Content to be offensive, harmful, inaccurate, or deceptive. By using MicLocker, you agree to accept 
-              such risks and expressly agree that MicLocker (and MicLocker's officers, directors, agents, subsidiaries, 
-              joint ventures and employees) is not responsible for any and all acts or omissions of users on MicLocker.
+              some Content to be offensive, harmful, inaccurate, or deceptive. However, MicLocker will do everything in its 
+              power to mitigate this and to make sure that all listings are honest and fair. We scan through the website and 
+              if there are any potential malicious listings or profiles, we will take necessary actions to address those concerns. 
+              By using MicLocker, you agree to accept such risks and expressly agree that MicLocker (and MicLocker's officers, 
+              directors, agents, subsidiaries, joint ventures and employees) is not responsible for any and all acts or omissions 
+              of users on MicLocker.
             </p>
             <p className={`mt-4 ${isDark ? 'text-gray-300' : 'text-gray-700'} leading-relaxed`}>
               Please use caution, common sense, and practice safe buying and selling when using MicLocker. We encourage 
@@ -373,6 +376,40 @@ const TermsOfUsePage = () => {
               any time from marketing emails through the opt-out link included in marketing emails, or by reaching out 
               to MicLocker support.
             </p>
+            
+            <div className={`mt-6 p-4 rounded-lg border-l-4 border-red-500 ${isDark ? 'bg-red-500/10' : 'bg-red-50'}`}>
+              <h3 className={`text-lg font-semibold mb-3 ${isDark ? 'text-red-400' : 'text-red-700'}`}>
+                Messaging Policy & Prohibited Conduct
+              </h3>
+              <p className={`mb-4 ${isDark ? 'text-gray-300' : 'text-gray-700'} leading-relaxed`}>
+                Messages between users are designed for users to connect and use the platform with transparency. If any of 
+                the following are found to be true, terminations and potential lifetime bans will be imposed:
+              </p>
+              <ul className={`list-disc list-inside space-y-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                <li>Circumventing the platform to conduct offline transactions or markets</li>
+                <li>Any sexually driven messages, including: images, inappropriate messages, harassment, or solicitation</li>
+                <li>Sending spam, promotional content, or unsolicited advertisements</li>
+                <li>Phishing attempts or requests for sensitive personal information (passwords, SSN, bank details)</li>
+                <li>Threats, intimidation, bullying, or abusive language</li>
+                <li>Sharing another user's personal information without consent (doxxing)</li>
+                <li>Impersonating another user, MicLocker staff, or any third party</li>
+                <li>Attempting to manipulate or deceive other users regarding listings or transactions</li>
+                <li>Soliciting reviews, feedback manipulation, or offering incentives for fake reviews</li>
+                <li>Discussing or promoting illegal activities</li>
+                <li>Sending malicious links, malware, or attempting to compromise user security</li>
+                <li>Using automated systems or bots to send messages</li>
+                <li>Any form of discrimination based on race, ethnicity, religion, gender, sexual orientation, disability, or other protected characteristics</li>
+              </ul>
+              <p className={`mt-4 font-semibold ${isDark ? 'text-red-400' : 'text-red-700'}`}>
+                MicLocker reserves the right to monitor messages for policy violations and take action including warning, 
+                suspension, or permanent ban without prior notice.
+              </p>
+              <p className={`mt-4 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                MicLocker will comply with all local, state and federal laws. If any violations become illegal, criminal 
+                or dangerous in any way, MicLocker will take actions to reach out to the proper authorities to handle 
+                such matters, in alignment with all applicable laws.
+              </p>
+            </div>
           </section>
 
           {/* Section 10 */}

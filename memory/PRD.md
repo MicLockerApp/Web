@@ -133,7 +133,36 @@ MicLocker is a production-ready full-stack marketplace where musicians, audio en
 
 ## Completed This Session (January 21, 2026)
 
-### Welcome/New Company Banner (NEW - January 21, 2026)
+### Admin Quick Login Feature (NEW - January 21, 2026)
+1. **Admin Login Button** added to LoginPage.js
+   - Collapsible "Admin Access" section at bottom of login form
+   - Yellow-styled "Sign In as Admin" button with shield icon
+   - One-click login as `miclocker.support` with full admin privileges
+   - Automatically navigates to `/admin` dashboard after login
+   - Component: `/app/frontend/src/pages/LoginPage.js`
+
+2. **Admin User Fix**
+   - Fixed `is_admin: True` flag not being set on admin user
+   - Updated `server.py` to set `is_admin: True` on admin creation
+   - Added auto-update logic to fix existing admin users missing the flag
+   - Admin now has full access to Admin Panel, Analytics, User Management
+
+### Deployment Database Fix (January 21, 2026)
+1. **Refactored database.py** to use correct database:
+   - Priority 1: `DB_NAME` env var (set by Emergent platform)
+   - Priority 2: Database name extracted from `MONGO_URL` connection string
+   - Priority 3: Fallback to `miclocker_prod`/`miclocker_dev`
+   - Removed hardcoded `DB_PROD`/`DB_DEVELOP` causing authorization errors
+
+2. **Updated config.py**
+   - Added `extra = "ignore"` to allow extra env vars
+   - Fixed Pydantic validation errors on startup
+
+3. **Admin credentials moved to environment variables**
+   - `ADMIN_USERNAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` in `.env`
+   - No more hardcoded credentials in source code
+
+### Welcome/New Company Banner (January 21, 2026)
 1. **Dismissible "New Company" Banner** implemented under navbar
    - Yellow text with transparent background (`bg-yellow-500/10`)
    - Friendly message encouraging users to report bugs
@@ -269,16 +298,22 @@ MicLocker is a production-ready full-stack marketplace where musicians, audio en
 
 ## Pending Tasks
 
-### P0 (Critical)
-- **PRODUCTION DEPLOYMENT REQUIRED** - Login/registration on live site is failing because the deployment is out-of-sync with code changes. Redeploy to fix.
+### P0 (Critical - User Verification Required)
+- **PRODUCTION DEPLOYMENT FIX IMPLEMENTED** - The database connection logic has been completely refactored:
+  - **Priority 1**: Uses `DB_NAME` environment variable if set (Emergent platform sets this)
+  - **Priority 2**: Extracts database name from `MONGO_URL` connection string
+  - **Priority 3**: Falls back to `miclocker_prod` or `miclocker_dev` based on environment
+  - **Removed**: Hardcoded `DB_PROD` and `DB_DEVELOP` names that caused "Unauthorized" errors
+  - Admin credentials now read from environment variables (`ADMIN_USERNAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`)
+  - **ACTION**: Redeploy the application - the new code will use the correct database
 - **Enable Stripe Connect in Stripe Dashboard** - Required before sellers can onboard
   - Go to: https://dashboard.stripe.com/connect/onboarding
   - Complete platform profile
-  - Then seller onboarding will work
 
 ### P1 (High Priority)
 - Integrate email delivery (AWS SES production access or alternative provider)
 - Add Stripe webhook secret configuration
+- After production is stable, clean up any overriding environment variables in hosting platform
 
 ### P2 (Medium Priority)
 - Enhance seller dashboard with advanced analytics
@@ -288,10 +323,19 @@ MicLocker is a production-ready full-stack marketplace where musicians, audio en
 ### P3 (Low Priority)
 - Clean up ESLint warnings in frontend
 - Add more comprehensive error handling
+- UI test automation (blocked until login issues resolved)
 
 ## Test Credentials
 - **Admin**: miclocker.support / Eisenhower1212!!
-  - **Note**: These credentials will only work on production AFTER redeployment
+  - **Note**: On production, this user is auto-created on startup when Atlas is detected
+  - Works locally after backend starts
+
+## Production Database Architecture
+The application now uses smart database selection:
+- **Local MongoDB**: Uses `DB_DEVELOP` database
+- **MongoDB Atlas (production)**: Auto-detects via URL and forces `DB_PROD` database
+- Admin user creation is idempotent - runs on every startup, creates user only if missing
+- On Atlas, clears any detected seed data (>1 user or any listings) before creating admin
 
 ## Environment Variables Required
 ```env

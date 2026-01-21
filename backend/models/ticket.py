@@ -27,6 +27,13 @@ TICKET_PRIORITIES = ["low", "medium", "high", "urgent"]
 TICKET_STATUSES = ["open", "in_progress", "waiting_on_customer", "resolved", "closed"]
 
 
+class TicketAttachment(BaseModel):
+    """File attachment for a ticket"""
+    url: str
+    filename: str
+    type: str
+
+
 class TicketCreate(BaseModel):
     """Request to create a new support ticket"""
     category: str
@@ -34,6 +41,7 @@ class TicketCreate(BaseModel):
     message: str
     order_id: Optional[str] = None  # If related to a specific order
     listing_id: Optional[str] = None  # If related to a specific listing
+    attachments: Optional[List[TicketAttachment]] = None  # Attached files
 
 
 class TicketReply(BaseModel):
@@ -64,6 +72,7 @@ class TicketInDB(BaseModel):
     # Related entities
     order_id: Optional[str] = None
     listing_id: Optional[str] = None
+    attachments: Optional[List[dict]] = None  # Attached files
     
     # Status tracking
     status: str = "open"

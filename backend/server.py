@@ -19,6 +19,7 @@ from routes.payments import router as payments_router
 from routes.trades import router as trades_router
 from routes.stats import router as stats_router
 from routes.stripe_connect_v2_sample import router as stripe_connect_v2_sample_router
+from routes.reports import router as reports_router
 
 # Delivery tasks import
 from tasks.delivery_tasks import start_delivery_scheduler
@@ -44,73 +45,57 @@ logger = logging.getLogger(__name__)
 
 async def ensure_admin_user_exists():
     """
-    CRITICAL: Ensure the admin user exists in the database.
-    This runs on EVERY startup to guarantee the admin user exists
-    on ANY MongoDB server (local development OR production Atlas).
+    Ensure the admin user exists in the database.
+    This runs on EVERY startup to guarantee the admin user exists.
     
-    Admin credentials:
-    - Username: miclocker.support
-    - Email: info@miclockerapp.com
-    - Password: Eisenhower1212!!
-    - Role: owner
+    Admin credentials are read from environment variables:
+    - ADMIN_USERNAME (default: miclocker.support)
+    - ADMIN_EMAIL (default: info@miclockerapp.com)
+    - ADMIN_PASSWORD (default: changeme123!)
     """
     try:
         db = get_database()
-        mongo_url = os.getenv("MONGO_URL", "mongodb://localhost:27017")
+        
+        # Get admin credentials from environment (with safe defaults for dev)
+        admin_username = os.getenv("ADMIN_USERNAME", "miclocker.support")
+        admin_email = os.getenv("ADMIN_EMAIL", "info@miclockerapp.com")
+        admin_password = os.getenv("ADMIN_PASSWORD", "changeme123!")
         
         logger.info("=" * 60)
         logger.info("ADMIN USER CHECK - STARTING")
-        logger.info(f"MONGO_URL type: {'ATLAS' if 'mongodb+srv' in mongo_url or 'mongodb.net' in mongo_url else 'LOCAL'}")
+        logger.info(f"Admin username: {admin_username}")
         logger.info("=" * 60)
         
-        # Detect if we're on Atlas (production)
-        is_atlas = "mongodb+srv://" in mongo_url or "mongodb.net" in mongo_url
-        
-        # Check current database state
-        try:
-            user_count = await db.users.count_documents({})
-            listing_count = await db.listings.count_documents({})
-            logger.info(f"Current DB state: {user_count} users, {listing_count} listings")
-        except Exception as e:
-            logger.error(f"Error counting documents: {e}")
-            user_count = 0
-            listing_count = 0
-        
-        # On Atlas, clear seed data if detected
-        if is_atlas and (user_count > 1 or listing_count > 0):
-            logger.warning("SEED DATA DETECTED ON ATLAS - CLEARING ALL DATA")
-            try:
-                collections = await db.list_collection_names()
-                for coll_name in collections:
-                    await db[coll_name].delete_many({})
-                    logger.info(f"Cleared: {coll_name}")
-                logger.info("ALL SEED DATA CLEARED")
-            except Exception as e:
-                logger.error(f"Error clearing seed data: {e}")
-        
         # Check if admin user exists
-        existing_user = await db.users.find_one({"username": "miclocker.support"})
+        existing_user = await db.users.find_one({"username": admin_username})
         
         if existing_user:
-            logger.info("Admin user miclocker.support ALREADY EXISTS")
+            # Ensure admin has is_admin flag set to True
+            if not existing_user.get("is_admin"):
+                await db.users.update_one(
+                    {"username": admin_username},
+                    {"$set": {"is_admin": True, "role": "owner"}}
+                )
+                logger.info(f"Updated admin user {admin_username} with is_admin=True")
+            logger.info(f"Admin user {admin_username} ALREADY EXISTS")
             logger.info("=" * 60)
             return
         
         # Create admin user
-        logger.info("Creating admin user miclocker.support...")
-        admin_password = "Eisenhower1212!!"
+        logger.info(f"Creating admin user {admin_username}...")
         hashed_password = pwd_context.hash(admin_password)
         
         admin_user = {
-            "id": "admin-miclocker-support",
-            "username": "miclocker.support",
-            "email": "info@miclockerapp.com",
+            "id": f"admin-{admin_username.replace('.', '-')}",
+            "username": admin_username,
+            "email": admin_email,
             "hashed_password": hashed_password,
             "full_name": "MicLocker Support",
             "bio": "Official MicLocker Support Account",
             "location": "United States",
             "profile_picture": None,
             "role": "owner",
+            "is_admin": True,  # CRITICAL: This allows access to admin pages
             "is_active": True,
             "is_verified": True,
             "is_approved_seller": True,
@@ -132,13 +117,13 @@ async def ensure_admin_user_exists():
         }
         
         result = await db.users.insert_one(admin_user)
-        logger.info(f"ADMIN USER CREATED: miclocker.support (inserted_id: {result.inserted_id})")
+        logger.info(f"ADMIN USER CREATED: {admin_username} (inserted_id: {result.inserted_id})")
         logger.info("=" * 60)
         
     except Exception as e:
-        logger.error(f"CRITICAL ERROR in ensure_admin_user_exists: {e}")
-        logger.error("Admin user may not have been created!")
-        raise
+        logger.error(f"Error in ensure_admin_user_exists: {e}")
+        # Don't raise - app should still start even if admin creation fails
+        logger.warning("Admin user may not have been created - please create manually if needed")
 
 
 @asynccontextmanager
@@ -305,6 +290,9 @@ app.include_router(chatbot_router, prefix="/api")
 
 # Stripe Connect V2 Sample routes (demonstration integration)
 app.include_router(stripe_connect_v2_sample_router, prefix="/api")
+
+# Reports routes (listing flagging system)
+app.include_router(reports_router, prefix="/api")
 
 # Health check endpoints
 @app.get("/api/health")

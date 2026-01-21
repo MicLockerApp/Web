@@ -705,3 +705,49 @@ async def delete_employee(
     await db.users.delete_one({"id": employee_id})
     
     return {"message": "Employee deleted"}
+
+
+
+@router.post("/migrations/gold-members")
+async def migrate_gold_members(admin_user: dict = Depends(get_admin_user)):
+    """
+    One-time migration to set is_gold_member for existing users.
+    Sets is_gold_member=True for the first 300 non-employee users based on signup order.
+    """
+    db = get_database()
+    
+    # Get all non-employee users sorted by creation date
+    cursor = db.users.find(
+        {"is_employee": {"$ne": True}},
+        {"id": 1, "username": 1, "created_at": 1}
+    ).sort("created_at", 1).limit(300)
+    
+    users = await cursor.to_list(length=300)
+    
+    updated_count = 0
+    for index, user in enumerate(users):
+        signup_number = index + 1
+        result = await db.users.update_one(
+            {"id": user["id"]},
+            {"$set": {
+                "is_gold_member": True,
+                "signup_number": signup_number,
+                "has_lifetime_free_fees": True
+            }}
+        )
+        if result.modified_count > 0:
+            updated_count += 1
+    
+    # Set is_gold_member=False for users after the first 300
+    await db.users.update_many(
+        {
+            "is_employee": {"$ne": True},
+            "signup_number": {"$exists": False}
+        },
+        {"$set": {"is_gold_member": False}}
+    )
+    
+    return {
+        "message": f"Migration complete. Updated {updated_count} users as Gold Members.",
+        "gold_member_count": len(users)
+    }

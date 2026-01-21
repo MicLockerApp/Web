@@ -198,6 +198,8 @@ async def verify_registration_email(data: EmailVerificationVerify):
     user_count = await db.users.count_documents({"is_employee": {"$ne": True}})
     is_first_user = user_count == 0
     has_lifetime_free_fees = user_count < 300
+    is_gold_member = user_count < 300  # First 300 users get Gold Member badge
+    signup_number = user_count + 1
     
     # Create the actual user account
     user = UserInDB(
@@ -208,6 +210,8 @@ async def verify_registration_email(data: EmailVerificationVerify):
         is_admin=is_first_user,
         is_first_user=is_first_user,
         has_lifetime_free_fees=has_lifetime_free_fees,
+        is_gold_member=is_gold_member,
+        signup_number=signup_number,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow()
     )
@@ -232,6 +236,8 @@ async def verify_registration_email(data: EmailVerificationVerify):
         metadata={
             "category": None,  # Will be set in complete-profile
             "has_lifetime_free_fees": has_lifetime_free_fees,
+            "is_gold_member": is_gold_member,
+            "signup_number": signup_number,
             "user_number": user_count + 1,
             "is_first_user": is_first_user,
             "email_verified": True
@@ -341,8 +347,10 @@ async def register(user_data: UserCreate):
     user_count = await db.users.count_documents({"is_employee": {"$ne": True}})
     is_first_user = user_count == 0
     
-    # First 300 users get lifetime 0% platform fees
+    # First 300 users get lifetime 0% platform fees and Gold Member badge
     has_lifetime_free_fees = user_count < 300
+    is_gold_member = user_count < 300
+    signup_number = user_count + 1
     
     # Create user
     user = UserInDB(
@@ -352,6 +360,8 @@ async def register(user_data: UserCreate):
         is_admin=is_first_user,
         is_first_user=is_first_user,
         has_lifetime_free_fees=has_lifetime_free_fees,
+        is_gold_member=is_gold_member,
+        signup_number=signup_number,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow()
     )
@@ -367,6 +377,8 @@ async def register(user_data: UserCreate):
         metadata={
             "category": None,  # Will be set in complete-profile
             "has_lifetime_free_fees": has_lifetime_free_fees,
+            "is_gold_member": is_gold_member,
+            "signup_number": signup_number,
             "user_number": user_count + 1,
             "is_first_user": is_first_user
         }
@@ -417,7 +429,8 @@ async def login(username: str, password: str):
         actor_username=user.get("username"),
         metadata={
             "category": user.get("category"),
-            "has_lifetime_free_fees": user.get("has_lifetime_free_fees", False)
+            "has_lifetime_free_fees": user.get("has_lifetime_free_fees", False),
+            "is_gold_member": user.get("is_gold_member", False)
         }
     )
     

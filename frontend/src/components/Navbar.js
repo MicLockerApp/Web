@@ -7,6 +7,7 @@ import { useTheme } from '../context/ThemeContext';
 import { messagesAPI, searchAPI } from '../services/api';
 import VinylLogo from './VinylLogo';
 import AnimatedSearchPlaceholder from './AnimatedSearchPlaceholder';
+import GoldMemberBadge from './GoldMemberBadge';
 
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -197,8 +198,15 @@ const Navbar = () => {
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className={`font-medium truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                              <p className={`font-medium truncate flex items-center gap-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                                 @{user.username}
+                                {/* Founder badge */}
+                                {user.is_founder && (
+                                  <span title="MicLocker Founder" className="inline-flex">
+                                    <VinylLogo size={14} spinning={true} />
+                                  </span>
+                                )}
+                                {user.is_gold_member && <GoldMemberBadge size="xs" />}
                               </p>
                               <p className={`text-sm truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                                 {user.category ? user.category.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Member'}

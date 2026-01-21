@@ -13,7 +13,14 @@ const AnalyticsDashboard = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [dateRange, setDateRange] = useState('30d');
+  const [startDate, setStartDate] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 30);
+    return date.toISOString().split('T')[0];
+  });
+  const [endDate, setEndDate] = useState(() => {
+    return new Date().toISOString().split('T')[0];
+  });
   const [realtimeMetrics, setRealtimeMetrics] = useState(null);
   const [revenueData, setRevenueData] = useState(null);
   const [offerFunnel, setOfferFunnel] = useState(null);
@@ -27,28 +34,11 @@ const AnalyticsDashboard = () => {
   const [lastRefresh, setLastRefresh] = useState(new Date());
 
   const getDateParams = useCallback(() => {
-    const endDate = new Date();
-    let startDate = new Date();
-    
-    switch (dateRange) {
-      case '7d':
-        startDate.setDate(startDate.getDate() - 7);
-        break;
-      case '30d':
-        startDate.setDate(startDate.getDate() - 30);
-        break;
-      case '90d':
-        startDate.setDate(startDate.getDate() - 90);
-        break;
-      default:
-        startDate.setDate(startDate.getDate() - 30);
-    }
-    
     return {
-      start_date: startDate.toISOString().split('T')[0],
-      end_date: endDate.toISOString().split('T')[0]
+      start_date: startDate,
+      end_date: endDate
     };
-  }, [dateRange]);
+  }, [startDate, endDate]);
 
   const fetchAnalytics = useCallback(async () => {
     if (!isAuthenticated || !user?.is_admin) return;
@@ -98,7 +88,7 @@ const AnalyticsDashboard = () => {
       return;
     }
     fetchAnalytics();
-  }, [authLoading, isAuthenticated, user, navigate, fetchAnalytics, dateRange]);
+  }, [authLoading, isAuthenticated, user, navigate, fetchAnalytics]);
 
   // Auto-refresh every 5 minutes
   useEffect(() => {
@@ -117,6 +107,12 @@ const AnalyticsDashboard = () => {
 
   const formatPercent = (value) => {
     return `${(value || 0).toFixed(1)}%`;
+  };
+
+  const formatDateRange = () => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
   };
 
   if (authLoading || loading) return <LoadingSpinner />;
@@ -146,23 +142,35 @@ const AnalyticsDashboard = () => {
             </div>
           </div>
           
-          <div className="flex items-center gap-4">
-            {/* Date Range Selector */}
-            <div className="flex bg-dark-400 rounded-lg p-1">
-              {['7d', '30d', '90d'].map((range) => (
-                <button
-                  key={range}
-                  onClick={() => setDateRange(range)}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    dateRange === range
-                      ? 'bg-primary text-black'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  {range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : '90 Days'}
-                </button>
-              ))}
+          <div className="flex items-center gap-4 flex-wrap">
+            {/* Custom Date Range Picker */}
+            <div className="flex items-center gap-2 bg-dark-400 rounded-lg p-2">
+              <Calendar className="w-4 h-4 text-gray-400" />
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="bg-transparent border-none text-white text-sm focus:outline-none focus:ring-0 w-32"
+                data-testid="start-date-input"
+              />
+              <span className="text-gray-500">to</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="bg-transparent border-none text-white text-sm focus:outline-none focus:ring-0 w-32"
+                data-testid="end-date-input"
+              />
             </div>
+            
+            <button
+              onClick={fetchAnalytics}
+              className="btn btn-primary"
+              disabled={loading}
+              data-testid="apply-date-range-btn"
+            >
+              Apply
+            </button>
             
             <button
               onClick={fetchAnalytics}
@@ -173,6 +181,13 @@ const AnalyticsDashboard = () => {
               Refresh
             </button>
           </div>
+        </div>
+
+        {/* Date Range Display */}
+        <div className="mb-6">
+          <p className="text-gray-400 text-sm">
+            Showing data for: <span className="text-primary font-medium">{formatDateRange()}</span>
+          </p>
         </div>
 
         {/* Real-time Stats */}
@@ -229,7 +244,7 @@ const AnalyticsDashboard = () => {
         <div className="bg-dark-400 rounded-xl p-6 mb-8">
           <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-primary" />
-            Revenue Summary ({dateRange})
+            Revenue Summary
           </h2>
           
           <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
@@ -261,7 +276,7 @@ const AnalyticsDashboard = () => {
         <div className="bg-dark-400 rounded-xl p-6 mb-8" data-testid="daily-visitors-section">
           <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
             <Globe className="w-5 h-5 text-cyan-400" />
-            Daily Visitors ({dateRange})
+            Daily Visitors
           </h2>
           
           {/* Summary Stats */}

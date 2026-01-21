@@ -5,12 +5,58 @@ Provides public statistics about the platform without requiring authentication.
 """
 
 from fastapi import APIRouter
-from database import get_database
+from database import get_database, get_database_name
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/stats", tags=["Stats"])
+
+
+@router.get("/debug")
+async def get_debug_info():
+    """
+    Debug endpoint to diagnose database connection issues.
+    Returns information about database configuration and connection status.
+    """
+    mongo_url = os.getenv("MONGO_URL", "mongodb://localhost:27017")
+    db_name_env = os.getenv("DB_NAME", "NOT SET")
+    
+    # Mask the password in MONGO_URL for security
+    if "@" in mongo_url:
+        parts = mongo_url.split("@")
+        masked_url = "mongodb+srv://***:***@" + parts[1] if "mongodb+srv://" in mongo_url else "mongodb://***:***@" + parts[1]
+    else:
+        masked_url = mongo_url
+    
+    db_name_used = get_database_name()
+    
+    # Try to list collections to verify access
+    collections = []
+    user_count = 0
+    admin_exists = False
+    error_message = None
+    
+    try:
+        db = get_database()
+        collections = await db.list_collection_names()
+        user_count = await db.users.count_documents({})
+        admin_user = await db.users.find_one({"username": "miclocker.support"})
+        admin_exists = admin_user is not None
+    except Exception as e:
+        error_message = str(e)
+    
+    return {
+        "mongo_url_masked": masked_url,
+        "db_name_env_var": db_name_env,
+        "db_name_used": db_name_used,
+        "is_atlas": "mongodb+srv://" in mongo_url or "mongodb.net" in mongo_url,
+        "collections": collections,
+        "user_count": user_count,
+        "admin_user_exists": admin_exists,
+        "error": error_message
+    }
 
 
 @router.get("/public")

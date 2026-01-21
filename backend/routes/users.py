@@ -31,6 +31,9 @@ async def get_user_profile(
     # Create profile response
     profile_data = dict(user)
     
+    # Set is_founder flag for James McDougall
+    profile_data["is_founder"] = user.get("email") == "james.mcdougall@miclockerapp.com"
+    
     # If not own profile, apply privacy settings
     if not is_own_profile:
         # Hide email unless show_email is true
