@@ -29,11 +29,22 @@ class Settings(BaseSettings):
         # In production, set CORS_ALLOWED_ORIGINS to specific domains
         return ["*"]
     
-    # MongoDB - Read database name from env
-    # LOCAL DEVELOPMENT: Uses DATABASE_NAME=DB_DEVELOP
-    # PRODUCTION (Emergent): Set DB_NAME=DB_PROD in deployment environment
+    # MongoDB Configuration
+    # DEVELOPMENT: Uses DB_DEVELOP
+    # PRODUCTION: Uses DB_PROD
     mongo_url: str = os.getenv("MONGO_URL", "mongodb://localhost:27017")
-    database_name: str = os.getenv("DB_NAME") or os.getenv("DATABASE_NAME", "DB_DEVELOP")
+    
+    @property
+    def database_name(self) -> str:
+        """
+        Get database name based on environment:
+        - Production: DB_PROD
+        - Development: DB_DEVELOP
+        """
+        env = os.getenv("ENVIRONMENT", "development").lower()
+        if env in ["production", "prod"]:
+            return "DB_PROD"
+        return "DB_DEVELOP"
     
     # AWS S3
     aws_access_key_id: Optional[str] = os.getenv("AWS_ACCESS_KEY_ID") or None
