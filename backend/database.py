@@ -11,61 +11,65 @@ class Database:
 
 db = Database()
 
-def get_database_name_from_url(mongo_url: str) -> str:
-    """Extract database name from MongoDB URL or use settings"""
-    # For Atlas URLs like: mongodb+srv://user:pass@cluster.mongodb.net/dbname?...
-    # Try to extract database name from URL
-    if '/' in mongo_url:
-        # Get the part after the last / and before any ?
-        path_part = mongo_url.split('/')[-1]
-        if '?' in path_part:
-            db_name = path_part.split('?')[0]
-        else:
-            db_name = path_part
-        
-        # If we got a valid db name from URL, use it
-        if db_name and db_name not in ['', 'admin', 'local']:
-            return db_name
+def get_database_name() -> str:
+    """
+    Get database name.
     
-    # Fall back to settings
-    return settings.database_name
+    CRITICAL: If we detect MongoDB Atlas (mongodb+srv://), we're in PRODUCTION
+    regardless of what ENVIRONMENT variable says.
+    
+    Production = DB_PROD
+    Development = DB_DEVELOP
+    """
+    mongo_url = os.getenv("MONGO_URL", "mongodb://localhost:27017")
+    
+    # If using Atlas (mongodb+srv://), this is PRODUCTION - ignore ENVIRONMENT variable
+    if "mongodb+srv://" in mongo_url or "mongodb.net" in mongo_url:
+        logger.info("ATLAS DETECTED: Forcing PRODUCTION mode with DB_PROD")
+        return "DB_PROD"
+    
+    # For local MongoDB, check ENVIRONMENT
+    env = os.getenv("ENVIRONMENT", "development").lower()
+    if env in ["production", "prod"]:
+        db_name = "DB_PROD"
+    else:
+        db_name = "DB_DEVELOP"
+    
+    logger.info(f"Using database: {db_name} (environment: {env})")
+    return db_name
 
 async def connect_to_mongo():
     """Connect to MongoDB"""
-    mongo_url = settings.mongo_url
+    mongo_url = os.getenv("MONGO_URL", "mongodb://localhost:27017")
     
-    # Mask credentials in log
+    # Log connection (mask credentials)
     if '@' in mongo_url:
-        masked_url = mongo_url.split('@')[1] if '@' in mongo_url else mongo_url
-        logger.info(f"Connecting to MongoDB at ...@{masked_url}")
+        masked = mongo_url.split('@')[1]
+        logger.info(f"Connecting to MongoDB at ...@{masked}")
     else:
         logger.info(f"Connecting to MongoDB at {mongo_url}")
     
     try:
-        # Create client with appropriate settings for Atlas
-        # Note: Don't set w='majority' as it may not be supported on all Atlas tiers
         db.client = AsyncIOMotorClient(
             mongo_url,
-            serverSelectionTimeoutMS=30000,  # 30 second timeout
+            serverSelectionTimeoutMS=30000,
             connectTimeoutMS=30000,
             socketTimeoutMS=30000,
             retryWrites=True
         )
         
-        # Get database name
-        db_name = get_database_name_from_url(mongo_url)
+        # Get database name (DB_PROD for Atlas, DB_DEVELOP for local)
+        db_name = get_database_name()
         db.db = db.client[db_name]
         
-        # Test connection by listing collection names instead of admin ping
-        # This works with standard user permissions on Atlas
+        # Test connection
         try:
-            await db.db.list_collection_names()
-            logger.info(f"Connected to MongoDB database: {db_name}")
-        except Exception as ping_error:
-            logger.warning(f"Could not verify connection: {ping_error}")
-            # Continue anyway - the connection may still work
+            collections = await db.db.list_collection_names()
+            logger.info(f"Connected to database: {db_name} ({len(collections)} collections)")
+        except Exception as e:
+            logger.error(f"Database connection failed: {e}")
+            raise
         
-        # Create indexes
         await create_indexes()
         
     except Exception as e:
@@ -73,48 +77,33 @@ async def connect_to_mongo():
         raise
 
 async def close_mongo_connection():
-    """Close MongoDB connection"""
     if db.client:
         db.client.close()
-        logger.info("Closed MongoDB connection")
+        logger.info("MongoDB connection closed")
 
 async def create_indexes():
-    """Create database indexes for better query performance"""
-    # Users collection indexes
+    """Create database indexes"""
     await db.db.users.create_index("username", unique=True)
     await db.db.users.create_index("email", unique=True)
-    
-    # Listings collection indexes
     await db.db.listings.create_index([("title", "text"), ("description", "text"), ("brand", "text"), ("model", "text")])
     await db.db.listings.create_index("seller_id")
     await db.db.listings.create_index("category")
     await db.db.listings.create_index("status")
     await db.db.listings.create_index("price")
     await db.db.listings.create_index("created_at")
-    
-    # Orders collection indexes
     await db.db.orders.create_index("buyer_id")
     await db.db.orders.create_index("seller_id")
     await db.db.orders.create_index("status")
-    
-    # Offers collection indexes
     await db.db.offers.create_index("listing_id")
     await db.db.offers.create_index("buyer_id")
     await db.db.offers.create_index("seller_id")
-    
-    # Messages collection indexes
     await db.db.messages.create_index("thread_id")
     await db.db.message_threads.create_index("participants")
-    
-    # Reviews collection indexes - allows bidirectional reviews (buyer->seller & seller->buyer)
     await db.db.reviews.create_index("seller_id")
     await db.db.reviews.create_index("reviewee_id")
     await db.db.reviews.create_index("reviewer_id")
     await db.db.reviews.create_index([("order_id", 1), ("review_type", 1)], unique=True)
-    
-    # Cart items indexes
     await db.db.cart_items.create_index("user_id")
-    
     logger.info("Database indexes created")
 
 def get_database():

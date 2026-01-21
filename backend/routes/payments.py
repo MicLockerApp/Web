@@ -832,6 +832,7 @@ async def handle_charge_refunded(db, charge):
 
 @router.post("/connect/onboard")
 async def start_seller_onboarding(
+    request: Request,
     current_user: dict = Depends(get_current_user)
 ):
     """
@@ -841,6 +842,11 @@ async def start_seller_onboarding(
     Sellers complete identity verification and add bank account on Stripe's hosted page.
     """
     db = get_database()
+    
+    # Get origin URL from request for dynamic redirect URLs
+    origin_url = request.headers.get("origin") or request.headers.get("referer", "").rstrip("/")
+    if origin_url and origin_url.endswith("/"):
+        origin_url = origin_url[:-1]
     
     # Check if user already has a Stripe account
     if current_user.get("stripe_connect_account_id"):
@@ -859,7 +865,8 @@ async def start_seller_onboarding(
         # Account exists but onboarding not complete - generate new link
         onboarding_url = await stripe_connect_service.create_account_link(
             current_user["stripe_connect_account_id"],
-            current_user["id"]
+            current_user["id"],
+            origin_url
         )
         
         if onboarding_url:
@@ -894,7 +901,8 @@ async def start_seller_onboarding(
     # Create onboarding link
     onboarding_url = await stripe_connect_service.create_account_link(
         account["account_id"],
-        current_user["id"]
+        current_user["id"],
+        origin_url
     )
     
     if not onboarding_url:
@@ -951,9 +959,13 @@ async def get_connect_status(
 
 @router.post("/connect/refresh-link")
 async def refresh_onboarding_link(
+    request: Request,
     current_user: dict = Depends(get_current_user)
 ):
     """Generate a new onboarding link if the previous one expired"""
+    
+    # Get origin URL from request for dynamic redirect URLs
+    origin_url = request.headers.get("origin") or request.headers.get("referer", "").rstrip("/")
     
     stripe_account_id = current_user.get("stripe_connect_account_id")
     
@@ -965,7 +977,8 @@ async def refresh_onboarding_link(
     
     onboarding_url = await stripe_connect_service.create_account_link(
         stripe_account_id,
-        current_user["id"]
+        current_user["id"],
+        origin_url
     )
     
     if not onboarding_url:

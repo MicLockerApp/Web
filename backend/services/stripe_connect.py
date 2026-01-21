@@ -77,21 +77,36 @@ class StripeConnectService:
             logger.error(f"Error creating Stripe account: {e}")
             return None
     
-    async def create_account_link(self, account_id: str, seller_id: str) -> Optional[str]:
+    async def create_account_link(self, account_id: str, seller_id: str, origin_url: str = None) -> Optional[str]:
         """
         Create an account link for seller onboarding
         
         This generates a URL that the seller visits to complete their
         Stripe Express account setup (identity verification, bank account, etc.)
+        
+        Args:
+            account_id: Stripe account ID
+            seller_id: Internal seller ID
+            origin_url: The origin URL for redirects (e.g., from request.headers.get('origin'))
+                       Falls back to FRONTEND_URL if not provided
         """
         if not self.api_key:
             return None
         
         try:
+            # Use provided origin URL or fall back to configured frontend URL
+            base_url = origin_url or self.frontend_url
+            if not base_url:
+                logger.error("No origin URL or FRONTEND_URL configured for Stripe redirects")
+                return None
+            
+            # Ensure no trailing slash
+            base_url = base_url.rstrip('/')
+            
             account_link = stripe.AccountLink.create(
                 account=account_id,
-                refresh_url=f"{self.frontend_url}/dashboard?stripe_refresh=true",
-                return_url=f"{self.frontend_url}/dashboard?stripe_onboarding=complete",
+                refresh_url=f"{base_url}/dashboard?stripe_refresh=true",
+                return_url=f"{base_url}/dashboard?stripe_onboarding=complete",
                 type="account_onboarding",
             )
             

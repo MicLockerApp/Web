@@ -131,7 +131,18 @@ MicLocker is a production-ready full-stack marketplace where musicians, audio en
 }
 ```
 
-## Completed This Session (January 20, 2026)
+## Completed This Session (January 21, 2026)
+
+### Welcome/New Company Banner (NEW - January 21, 2026)
+1. **Dismissible "New Company" Banner** implemented under navbar
+   - Yellow text with transparent background (`bg-yellow-500/10`)
+   - Friendly message encouraging users to report bugs
+   - X button to dismiss
+   - **localStorage persistence** - once dismissed, stays hidden
+   - Component: `/app/frontend/src/components/WelcomeBanner.js`
+   - Added to Layout in `/app/frontend/src/App.js`
+
+## Completed Previous Session (January 20, 2026)
 
 ### Trading System (NEW - January 2026)
 1. **Full Trading API** - Direct item swaps with no platform fees
@@ -259,6 +270,7 @@ MicLocker is a production-ready full-stack marketplace where musicians, audio en
 ## Pending Tasks
 
 ### P0 (Critical)
+- **PRODUCTION DEPLOYMENT REQUIRED** - Login/registration on live site is failing because the deployment is out-of-sync with code changes. Redeploy to fix.
 - **Enable Stripe Connect in Stripe Dashboard** - Required before sellers can onboard
   - Go to: https://dashboard.stripe.com/connect/onboarding
   - Complete platform profile
@@ -278,7 +290,8 @@ MicLocker is a production-ready full-stack marketplace where musicians, audio en
 - Add more comprehensive error handling
 
 ## Test Credentials
-- **Admin**: miclocker.support / Finally2026!!
+- **Admin**: miclocker.support / Eisenhower1212!!
+  - **Note**: These credentials will only work on production AFTER redeployment
 
 ## Environment Variables Required
 ```env
