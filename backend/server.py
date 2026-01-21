@@ -55,16 +55,22 @@ async def ensure_admin_user_exists():
     - Role: owner
     """
     db = get_database()
-    env = os.getenv("ENVIRONMENT", "development").lower()
+    mongo_url = os.getenv("MONGO_URL", "mongodb://localhost:27017")
     
-    # In PRODUCTION, check if there's seed data and clear it
-    if env in ["production", "prod"]:
+    # Detect if we're on Atlas (production) - ignore ENVIRONMENT variable
+    is_production = "mongodb+srv://" in mongo_url or "mongodb.net" in mongo_url
+    
+    # In PRODUCTION (Atlas), check if there's seed data and clear it
+    if is_production:
         user_count = await db.users.count_documents({})
         listing_count = await db.listings.count_documents({})
         
+        logger.info(f"PRODUCTION CHECK: {user_count} users, {listing_count} listings")
+        
         # If there are multiple users or any listings, this is seed data - CLEAR IT
         if user_count > 1 or listing_count > 0:
-            logger.warning(f"SEED DATA DETECTED: {user_count} users, {listing_count} listings - CLEARING ALL DATA")
+            logger.warning(f"SEED DATA DETECTED ON PRODUCTION: {user_count} users, {listing_count} listings")
+            logger.warning("CLEARING ALL SEED DATA NOW...")
             
             # Get all collection names and clear them
             collections = await db.list_collection_names()
