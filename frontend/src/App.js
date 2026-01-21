@@ -6,6 +6,7 @@ import { ThemeProvider, useTheme } from './context/ThemeContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ChatWidget from './components/ChatWidget';
+import WelcomeBanner from './components/WelcomeBanner';
 import analytics from './services/analytics';
 
 // Pages
