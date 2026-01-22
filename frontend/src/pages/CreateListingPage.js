@@ -112,45 +112,12 @@ const CreateListingPage = () => {
         )}
 
         <form onSubmit={handleSubmit}>
-          {/* Media Upload */}
-          <div className="bg-dark-400 rounded-xl p-6 mb-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Photos & Videos</h2>
-            <div className="grid grid-cols-3 md:grid-cols-4 gap-4 mb-4">
-              {mediaPreview.map((media, index) => (
-                <div key={index} className="relative aspect-square bg-dark-300 rounded-lg overflow-hidden">
-                  {media.type === 'image' ? (
-                    <img src={media.preview} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <video src={media.preview} className="w-full h-full object-cover" />
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => removeMedia(index)}
-                    className="absolute top-1 right-1 bg-black/50 rounded-full p-1 hover:bg-red-500"
-                  >
-                    <X className="w-4 h-4 text-white" />
-                  </button>
-                  {index === 0 && (
-                    <span className="absolute bottom-1 left-1 bg-primary text-black text-xs px-2 py-0.5 rounded">
-                      Primary
-                    </span>
-                  )}
-                </div>
-              ))}
-              <label className="aspect-square bg-dark-300 rounded-lg border-2 border-dashed border-dark-200 hover:border-primary flex flex-col items-center justify-center cursor-pointer transition-colors">
-                <input
-                  type="file"
-                  accept="image/*,video/*"
-                  multiple
-                  onChange={handleMediaUpload}
-                  className="hidden"
-                  disabled={uploadingMedia}
-                />
-                <Plus className="w-8 h-8 text-gray-400 mb-2" />
-                <span className="text-gray-400 text-sm">Add Media</span>
-              </label>
-            </div>
-            <p className="text-gray-500 text-sm">Upload up to 10 images and 1 video. First image will be the cover.</p>
+          {/* Media Upload - S3 */}
+          <div className="mb-6">
+            <S3MediaUploader 
+              onChange={handleMediaChange}
+              maxFiles={10}
+            />
           </div>
 
           {/* Basic Info */}
