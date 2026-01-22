@@ -95,8 +95,9 @@ function AppContent() {
     <Router>
       <AuthProvider>
         <CartProvider>
-          <Layout>
-            <Routes>
+          <ReviewGatingWrapper>
+            <Layout>
+              <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
