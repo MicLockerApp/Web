@@ -269,10 +269,14 @@ const ListingDetailPage = () => {
             <div className="relative aspect-square bg-dark-400 rounded-xl overflow-hidden mb-4">
               {isCurrentVideo ? (
                 <video
+                  key={currentMedia?.url}
                   src={currentImage}
                   controls
-                  className="w-full h-full object-contain"
+                  autoPlay
+                  playsInline
+                  className="w-full h-full object-contain bg-black"
                   poster={images[0]?.url}
+                  data-testid="video-player"
                 >
                   Your browser does not support the video tag.
                 </video>
@@ -281,6 +285,7 @@ const ListingDetailPage = () => {
                   src={currentImage}
                   alt={listing.title}
                   className="w-full h-full object-contain"
+                  data-testid="image-display"
                 />
               )}
               {allMedia.length > 1 && (
