@@ -34,6 +34,13 @@ class ShippingOption(BaseModel):
     price: float = 0.0
     estimated_days: Optional[str] = None
 
+class S3MediaItem(BaseModel):
+    """Media item from S3 upload"""
+    url: str
+    key: Optional[str] = None
+    type: str  # "image" or "video"
+    is_primary: bool = False
+
 class ListingCreate(BaseModel):
     title: str = Field(..., min_length=3, max_length=200)
     description: str = Field(..., min_length=10)
@@ -47,6 +54,7 @@ class ListingCreate(BaseModel):
     shipping: Optional[ShippingOption] = None
     payment_plan: Optional[PaymentPlan] = None
     tags: Optional[List[str]] = None
+    media: Optional[List[S3MediaItem]] = None  # S3 uploaded media
 
 class ListingUpdate(BaseModel):
     title: Optional[str] = None
