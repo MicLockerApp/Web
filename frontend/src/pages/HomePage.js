@@ -119,7 +119,7 @@ const HomePage = () => {
         
         <div className="relative max-w-7xl mx-auto text-center">
           <h1 className={`text-4xl md:text-6xl font-bold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            By Music Pros. <span className="text-primary">For Music Pros.</span>
+            For Music Pros. <span className="text-primary">By Music Pros.</span>
           </h1>
           <p className={`text-xl mb-8 max-w-2xl mx-auto ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             The gold standard of the music industry
