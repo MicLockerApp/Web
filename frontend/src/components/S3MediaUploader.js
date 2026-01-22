@@ -293,13 +293,12 @@ const S3MediaUploader = ({
         <p>• Images: JPEG, PNG, WebP, GIF (max 10MB each)</p>
         <p>• Videos: MP4, MOV, WebM (max 100MB each)</p>
         <p>• Drag and drop or click to upload</p>
-        <div className={`mt-3 p-3 rounded-lg ${isDark ? 'bg-blue-500/10 border border-blue-500/30' : 'bg-blue-50 border border-blue-200'}`}>
-          <p className={`font-medium ${isDark ? 'text-blue-400' : 'text-blue-700'}`}>
-            ⏱️ Upload Times
+        <div className={`mt-3 p-3 rounded-lg ${isDark ? 'bg-yellow-500/10 border border-yellow-500/30' : 'bg-yellow-50 border border-yellow-200'}`}>
+          <p className={`font-medium ${isDark ? 'text-yellow-400' : 'text-yellow-700'}`}>
+            ⏱️ Upload Time Notice
           </p>
-          <p className={`mt-1 ${isDark ? 'text-blue-300/80' : 'text-blue-600'}`}>
-            Large files may take 1-5 minutes to fully upload depending on your internet speed. 
-            Wait for the green checkmark ✓ before saving your listing.
+          <p className={`mt-1 ${isDark ? 'text-yellow-300/80' : 'text-yellow-600'}`}>
+            Photos and videos may take up to 5 minutes (or less) to fully upload, depending on your network speed and file sizes. Please wait for the green checkmark ✓ on each file before saving your listing.
           </p>
         </div>
       </div>
