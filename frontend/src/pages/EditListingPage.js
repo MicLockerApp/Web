@@ -203,76 +203,18 @@ const EditListingPage = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Media Upload */}
-          <div className="bg-dark-400 rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <Image className="w-5 h-5" />
-              Photos & Videos
-            </h2>
-
-            <div className="grid grid-cols-3 md:grid-cols-4 gap-4 mb-4">
-              {media.map((item) => (
-                <div key={item.id} className="relative aspect-square bg-dark-300 rounded-lg overflow-hidden group">
-                  {item.media_type === 'video' ? (
-                    <video src={item.url} className="w-full h-full object-cover" />
-                  ) : (
-                    <img src={item.url} alt="" className="w-full h-full object-cover" />
-                  )}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleSetPrimary(item.id)}
-                      className={`p-2 rounded-lg ${item.is_primary ? 'bg-primary text-black' : 'bg-white/20 text-white'}`}
-                      title="Set as primary"
-                    >
-                      <Tag className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveMedia(item.id)}
-                      className="p-2 bg-red-500/20 text-red-400 rounded-lg"
-                      title="Remove"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                  {item.is_primary && (
-                    <span className="absolute top-2 left-2 bg-primary text-black text-xs px-2 py-1 rounded">Primary</span>
-                  )}
-                  {item.media_type === 'video' && (
-                    <Video className="absolute bottom-2 right-2 w-4 h-4 text-white" />
-                  )}
-                </div>
-              ))}
-
-              {/* Upload Button */}
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="aspect-square bg-dark-300 rounded-lg border-2 border-dashed border-dark-200 flex flex-col items-center justify-center gap-2 hover:border-primary transition-colors"
-              >
-                {uploading ? (
-                  <LoadingSpinner />
-                ) : (
-                  <>
-                    <Upload className="w-6 h-6 text-gray-400" />
-                    <span className="text-gray-400 text-sm">Add</span>
-                  </>
-                )}
-              </button>
-            </div>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*,video/*"
-              multiple
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-            <p className="text-gray-500 text-sm">Upload up to 10 photos and 1 video. First image is the cover.</p>
-          </div>
+          {/* Media Upload - S3 */}
+          <S3MediaUploader
+            listingId={id}
+            onChange={handleMediaChange}
+            initialMedia={media.map(m => ({
+              key: m.id,
+              url: m.url,
+              type: m.media_type,
+              filename: m.id
+            }))}
+            maxFiles={10}
+          />
 
           {/* Basic Info */}
           <div className="bg-dark-400 rounded-xl p-6">
