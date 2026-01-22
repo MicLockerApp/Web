@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Upload, X, Plus, Image, Video } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { listingsAPI, filesAPI } from '../services/api';
+import { listingsAPI } from '../services/api';
+import S3MediaUploader from '../components/S3MediaUploader';
 
 const CATEGORIES = [
   'Guitars', 'Bass', 'Keyboards & Synths', 'Drums & Percussion',
@@ -19,7 +20,6 @@ const CreateListingPage = () => {
   const { isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [uploadingMedia, setUploadingMedia] = useState(false);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -38,8 +38,8 @@ const CreateListingPage = () => {
     tags: '',
   });
 
-  const [mediaFiles, setMediaFiles] = useState([]);
-  const [mediaPreview, setMediaPreview] = useState([]);
+  // S3 uploaded media
+  const [uploadedMedia, setUploadedMedia] = useState([]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -47,7 +47,10 @@ const CreateListingPage = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  const handleMediaUpload = async (e) => {
+  // Handle S3 media uploads
+  const handleMediaChange = useCallback((media) => {
+    setUploadedMedia(media);
+  }, []);
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
 
