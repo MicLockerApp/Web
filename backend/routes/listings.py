@@ -56,10 +56,25 @@ async def create_listing(
             detail=f"Invalid condition. Must be one of: {LISTING_CONDITIONS}"
         )
     
+    # Convert S3 media to ListingMedia format
+    media_items = []
+    if listing_data.media:
+        for i, item in enumerate(listing_data.media):
+            media_items.append(ListingMedia(
+                url=item.url,
+                media_type=item.type,
+                is_primary=(i == 0 or item.is_primary),
+                order=i
+            ))
+    
+    # Create listing data without the S3 media field
+    listing_dict = listing_data.model_dump(exclude={'media'})
+    
     listing = ListingInDB(
         seller_id=current_user["id"],
         seller_username=current_user["username"],
-        **listing_data.model_dump()
+        media=media_items,  # Add converted media
+        **listing_dict
     )
     
     await db.listings.insert_one(listing.model_dump())
