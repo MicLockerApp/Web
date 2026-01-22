@@ -90,9 +90,9 @@ class TestPresignedUrlGeneration:
         assert "public_url" in data, "Response should contain public_url"
         assert "expires_in" in data, "Response should contain expires_in"
         
-        # Verify URL structure
-        assert "s3.us-east-2.amazonaws.com" in data["upload_url"], "Upload URL should be S3 URL"
+        # Verify URL structure - upload_url is the S3 bucket URL, public_url has the region
         assert "miclocker-saint-louis-bucket" in data["upload_url"], "Upload URL should contain bucket name"
+        assert "s3.us-east-2.amazonaws.com" in data["public_url"], "Public URL should have region"
         assert data["key"].startswith("temp/"), "Key should start with temp/ when no listing_id"
         
         print(f"✓ Presigned URL generated: key={data['key']}, expires_in={data['expires_in']}")
