@@ -51,33 +51,6 @@ const CreateListingPage = () => {
   const handleMediaChange = useCallback((media) => {
     setUploadedMedia(media);
   }, []);
-    const files = Array.from(e.target.files);
-    if (files.length === 0) return;
-
-    setUploadingMedia(true);
-    
-    for (const file of files) {
-      const isImage = file.type.startsWith('image/');
-      const isVideo = file.type.startsWith('video/');
-      
-      if (!isImage && !isVideo) {
-        setError('Only images and videos are allowed');
-        continue;
-      }
-
-      // Create preview
-      const preview = URL.createObjectURL(file);
-      setMediaPreview(prev => [...prev, { file, preview, type: isImage ? 'image' : 'video' }]);
-      setMediaFiles(prev => [...prev, file]);
-    }
-    
-    setUploadingMedia(false);
-  };
-
-  const removeMedia = (index) => {
-    setMediaPreview(prev => prev.filter((_, i) => i !== index));
-    setMediaFiles(prev => prev.filter((_, i) => i !== index));
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -85,7 +58,15 @@ const CreateListingPage = () => {
     setError('');
 
     try {
-      // Create listing first
+      // Prepare media data from S3 uploads
+      const mediaData = uploadedMedia.map((item, index) => ({
+        url: item.url,
+        key: item.key,
+        type: item.type,
+        is_primary: index === 0
+      }));
+
+      // Create listing with S3 media URLs
       const listingData = {
         title: formData.title,
         description: formData.description,
@@ -107,21 +88,11 @@ const CreateListingPage = () => {
           down_payment_percent: 25,
         },
         tags: formData.tags.split(',').map(t => t.trim()).filter(t => t),
+        media: mediaData,  // S3 media URLs
       };
 
       const response = await listingsAPI.create(listingData);
-      const listingId = response.data.id;
-
-      // Upload media
-      for (let i = 0; i < mediaFiles.length; i++) {
-        const file = mediaFiles[i];
-        const formDataMedia = new FormData();
-        formDataMedia.append('file', file);
-        
-        await listingsAPI.addMedia(listingId, formDataMedia, i === 0);
-      }
-
-      navigate(`/listing/${listingId}`);
+      navigate(`/listing/${response.data.id}`);
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to create listing');
     } finally {
