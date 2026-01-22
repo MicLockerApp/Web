@@ -65,6 +65,10 @@ const ListingCard = ({ listing, onFavoriteChange }) => {
           alt={listing.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           loading="lazy"
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=400';
+          }}
         />
         {listing.condition && (
           <span className="absolute top-2 left-2 badge badge-primary">
