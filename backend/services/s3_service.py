@@ -179,8 +179,8 @@ class S3Service:
         
         try:
             extra_args = {
-                'ContentType': content_type,
-                'ACL': 'public-read'  # Make files publicly readable
+                'ContentType': content_type
+                # Note: ACL removed - bucket uses bucket policy for public access
             }
             
             if metadata:
