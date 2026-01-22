@@ -20,6 +20,7 @@ from routes.trades import router as trades_router
 from routes.stats import router as stats_router
 from routes.stripe_connect_v2_sample import router as stripe_connect_v2_sample_router
 from routes.reports import router as reports_router
+from routes.uploads import router as uploads_router
 
 # Delivery tasks import
 from tasks.delivery_tasks import start_delivery_scheduler
