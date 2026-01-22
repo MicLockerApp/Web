@@ -295,6 +295,9 @@ app.include_router(stripe_connect_v2_sample_router, prefix="/api")
 # Reports routes (listing flagging system)
 app.include_router(reports_router, prefix="/api")
 
+# File uploads routes (S3 integration)
+app.include_router(uploads_router, prefix="/api")
+
 # Health check endpoints
 @app.get("/api/health")
 async def api_health_check():
