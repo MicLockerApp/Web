@@ -100,31 +100,18 @@ const EditListingPage = () => {
     }));
   };
 
-  const handleFileUpload = async (e) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-
-    setUploading(true);
-    try {
-      for (const file of files) {
-        const isVideo = file.type.startsWith('video/');
-        const fileType = isVideo ? 'video' : 'image';
-        
-        const res = await filesAPI.upload(file, fileType);
-        setMedia(prev => [...prev, {
-          id: Date.now().toString(),
-          url: res.data.url,
-          media_type: fileType,
-          is_primary: prev.length === 0,
-        }]);
-      }
-      setMessage({ type: 'success', text: 'Files uploaded successfully!' });
-    } catch (error) {
-      setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to upload files' });
-    } finally {
-      setUploading(false);
-    }
-  };
+  // Handle S3 media changes
+  const handleMediaChange = useCallback((newMedia) => {
+    // Convert S3MediaUploader format to listing media format
+    const converted = newMedia.map((item, index) => ({
+      id: item.key || `media-${index}`,
+      url: item.url,
+      media_type: item.type,
+      is_primary: index === 0,
+      order: index
+    }));
+    setMedia(converted);
+  }, []);
 
   const handleRemoveMedia = (mediaId) => {
     setMedia(prev => {
