@@ -264,24 +264,35 @@ const ListingDetailPage = () => {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Images */}
+          {/* Images & Videos */}
           <div>
             <div className="relative aspect-square bg-dark-400 rounded-xl overflow-hidden mb-4">
-              <img
-                src={currentImage}
-                alt={listing.title}
-                className="w-full h-full object-contain"
-              />
-              {images.length > 1 && (
+              {isCurrentVideo ? (
+                <video
+                  src={currentImage}
+                  controls
+                  className="w-full h-full object-contain"
+                  poster={images[0]?.url}
+                >
+                  Your browser does not support the video tag.
+                </video>
+              ) : (
+                <img
+                  src={currentImage}
+                  alt={listing.title}
+                  className="w-full h-full object-contain"
+                />
+              )}
+              {allMedia.length > 1 && (
                 <>
                   <button
-                    onClick={() => setCurrentImageIndex((currentImageIndex - 1 + images.length) % images.length)}
+                    onClick={() => setCurrentImageIndex((currentImageIndex - 1 + allMedia.length) % allMedia.length)}
                     className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 p-2 rounded-full"
                   >
                     <ChevronLeft className="w-5 h-5 text-white" />
                   </button>
                   <button
-                    onClick={() => setCurrentImageIndex((currentImageIndex + 1) % images.length)}
+                    onClick={() => setCurrentImageIndex((currentImageIndex + 1) % allMedia.length)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 p-2 rounded-full"
                   >
                     <ChevronRight className="w-5 h-5 text-white" />
@@ -290,17 +301,27 @@ const ListingDetailPage = () => {
               )}
             </div>
             {/* Thumbnails */}
-            {images.length > 1 && (
+            {allMedia.length > 1 && (
               <div className="flex gap-2 overflow-x-auto">
-                {images.map((img, idx) => (
+                {allMedia.map((media, idx) => (
                   <button
-                    key={img.id}
+                    key={media.id || idx}
                     onClick={() => setCurrentImageIndex(idx)}
-                    className={`w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 border-2 ${
+                    className={`relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 border-2 ${
                       idx === currentImageIndex ? 'border-primary' : 'border-transparent'
                     }`}
                   >
-                    <img src={img.url} alt="" className="w-full h-full object-cover" />
+                    {media.media_type === 'video' ? (
+                      <>
+                        <video src={media.url} className="w-full h-full object-cover" muted />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                          <Play className="w-6 h-6 text-white" />
+                        </div>
+                      </>
+                    ) : (
+                      <img src={media.url} alt="" className="w-full h-full object-cover" />
+                    )}
+                  </button>
                   </button>
                 ))}
               </div>
