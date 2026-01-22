@@ -293,6 +293,9 @@ const S3MediaUploader = ({
         <p>• Images: JPEG, PNG, WebP, GIF (max 10MB each)</p>
         <p>• Videos: MP4, MOV, WebM (max 100MB each)</p>
         <p>• Drag and drop or click to upload</p>
+        <p className={`mt-2 ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
+          💡 Videos will appear on your listing immediately after saving. No processing delay!
+        </p>
       </div>
     </div>
   );
