@@ -161,6 +161,7 @@ function AppContent() {
           </Layout>
           {/* AI Chat Widget - Stateless UI, can be replaced with Crisp */}
           <ChatWidget />
+          </ReviewGatingWrapper>
         </CartProvider>
       </AuthProvider>
     </Router>
