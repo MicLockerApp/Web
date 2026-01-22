@@ -102,7 +102,15 @@ const S3MediaUploader = ({
           return updated;
         });
       } else {
-        setError(result.error || `Failed to upload ${file.name}`);
+        console.error('Upload failed for', file.name, ':', result.error);
+        setError(`Failed to upload ${file.name}: ${result.error || 'Unknown error'}`);
+        // Clean up preview for failed upload
+        URL.revokeObjectURL(preview);
+        setLocalPreviews(prev => {
+          const updated = { ...prev };
+          delete updated[file.name];
+          return updated;
+        });
       }
     }
     
