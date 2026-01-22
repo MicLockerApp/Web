@@ -19,27 +19,16 @@ const useS3Upload = () => {
     setError(null);
     
     try {
-      // Get presigned URL from backend
-      const presignedResponse = await api.post('/uploads/presigned-url', {
+      // Use PUT URL method (simpler and more reliable than POST)
+      const presignedResponse = await api.post('/uploads/presigned-put-url', {
         filename: file.name,
         content_type: file.type,
         listing_id: listingId
       });
 
-      const { upload_url, fields, key, public_url } = presignedResponse.data;
+      const { upload_url, key, public_url, content_type } = presignedResponse.data;
 
-      // Create form data for S3 upload
-      const formData = new FormData();
-      
-      // Add all fields from presigned URL (order matters!)
-      Object.entries(fields).forEach(([fieldKey, value]) => {
-        formData.append(fieldKey, value);
-      });
-      
-      // Add file last
-      formData.append('file', file);
-
-      // Upload to S3
+      // Upload directly to S3 using PUT
       const xhr = new XMLHttpRequest();
       
       const uploadPromise = new Promise((resolve, reject) => {
@@ -51,23 +40,27 @@ const useS3Upload = () => {
         });
 
         xhr.addEventListener('load', () => {
-          if (xhr.status >= 200 && xhr.status < 300 || xhr.status === 204) {
+          if (xhr.status >= 200 && xhr.status < 300) {
             resolve({ success: true, key, url: public_url });
           } else {
-            reject(new Error(`Upload failed with status ${xhr.status}`));
+            console.error('S3 Upload Error:', xhr.status, xhr.responseText);
+            reject(new Error(`Upload failed with status ${xhr.status}: ${xhr.responseText}`));
           }
         });
 
-        xhr.addEventListener('error', () => {
-          reject(new Error('Upload failed'));
+        xhr.addEventListener('error', (e) => {
+          console.error('S3 Upload Network Error:', e);
+          reject(new Error('Network error during upload'));
         });
 
-        xhr.open('POST', upload_url);
-        xhr.send(formData);
+        xhr.open('PUT', upload_url);
+        xhr.setRequestHeader('Content-Type', content_type);
+        xhr.send(file);
       });
 
       return await uploadPromise;
     } catch (err) {
+      console.error('Upload error:', err);
       const errorMsg = err.response?.data?.detail || err.message || 'Upload failed';
       setError(errorMsg);
       return { success: false, error: errorMsg };
