@@ -322,7 +322,6 @@ const ListingDetailPage = () => {
                       <img src={media.url} alt="" className="w-full h-full object-cover" />
                     )}
                   </button>
-                  </button>
                 ))}
               </div>
             )}
