@@ -506,6 +506,54 @@ const AdminPage = () => {
         {/* Overview Tab - Only for owner and manager */}
         {activeTab === 'overview' && canSeeAllStats && (
           <>
+            {/* Date Range Picker - synced with Analytics Dashboard */}
+            <div className="flex flex-wrap items-center gap-3 mb-6">
+              <div className="flex gap-1 bg-dark-400 rounded-lg p-1">
+                <button
+                  onClick={setLast7Days}
+                  className="px-3 py-1.5 text-xs rounded-lg bg-dark-300 text-gray-400 hover:text-white hover:bg-dark-200 transition-colors"
+                >
+                  7D
+                </button>
+                <button
+                  onClick={setLast30Days}
+                  className="px-3 py-1.5 text-xs rounded-lg bg-dark-300 text-gray-400 hover:text-white hover:bg-dark-200 transition-colors"
+                >
+                  30D
+                </button>
+                <button
+                  onClick={setLast90Days}
+                  className="px-3 py-1.5 text-xs rounded-lg bg-dark-300 text-gray-400 hover:text-white hover:bg-dark-200 transition-colors"
+                >
+                  90D
+                </button>
+              </div>
+              
+              <div className="flex items-center gap-2 bg-dark-400 rounded-lg p-2">
+                <Calendar className="w-4 h-4 text-gray-400" />
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="bg-transparent border-none text-white text-sm focus:outline-none focus:ring-0 w-32"
+                  data-testid="admin-start-date"
+                />
+                <span className="text-gray-500">to</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="bg-transparent border-none text-white text-sm focus:outline-none focus:ring-0 w-32"
+                  data-testid="admin-end-date"
+                />
+              </div>
+              
+              <p className="text-gray-400 text-sm ml-auto">
+                Date range: <span className="text-primary font-medium">{formatDateRange()}</span>
+                <span className="text-gray-600 ml-2">(synced with Analytics)</span>
+              </p>
+            </div>
+            
             {/* Reset Analytics Button - Only for Admin/Owner */}
             {canResetAnalytics && (
               <div className="flex justify-end mb-4">
