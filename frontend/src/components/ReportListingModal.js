@@ -140,32 +140,41 @@ const ReportListingModal = ({ isOpen, onClose, listing, onSuccess }) => {
 
             {/* Category Selection */}
             <div className="mb-4">
-              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+              <label className={`block text-sm font-medium mb-3 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 Why are you reporting this listing?
               </label>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
+              <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
                 {REPORT_CATEGORIES.map((category) => (
                   <label
                     key={category.id}
-                    className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-all ${
+                    className={`flex items-center gap-4 p-4 rounded-xl cursor-pointer transition-all ${
                       selectedCategory === category.id
                         ? isDark ? 'bg-primary/20 border-2 border-primary' : 'bg-yellow-50 border-2 border-yellow-400'
                         : isDark ? 'bg-dark-500 hover:bg-dark-300 border-2 border-transparent' : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent'
                     }`}
                   >
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                      selectedCategory === category.id
+                        ? 'border-primary bg-primary'
+                        : isDark ? 'border-gray-500' : 'border-gray-400'
+                    }`}>
+                      {selectedCategory === category.id && (
+                        <div className="w-2 h-2 bg-black rounded-full" />
+                      )}
+                    </div>
                     <input
                       type="radio"
                       name="category"
                       value={category.id}
                       checked={selectedCategory === category.id}
                       onChange={(e) => setSelectedCategory(e.target.value)}
-                      className="mt-1"
+                      className="sr-only"
                     />
-                    <div>
-                      <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    <div className="flex-1">
+                      <p className={`font-semibold text-base ${isDark ? 'text-white' : 'text-gray-900'}`}>
                         {category.label}
                       </p>
-                      <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                      <p className={`text-sm mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
                         {category.description}
                       </p>
                     </div>
