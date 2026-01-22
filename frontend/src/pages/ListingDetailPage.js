@@ -269,18 +269,36 @@ const ListingDetailPage = () => {
           <div>
             <div className="relative aspect-square bg-dark-400 rounded-xl overflow-hidden mb-4">
               {isCurrentVideo ? (
-                <video
-                  key={currentMedia?.url}
-                  src={currentImage}
-                  controls
-                  autoPlay
-                  playsInline
-                  className="w-full h-full object-contain bg-black"
-                  poster={images[0]?.url}
-                  data-testid="video-player"
-                >
-                  Your browser does not support the video tag.
-                </video>
+                <>
+                  <video
+                    ref={videoRef}
+                    key={`video-${currentImageIndex}-${currentMedia?.url}`}
+                    src={currentImage}
+                    controls
+                    autoPlay
+                    playsInline
+                    className="w-full h-full object-contain bg-black"
+                    poster={images[0]?.url}
+                    data-testid="video-player"
+                    onLoadedData={(e) => {
+                      // Attempt to unmute and play when video loads
+                      const video = e.target;
+                      video.muted = false;
+                      video.play().catch(() => {
+                        // If autoplay with sound fails, try muted
+                        video.muted = true;
+                        video.play();
+                      });
+                    }}
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                  {/* Video indicator */}
+                  <div className="absolute top-4 left-4 flex items-center gap-2 bg-black/70 px-3 py-1.5 rounded-full">
+                    <Volume2 className="w-4 h-4 text-primary" />
+                    <span className="text-sm text-white font-medium">Video</span>
+                  </div>
+                </>
               ) : (
                 <img
                   src={currentImage}
