@@ -67,8 +67,8 @@ async def create_listing(
                 order=i
             ))
     
-    # Create listing data without the S3 media field
-    listing_dict = listing_data.model_dump(exclude={'media'})
+    # Create listing data without the S3 media field and None values
+    listing_dict = {k: v for k, v in listing_data.model_dump(exclude={'media'}).items() if v is not None}
     
     listing = ListingInDB(
         seller_id=current_user["id"],
