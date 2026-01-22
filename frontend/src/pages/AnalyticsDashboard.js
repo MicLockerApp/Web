@@ -1,26 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import api from '../services/api';
+import { useDateRange } from '../context/DateRangeContext';
+import api, { adminAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import {
   BarChart3, TrendingUp, DollarSign, Package, Users, Search, MessageSquare,
   ShoppingCart, Tag, AlertTriangle, RefreshCw, Calendar, Clock, ArrowUp, ArrowDown,
-  Activity, Target, Percent, Shield, Eye, Ticket, ChevronRight, Globe, ArrowLeft
+  Activity, Target, Percent, Shield, Eye, Ticket, ChevronRight, Globe, ArrowLeft, X
 } from 'lucide-react';
 
 const AnalyticsDashboard = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { startDate, endDate, setStartDate, setEndDate, formatDateRange, getDateParams, setLast7Days, setLast30Days, setLast90Days } = useDateRange();
   const [loading, setLoading] = useState(true);
-  const [startDate, setStartDate] = useState(() => {
-    const date = new Date();
-    date.setDate(date.getDate() - 30);
-    return date.toISOString().split('T')[0];
-  });
-  const [endDate, setEndDate] = useState(() => {
-    return new Date().toISOString().split('T')[0];
-  });
   const [realtimeMetrics, setRealtimeMetrics] = useState(null);
   const [revenueData, setRevenueData] = useState(null);
   const [offerFunnel, setOfferFunnel] = useState(null);
@@ -32,13 +26,22 @@ const AnalyticsDashboard = () => {
   const [recentTickets, setRecentTickets] = useState([]);
   const [dailyVisitors, setDailyVisitors] = useState(null);
   const [lastRefresh, setLastRefresh] = useState(new Date());
-
-  const getDateParams = useCallback(() => {
-    return {
-      start_date: startDate,
-      end_date: endDate
-    };
-  }, [startDate, endDate]);
+  
+  // Reset modal state
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetOptions, setResetOptions] = useState({
+    reset_orders: false,
+    reset_analytics_events: false,
+    reset_analytics_rollups: false,
+    reset_support_tickets: false,
+    reset_all: false
+  });
+  const [resetConfirmation, setResetConfirmation] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState('');
+  
+  // Check if user can reset (admin or owner)
+  const canResetAnalytics = user?.role === 'owner' || user?.role === 'admin' || user?.is_admin;
 
   const fetchAnalytics = useCallback(async () => {
     if (!isAuthenticated || !user?.is_admin) return;
@@ -109,10 +112,51 @@ const AnalyticsDashboard = () => {
     return `${(value || 0).toFixed(1)}%`;
   };
 
-  const formatDateRange = () => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  // Handle reset analytics
+  const handleResetAnalytics = async () => {
+    if (resetConfirmation !== 'CONFIRM_RESET') {
+      setResetError('Please type CONFIRM_RESET to proceed');
+      return;
+    }
+    
+    const hasSelection = resetOptions.reset_all || resetOptions.reset_orders || 
+                         resetOptions.reset_analytics_events || resetOptions.reset_analytics_rollups ||
+                         resetOptions.reset_support_tickets;
+    
+    if (!hasSelection) {
+      setResetError('Please select at least one option to reset');
+      return;
+    }
+    
+    setResetLoading(true);
+    setResetError('');
+    
+    try {
+      await adminAPI.resetAnalytics({
+        ...resetOptions,
+        confirmation: resetConfirmation
+      });
+      
+      // Refresh analytics data
+      fetchAnalytics();
+      
+      // Close modal and reset state
+      setShowResetModal(false);
+      setResetOptions({
+        reset_orders: false,
+        reset_analytics_events: false,
+        reset_analytics_rollups: false,
+        reset_support_tickets: false,
+        reset_all: false
+      });
+      setResetConfirmation('');
+      
+      alert('Analytics data reset successfully!');
+    } catch (error) {
+      setResetError(error.response?.data?.detail || 'Failed to reset analytics');
+    } finally {
+      setResetLoading(false);
+    }
   };
 
   if (authLoading || loading) return <LoadingSpinner />;
@@ -143,6 +187,40 @@ const AnalyticsDashboard = () => {
           </div>
           
           <div className="flex items-center gap-4 flex-wrap">
+            {/* Reset Analytics Button - Only for Admin/Owner */}
+            {canResetAnalytics && (
+              <button
+                onClick={() => setShowResetModal(true)}
+                className="px-3 py-1.5 text-xs rounded-lg bg-red-900/30 border border-red-500/30 text-red-400 hover:bg-red-900/50 transition-colors flex items-center gap-1"
+                data-testid="reset-analytics-btn"
+              >
+                <AlertTriangle className="w-3 h-3" />
+                Reset Data
+              </button>
+            )}
+            
+            {/* Quick date presets */}
+            <div className="flex gap-1">
+              <button
+                onClick={() => { setLast7Days(); }}
+                className="px-3 py-1.5 text-xs rounded-lg bg-dark-400 text-gray-400 hover:text-white hover:bg-dark-300 transition-colors"
+              >
+                7D
+              </button>
+              <button
+                onClick={() => { setLast30Days(); }}
+                className="px-3 py-1.5 text-xs rounded-lg bg-dark-400 text-gray-400 hover:text-white hover:bg-dark-300 transition-colors"
+              >
+                30D
+              </button>
+              <button
+                onClick={() => { setLast90Days(); }}
+                className="px-3 py-1.5 text-xs rounded-lg bg-dark-400 text-gray-400 hover:text-white hover:bg-dark-300 transition-colors"
+              >
+                90D
+              </button>
+            </div>
+            
             {/* Custom Date Range Picker */}
             <div className="flex items-center gap-2 bg-dark-400 rounded-lg p-2">
               <Calendar className="w-4 h-4 text-gray-400" />
@@ -646,6 +724,149 @@ const AnalyticsDashboard = () => {
             )}
           </div>
         </div>
+
+        {/* Reset Analytics Modal */}
+        {showResetModal && canResetAnalytics && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div className="bg-dark-400 rounded-xl max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-red-900/30 rounded-full flex items-center justify-center">
+                    <AlertTriangle className="w-6 h-6 text-red-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Reset Analytics Data</h2>
+                    <p className="text-gray-500 text-sm">This action cannot be undone</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowResetModal(false);
+                    setResetError('');
+                    setResetConfirmation('');
+                  }}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              {resetError && (
+                <div className="bg-red-500/20 text-red-400 px-4 py-3 rounded-lg mb-4 text-sm">
+                  {resetError}
+                </div>
+              )}
+
+              <div className="space-y-3 mb-6">
+                <p className="text-gray-400 text-sm mb-4">Select the data you want to reset:</p>
+                
+                <label className="flex items-center gap-3 p-3 bg-dark-300 rounded-lg cursor-pointer hover:bg-dark-200">
+                  <input
+                    type="checkbox"
+                    checked={resetOptions.reset_orders}
+                    onChange={(e) => setResetOptions({ ...resetOptions, reset_orders: e.target.checked, reset_all: false })}
+                    className="w-4 h-4 rounded border-gray-600"
+                  />
+                  <div>
+                    <p className="text-white font-medium">Orders</p>
+                    <p className="text-gray-500 text-xs">Delete all order records</p>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-3 p-3 bg-dark-300 rounded-lg cursor-pointer hover:bg-dark-200">
+                  <input
+                    type="checkbox"
+                    checked={resetOptions.reset_analytics_events}
+                    onChange={(e) => setResetOptions({ ...resetOptions, reset_analytics_events: e.target.checked, reset_all: false })}
+                    className="w-4 h-4 rounded border-gray-600"
+                  />
+                  <div>
+                    <p className="text-white font-medium">Analytics Events</p>
+                    <p className="text-gray-500 text-xs">Delete raw analytics event data</p>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-3 p-3 bg-dark-300 rounded-lg cursor-pointer hover:bg-dark-200">
+                  <input
+                    type="checkbox"
+                    checked={resetOptions.reset_analytics_rollups}
+                    onChange={(e) => setResetOptions({ ...resetOptions, reset_analytics_rollups: e.target.checked, reset_all: false })}
+                    className="w-4 h-4 rounded border-gray-600"
+                  />
+                  <div>
+                    <p className="text-white font-medium">Analytics Rollups</p>
+                    <p className="text-gray-500 text-xs">Delete aggregated analytics (Dashboard stats)</p>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-3 p-3 bg-dark-300 rounded-lg cursor-pointer hover:bg-dark-200">
+                  <input
+                    type="checkbox"
+                    checked={resetOptions.reset_support_tickets}
+                    onChange={(e) => setResetOptions({ ...resetOptions, reset_support_tickets: e.target.checked, reset_all: false })}
+                    className="w-4 h-4 rounded border-gray-600"
+                  />
+                  <div>
+                    <p className="text-white font-medium">Support Tickets</p>
+                    <p className="text-gray-500 text-xs">Delete all support ticket records</p>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-3 p-3 bg-red-900/20 border border-red-500/30 rounded-lg cursor-pointer hover:bg-red-900/30">
+                  <input
+                    type="checkbox"
+                    checked={resetOptions.reset_all}
+                    onChange={(e) => setResetOptions({
+                      reset_orders: e.target.checked,
+                      reset_analytics_events: e.target.checked,
+                      reset_analytics_rollups: e.target.checked,
+                      reset_support_tickets: e.target.checked,
+                      reset_all: e.target.checked
+                    })}
+                    className="w-4 h-4 rounded border-gray-600"
+                  />
+                  <div>
+                    <p className="text-red-400 font-medium">Reset All</p>
+                    <p className="text-gray-500 text-xs">Delete ALL analytics and order data</p>
+                  </div>
+                </label>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-gray-400 text-sm mb-2">
+                  Type <span className="text-red-400 font-mono">CONFIRM_RESET</span> to proceed:
+                </label>
+                <input
+                  type="text"
+                  value={resetConfirmation}
+                  onChange={(e) => setResetConfirmation(e.target.value)}
+                  placeholder="CONFIRM_RESET"
+                  className="w-full bg-dark-300 border border-dark-200 rounded-lg px-4 py-3 text-white font-mono"
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowResetModal(false);
+                    setResetError('');
+                    setResetConfirmation('');
+                  }}
+                  className="flex-1 py-3 bg-dark-300 hover:bg-dark-200 text-gray-400 font-medium rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleResetAnalytics}
+                  disabled={resetLoading || resetConfirmation !== 'CONFIRM_RESET'}
+                  className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {resetLoading ? 'Resetting...' : 'Reset Data'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

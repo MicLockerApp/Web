@@ -96,6 +96,8 @@ const EditProfilePage = () => {
   const [showPhysicalAddressWarning, setShowPhysicalAddressWarning] = useState(false);
   
   const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
     bio: '',
     location: '',
     profile_image: '',
@@ -173,6 +175,8 @@ const EditProfilePage = () => {
         const physicalAddress = profile.physical_address || {};
         
         setFormData({
+          firstName: profile.first_name || '',
+          lastName: profile.last_name || '',
           bio: profile.bio || '',
           location: profile.location || '',
           profile_image: profile.profile_image || '',
@@ -299,6 +303,9 @@ const EditProfilePage = () => {
       // Build the update payload
       const updateData = {
         ...formData,
+        // Map frontend names to backend names
+        first_name: formData.firstName,
+        last_name: formData.lastName,
         // Build shipping_address object
         shipping_address: formData.country ? {
           address_line1: formData.address_line1,
@@ -329,6 +336,8 @@ const EditProfilePage = () => {
       };
       
       // Remove individual address fields from root (they're in shipping_address/physical_address now)
+      delete updateData.firstName;
+      delete updateData.lastName;
       delete updateData.address_line1;
       delete updateData.address_line2;
       delete updateData.city;
@@ -469,6 +478,30 @@ const EditProfilePage = () => {
           <div className={`rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
             <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Basic Information</h2>
             
+            {/* First Name and Last Name */}
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>First Name</label>
+                <input
+                  type="text"
+                  value={formData.firstName}
+                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                  placeholder="John"
+                  data-testid="edit-first-name"
+                />
+              </div>
+              <div>
+                <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Last Name</label>
+                <input
+                  type="text"
+                  value={formData.lastName}
+                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                  placeholder="Doe"
+                  data-testid="edit-last-name"
+                />
+              </div>
+            </div>
+
             <div className="mb-4">
               <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Bio</label>
               <textarea

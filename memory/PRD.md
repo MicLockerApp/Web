@@ -325,6 +325,67 @@ MicLocker is a production-ready full-stack marketplace where musicians, audio en
 - Add more comprehensive error handling
 - UI test automation (blocked until login issues resolved)
 
+## Completed This Session (January 22, 2026)
+
+### Message Deletion Feature (NEW - January 22, 2026)
+1. **Backend Endpoints** - Already existed in `/app/backend/routes/messages.py`:
+   - `DELETE /api/messages/messages/{message_id}` - Delete a single message (only sender can delete)
+   - `DELETE /api/messages/threads/{thread_id}` - Delete entire conversation thread
+   
+2. **Frontend UI** added to `/app/frontend/src/pages/MessagesPage.js`:
+   - Trash icon appears on hover for own messages
+   - Delete confirmation popover before deletion
+   - Three-dot menu on threads with "Delete Conversation" option
+   - Click-outside handler to close menus
+   - Proper state management for message and thread removal
+
+3. **API Methods** added to `/app/frontend/src/services/api.js`:
+   - `messagesAPI.deleteMessage(messageId)`
+   - `messagesAPI.deleteThread(threadId)`
+
+### Admin User Deletion Feedback Fix (January 22, 2026)
+1. **Improved Error Handling** in `/app/frontend/src/pages/AdminPage.js`:
+   - When trying to delete admin/owner/employee accounts, shows clear error message
+   - "Cannot delete admin, owner, or employee accounts. These accounts are protected."
+   - Checks for 403 status code specifically
+
+### Date Picker Sync Between Admin & Analytics (January 22, 2026)
+1. **Shared DateRangeContext** integrated into `/app/frontend/src/pages/AnalyticsDashboard.js`:
+   - Uses `useDateRange` hook from `DateRangeContext`
+   - Removed local state for dates
+   - Added quick preset buttons (7D, 30D, 90D)
+   - Date range shared across Admin Panel and Analytics Dashboard
+
+### Admin Reports Page for Flagged Listings (January 22, 2026)
+1. **New Page Created**: `/app/frontend/src/pages/AdminReportsPage.js`
+   - Stats cards: Pending, Under Review, Resolved, Dismissed, Total
+   - Filter tabs for report status
+   - Report cards with listing info, reporter, seller, description
+   - Action modal with options: Dismiss, Warn Seller, Remove Listing, Ban Seller
+   - Admin response field for notes
+   - View Listing button with external link
+   - Pagination for reports list
+
+2. **Route Added** to `/app/frontend/src/App.js`:
+   - `/admin/reports` route for AdminReportsPage
+
+3. **Link Added** to Admin Panel:
+   - "Flagged Listings" button with red-orange gradient
+   - Visible to all admin/employee users
+
+### Files Modified (January 22, 2026)
+- `/app/frontend/src/pages/MessagesPage.js` - Added message/thread deletion UI
+- `/app/frontend/src/pages/AdminPage.js` - Fixed user deletion feedback, added reports link
+- `/app/frontend/src/pages/AnalyticsDashboard.js` - Integrated DateRangeContext
+- `/app/frontend/src/services/api.js` - Added deleteMessage, deleteThread methods
+- `/app/frontend/src/App.js` - Added AdminReportsPage route and import
+- `/app/frontend/src/pages/AdminReportsPage.js` - New file for admin reports management
+
+### Testing Results (January 22, 2026)
+- **Backend**: 100% (20/21 tests passed, 1 skipped)
+- **Frontend**: All UI features working correctly
+- Test file: `/app/tests/test_messages_reports.py`
+
 ## Test Credentials
 - **Admin**: miclocker.support / Eisenhower1212!!
   - **Note**: On production, this user is auto-created on startup when Atlas is detected

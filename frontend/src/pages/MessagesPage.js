@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Send, ArrowLeft, User, Plus, X, Search } from 'lucide-react';
+import { Send, ArrowLeft, User, Plus, X, Search, Trash2, MoreVertical } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { messagesAPI, usersAPI } from '../services/api';
@@ -34,6 +34,11 @@ const MessagesPage = () => {
   const [newConversationMessage, setNewConversationMessage] = useState('');
   const [sendingNewMessage, setSendingNewMessage] = useState(false);
   const [searchError, setSearchError] = useState('');
+  
+  // Message deletion state
+  const [deletingMessage, setDeletingMessage] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+  const [threadMenuOpen, setThreadMenuOpen] = useState(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -50,6 +55,20 @@ const MessagesPage = () => {
       fetchNewRecipient();
     }
   }, [toUserId]);
+
+  // Close thread menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (threadMenuOpen && !event.target.closest('[data-testid^="thread-menu"]')) {
+        setThreadMenuOpen(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [threadMenuOpen]);
 
   const fetchThreads = async () => {
     try {
@@ -202,6 +221,45 @@ const MessagesPage = () => {
     setSearchError('');
   };
 
+  // Handle deleting a single message
+  const handleDeleteMessage = async (messageId) => {
+    setDeletingMessage(messageId);
+    try {
+      await messagesAPI.deleteMessage(messageId);
+      // Remove the message from local state
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+      // Refresh threads to update last message preview
+      fetchThreads();
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      alert('Failed to delete message. You can only delete your own messages.');
+    } finally {
+      setDeletingMessage(null);
+      setShowDeleteConfirm(null);
+    }
+  };
+
+  // Handle deleting an entire conversation
+  const handleDeleteThread = async (threadId) => {
+    if (!window.confirm('Are you sure you want to delete this entire conversation? This cannot be undone.')) {
+      return;
+    }
+    try {
+      await messagesAPI.deleteThread(threadId);
+      // Remove from local state
+      setThreads(prev => prev.filter(t => t.id !== threadId));
+      // Clear selection if this was the selected thread
+      if (selectedThread?.id === threadId) {
+        setSelectedThread(null);
+        setMessages([]);
+      }
+      setThreadMenuOpen(null);
+    } catch (error) {
+      console.error('Error deleting conversation:', error);
+      alert('Failed to delete conversation.');
+    }
+  };
+
   if (authLoading || loading) return <LoadingSpinner />;
 
   return (
@@ -230,48 +288,87 @@ const MessagesPage = () => {
             <div className="overflow-y-auto h-[360px] md:h-[calc(100%-60px)]">
               {threads.length > 0 ? (
                 threads.map(thread => (
-                  <button
+                  <div
                     key={thread.id}
-                    onClick={() => selectThread(thread)}
-                    className={`w-full p-4 text-left transition-colors border-b ${
+                    className={`relative group w-full p-4 text-left transition-colors border-b ${
                       isDark 
                         ? `hover:bg-dark-300 border-dark-300 ${selectedThread?.id === thread.id ? 'bg-dark-300' : ''}` 
                         : `hover:bg-gray-50 border-gray-200 ${selectedThread?.id === thread.id ? 'bg-gray-100' : ''}`
                     }`}
                   >
-                    <div className="flex items-center gap-3">
-                      {thread.other_user_avatar ? (
-                        <img 
-                          src={thread.other_user_avatar} 
-                          alt={thread.other_username}
-                          className="w-10 h-10 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          isDark ? 'bg-dark-200' : 'bg-gray-200'
+                    <button
+                      onClick={() => selectThread(thread)}
+                      className="w-full text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        {thread.other_user_avatar ? (
+                          <img 
+                            src={thread.other_user_avatar} 
+                            alt={thread.other_username}
+                            className="w-10 h-10 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                            isDark ? 'bg-dark-200' : 'bg-gray-200'
+                          }`}>
+                            <span className="text-primary font-bold">
+                              {thread.other_username?.[0]?.toUpperCase()}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start">
+                            <span className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                              {thread.other_username}
+                            </span>
+                            {thread.unread_count > 0 && (
+                              <span className="bg-primary text-black text-xs font-bold px-2 py-0.5 rounded-full">
+                                {thread.unread_count}
+                              </span>
+                            )}
+                          </div>
+                          <p className={`text-sm truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                            {thread.last_message}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                    {/* Thread menu button */}
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setThreadMenuOpen(threadMenuOpen === thread.id ? null : thread.id);
+                        }}
+                        className={`p-1.5 rounded-lg transition-colors ${
+                          isDark ? 'hover:bg-dark-200 text-gray-400' : 'hover:bg-gray-200 text-gray-500'
+                        }`}
+                        data-testid={`thread-menu-${thread.id}`}
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+                      {/* Thread dropdown menu */}
+                      {threadMenuOpen === thread.id && (
+                        <div className={`absolute right-0 top-full mt-1 w-40 rounded-lg shadow-lg z-10 ${
+                          isDark ? 'bg-dark-300' : 'bg-white border border-gray-200'
                         }`}>
-                          <span className="text-primary font-bold">
-                            {thread.other_username?.[0]?.toUpperCase()}
-                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteThread(thread.id);
+                            }}
+                            className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 rounded-lg ${
+                              isDark ? 'text-red-400 hover:bg-dark-200' : 'text-red-500 hover:bg-gray-50'
+                            }`}
+                            data-testid={`delete-thread-${thread.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Delete Conversation
+                          </button>
                         </div>
                       )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start">
-                          <span className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                            {thread.other_username}
-                          </span>
-                          {thread.unread_count > 0 && (
-                            <span className="bg-primary text-black text-xs font-bold px-2 py-0.5 rounded-full">
-                              {thread.unread_count}
-                            </span>
-                          )}
-                        </div>
-                        <p className={`text-sm truncate ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                          {thread.last_message}
-                        </p>
-                      </div>
                     </div>
-                  </button>
+                  </div>
                 ))
               ) : (
                 <div className={`p-4 text-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -330,9 +427,23 @@ const MessagesPage = () => {
                     return (
                       <div
                         key={msg.id}
-                        className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+                        className={`flex group ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
                       >
-                        <div className={`max-w-[70%]`}>
+                        {/* Delete button - positioned before message for own messages */}
+                        {isOwnMessage && (
+                          <button
+                            onClick={() => setShowDeleteConfirm(msg.id)}
+                            disabled={deletingMessage === msg.id}
+                            className={`mr-2 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all self-center ${
+                              isDark ? 'hover:bg-dark-200 text-gray-500 hover:text-red-400' : 'hover:bg-gray-200 text-gray-400 hover:text-red-500'
+                            } ${deletingMessage === msg.id ? 'opacity-50' : ''}`}
+                            data-testid={`delete-msg-${msg.id}`}
+                            title="Delete message"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                        <div className={`max-w-[70%] relative`}>
                           <div className={`rounded-lg px-4 py-2 ${
                             isOwnMessage
                               ? 'bg-primary text-black'
@@ -354,6 +465,32 @@ const MessagesPage = () => {
                               </span>
                             )}
                           </div>
+                          {/* Delete confirmation popover */}
+                          {showDeleteConfirm === msg.id && (
+                            <div className={`absolute ${isOwnMessage ? 'right-0' : 'left-0'} -top-16 z-10 p-3 rounded-lg shadow-lg ${
+                              isDark ? 'bg-dark-300' : 'bg-white border border-gray-200'
+                            }`}>
+                              <p className={`text-sm mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Delete this message?</p>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => setShowDeleteConfirm(null)}
+                                  className={`px-3 py-1 text-xs rounded ${
+                                    isDark ? 'bg-dark-200 text-gray-400 hover:bg-dark-100' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                  }`}
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteMessage(msg.id)}
+                                  disabled={deletingMessage === msg.id}
+                                  className="px-3 py-1 text-xs rounded bg-red-500 text-white hover:bg-red-600 disabled:opacity-50"
+                                  data-testid={`confirm-delete-${msg.id}`}
+                                >
+                                  {deletingMessage === msg.id ? 'Deleting...' : 'Delete'}
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );

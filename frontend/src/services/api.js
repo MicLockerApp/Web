@@ -168,6 +168,8 @@ export const messagesAPI = {
   getThread: (threadId, params) => api.get(`/messages/threads/${threadId}`, { params }),
   getUnreadCount: () => api.get('/messages/unread-count'),
   markThreadRead: (threadId) => api.post(`/messages/threads/${threadId}/read`),
+  deleteMessage: (messageId) => api.delete(`/messages/messages/${messageId}`),
+  deleteThread: (threadId) => api.delete(`/messages/threads/${threadId}`),
 };
 
 // Reviews APIs
@@ -220,6 +222,8 @@ export const adminAPI = {
   banUser: (userId, reason) => api.post(`/admin/users/${userId}/ban`, { reason }),
   unbanUser: (userId) => api.post(`/admin/users/${userId}/unban`),
   deleteUser: (userId) => api.delete(`/admin/users/${userId}`),
+  changeUserRole: (userId, role) => api.put(`/admin/users/${userId}/role`, { role }),
+  resetAnalytics: (options) => api.post('/admin/reset-analytics', options),
   getListings: (params) => api.get('/admin/listings', { params }),
   removeListing: (listingId) => api.post(`/admin/listings/${listingId}/remove`),
   getOrders: (params) => api.get('/admin/orders', { params }),

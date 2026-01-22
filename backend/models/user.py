@@ -64,9 +64,13 @@ MERCHANT_PRODUCT_TYPES = [
 class UserBase(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
+    first_name: Optional[str] = Field(None, max_length=50)
+    last_name: Optional[str] = Field(None, max_length=50)
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8, description="Password must be at least 8 characters")
+    first_name: str = Field(..., min_length=1, max_length=50, description="First name is required")
+    last_name: str = Field(..., min_length=1, max_length=50, description="Last name is required")
 
 class UserCategoryUpdate(BaseModel):
     category: str
@@ -94,6 +98,8 @@ class UserCategoryUpdate(BaseModel):
     same_as_mailing: Optional[bool] = None  # Whether physical = mailing
 
 class UserProfileUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     bio: Optional[str] = None
     location: Optional[str] = None
     profile_image: Optional[str] = None
@@ -135,6 +141,8 @@ class UserInDB(BaseModel):
     username: str
     email: str
     hashed_password: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     category: Optional[str] = None
     sub_categories: Optional[List[str]] = None
     is_admin: bool = False
@@ -196,6 +204,9 @@ class UserInDB(BaseModel):
     show_social: bool = True  # Default to showing social media
     show_physical_address: bool = False  # Default to NOT showing physical address
     
+    # Role hierarchy: owner > admin > manager > employee > user
+    role: str = "user"  # owner, admin, manager, employee, user
+    
     # Stats
     rating: float = 0.0
     review_count: int = 0
@@ -206,16 +217,18 @@ class UserInDB(BaseModel):
     is_founder: bool = False
     is_gold_member: bool = False
     
-    # Review Gating - After first transaction, users must review before next action
-    pending_review_order_id: Optional[str] = None  # Order that needs to be reviewed
-    pending_review_type: Optional[str] = None  # "buyer" or "seller" - which role needs review
-    first_purchase_completed: bool = False  # Has made at least one purchase
-    first_sale_completed: bool = False  # Has made at least one sale
+    # Review Gating - Enhanced system
+    pending_review_order_id: Optional[str] = None  # Order that needs review
+    pending_review_type: Optional[str] = None  # "buyer" or "seller"
+    pending_review_locked: bool = False  # Site functionality locked until review
+    must_submit_ticket_order_id: Optional[str] = None  # Order requiring support ticket (14-day non-receipt)
+    first_purchase_completed: bool = False
+    first_sale_completed: bool = False
     
     # Trading System - 1 free trade per month
-    last_trade_date: Optional[datetime] = None  # Last trade completed
-    trades_this_month: int = 0  # Counter reset monthly
-    has_seen_trade_rules: bool = False  # Shown the rules modal
+    last_trade_date: Optional[datetime] = None
+    trades_this_month: int = 0
+    has_seen_trade_rules: bool = False
     
     # Stripe Connect for seller payouts
     stripe_connect_account_id: Optional[str] = None
@@ -228,8 +241,11 @@ class UserResponse(BaseModel):
     id: str
     username: str
     email: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     category: Optional[str] = None
     sub_categories: Optional[List[str]] = None
+    role: str = "user"  # owner, admin, manager, employee, user
     is_admin: bool = False
     is_employee: bool = False
     employee_role: Optional[str] = None

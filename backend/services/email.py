@@ -11,6 +11,8 @@ class EmailService:
     def __init__(self):
         self.client = None
         self.sender_email = settings.ses_sender_email
+        # Format sender with display name for email clients
+        self.sender_formatted = f"MicLocker <{settings.ses_sender_email}>"
         self._initialize_client()
     
     def _initialize_client(self):
@@ -128,7 +130,7 @@ This is an automated message from MicLocker.
         
         try:
             response = self.client.send_email(
-                Source=self.sender_email,
+                Source=self.sender_formatted,
                 Destination={
                     'ToAddresses': [to_email]
                 },
@@ -285,7 +287,7 @@ This is an automated message from MicLocker.
     
     try:
         response = email_service.client.send_email(
-            Source=email_service.sender_email,
+            Source=email_service.sender_formatted,
             Destination={
                 'ToAddresses': [to_email]
             },
@@ -404,7 +406,7 @@ MicLocker Support System
     
     try:
         response = email_service.client.send_email(
-            Source=email_service.sender_email,
+            Source=email_service.sender_formatted,
             Destination={'ToAddresses': [staff_email]},
             Message={
                 'Subject': {'Data': subject, 'Charset': 'UTF-8'},
@@ -561,7 +563,7 @@ MicLocker Support System
     
     try:
         response = email_service.client.send_email(
-            Source=email_service.sender_email,
+            Source=email_service.sender_formatted,
             Destination={'ToAddresses': [to_email]},
             Message={
                 'Subject': {'Data': subject, 'Charset': 'UTF-8'},
@@ -706,7 +708,7 @@ This is an automated message from MicLocker.
     
     try:
         response = email_service.client.send_email(
-            Source=email_service.sender_email,
+            Source=email_service.sender_formatted,
             Destination={'ToAddresses': [to_email]},
             Message={
                 'Subject': {'Data': subject, 'Charset': 'UTF-8'},
@@ -849,7 +851,7 @@ async def send_seller_sale_notification_email(
     
     try:
         response = email_service.client.send_email(
-            Source=email_service.sender_email,
+            Source=email_service.sender_formatted,
             Destination={'ToAddresses': [to_email]},
             Message={
                 'Subject': {'Data': subject, 'Charset': 'UTF-8'},
@@ -970,7 +972,7 @@ async def send_order_confirmation_email(
     
     try:
         response = email_service.client.send_email(
-            Source=email_service.sender_email,
+            Source=email_service.sender_formatted,
             Destination={'ToAddresses': [to_email]},
             Message={
                 'Subject': {'Data': subject, 'Charset': 'UTF-8'},

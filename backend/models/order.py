@@ -92,13 +92,25 @@ class OrderInDB(BaseModel):
     seller_notified: bool = False
     buyer_notified: bool = False
     five_day_reminder_sent: bool = False  # Track if 5-day reminder was sent
+    seven_day_reminder_sent: bool = False
+    ten_day_reminder_sent: bool = False
+    twelve_day_reminder_sent: bool = False
+    fourteen_day_reminder_sent: bool = False
     
     # Item condition report from buyer
     item_condition_report: Optional[ItemConditionReport] = None
     
-    # Review tracking
+    # Review tracking - enhanced for new flow
+    buyer_confirmed_receipt: bool = False  # Buyer acknowledged receiving item
+    buyer_confirmed_receipt_at: Optional[datetime] = None
     buyer_review_submitted: bool = False
+    buyer_review_id: Optional[str] = None
     seller_review_submitted: bool = False
+    seller_review_id: Optional[str] = None
+    
+    # Support ticket tracking for non-receipt
+    non_receipt_ticket_submitted: bool = False
+    non_receipt_ticket_id: Optional[str] = None
     
     # Auto-confirmation tracking
     auto_confirmed: bool = False

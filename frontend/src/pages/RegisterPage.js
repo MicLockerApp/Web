@@ -13,6 +13,8 @@ const RegisterPage = () => {
   const [step, setStep] = useState(1);
   const [categoryOptions, setCategoryOptions] = useState(null);
   const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
     username: '',
     email: '',
     password: '',
@@ -99,10 +101,20 @@ const RegisterPage = () => {
     return defaultMsg;
   };
 
-  // Step 1: Create account directly (email verification disabled but code kept for future use)
+  // Step 1: Validate credentials and send verification email
   const handleBasicSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (!formData.firstName.trim()) {
+      setError('First name is required');
+      return;
+    }
+
+    if (!formData.lastName.trim()) {
+      setError('Last name is required');
+      return;
+    }
 
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
@@ -116,27 +128,16 @@ const RegisterPage = () => {
 
     setLoading(true);
     try {
-      // Register user directly without email verification
-      const registerResponse = await authAPI.register({
+      // Send verification email
+      await authAPI.sendVerification({
         username: formData.username,
         email: formData.email,
-        password: formData.password
+        password: formData.password,
+        first_name: formData.firstName.trim(),
+        last_name: formData.lastName.trim()
       });
       
-      // Login immediately after registration
-      const loginResponse = await authAPI.login(formData.username, formData.password);
-      const { access_token } = loginResponse.data;
-      
-      // Get user info
-      localStorage.setItem('token', access_token);
-      const meResponse = await authAPI.getMe();
-      const user = meResponse.data;
-      
-      localStorage.setItem('user', JSON.stringify(user));
-      setToken(access_token);
-      setUser(user);
-      
-      // Skip email verification (step 2) and go directly to category selection (step 2 in new flow)
+      // Move to email verification step
       setStep(2);
     } catch (err) {
       setError(getErrorMessage(err, 'Registration failed. Please try again.'));
@@ -145,19 +146,7 @@ const RegisterPage = () => {
     }
   };
 
-  /* 
-   * EMAIL VERIFICATION CODE - KEPT FOR FUTURE USE
-   * To re-enable email verification:
-   * 1. In handleBasicSubmit, replace the register/login calls with:
-   *    await authAPI.sendVerification({ username, email, password });
-   *    setStep(2); // Go to email verification step
-   * 2. Uncomment renderStep2() in the render section
-   * 3. Update step numbers: verification=2, category=3, etc.
-   * 4. Update getStepLabel() to include verification step
-   * 5. Update progress indicator to show 6 steps instead of 5
-   */
-
-  // Handle verification code input (KEPT FOR FUTURE USE)
+  // Handle verification code input
   const handleCodeChange = (index, value) => {
     if (value && !/^\d$/.test(value)) return;
     
@@ -192,7 +181,7 @@ const RegisterPage = () => {
     }
   };
 
-  // Verify email and create account (KEPT FOR FUTURE USE)
+  // Step 2: Verify email and create account
   const handleVerifyEmail = async () => {
     const fullCode = verificationCode.join('');
     if (fullCode.length !== 6) {
@@ -216,7 +205,7 @@ const RegisterPage = () => {
       setToken(access_token);
       setUser(user);
       
-      // Move to category selection (would be step 3 with verification enabled)
+      // Move to category selection (step 3)
       setStep(3);
     } catch (err) {
       setError(getErrorMessage(err, 'Invalid verification code. Please try again.'));
@@ -225,7 +214,7 @@ const RegisterPage = () => {
     }
   };
 
-  // Resend verification code (KEPT FOR FUTURE USE)
+  // Resend verification code
   const handleResendCode = async () => {
     setResending(true);
     setError('');
@@ -243,18 +232,18 @@ const RegisterPage = () => {
 
   const handleCategorySubmit = async (e) => {
     e.preventDefault();
-    setStep(3); // Was 4 with email verification
+    setStep(4); // Go to sub-categories
   };
 
   const handleSubCategoriesSubmit = async (e) => {
     e.preventDefault();
-    setStep(4); // Was 5 with email verification
+    setStep(5); // Go to category details
   };
 
   const handleFinalSubmit = async (e) => {
     e.preventDefault();
     // Move to contact info step
-    setStep(5); // Was 6 with email verification
+    setStep(6); // Go to contact info
   };
 
   const handleContactInfoSubmit = async (e) => {
@@ -375,6 +364,32 @@ const RegisterPage = () => {
 
   const renderStep1 = () => (
     <form onSubmit={handleBasicSubmit}>
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div>
+          <label className="block text-gray-400 mb-2">First Name</label>
+          <input
+            type="text"
+            value={formData.firstName}
+            onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+            required
+            autoFocus
+            placeholder="John"
+            data-testid="register-first-name"
+          />
+        </div>
+        <div>
+          <label className="block text-gray-400 mb-2">Last Name</label>
+          <input
+            type="text"
+            value={formData.lastName}
+            onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+            required
+            placeholder="Doe"
+            data-testid="register-last-name"
+          />
+        </div>
+      </div>
+
       <div className="mb-6">
         <label className="block text-gray-400 mb-2">Username</label>
         <input
@@ -382,8 +397,8 @@ const RegisterPage = () => {
           value={formData.username}
           onChange={(e) => setFormData({ ...formData, username: e.target.value })}
           required
-          autoFocus
           minLength={3}
+          placeholder="johndoe123"
           data-testid="register-username"
         />
       </div>
@@ -395,6 +410,7 @@ const RegisterPage = () => {
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           required
+          placeholder="john@example.com"
           data-testid="register-email"
         />
       </div>
@@ -434,13 +450,8 @@ const RegisterPage = () => {
     </form>
   );
 
-  /* 
-   * EMAIL VERIFICATION UI - KEPT FOR FUTURE USE
-   * This renderStep2 function displays the email verification code input.
-   * To re-enable: uncomment the {step === 2 && renderStep2()} line in the render section
-   */
-  // Step 2: Email Verification (DISABLED - kept for future use)
-  const renderEmailVerificationStep = () => (
+  // Step 2: Email Verification
+  const renderStep2 = () => (
     <div>
       {/* Info Box */}
       <div className="flex items-start gap-3 p-4 rounded-lg mb-6 bg-blue-500/10 border border-blue-500/20">
@@ -498,14 +509,14 @@ const RegisterPage = () => {
           disabled={resending}
           className="text-sm text-gray-400 hover:text-primary transition-colors"
         >
-          {resending ? 'Sending...' : "Didn\u0027t receive a code? Resend"}
+          {resending ? 'Sending...' : "Didn't receive a code? Resend"}
         </button>
       </div>
     </div>
   );
 
-  // Step 2: Category Selection (was Step 3 with email verification)
-  const renderStep2 = () => (
+  // Step 3: Category Selection
+  const renderStep3 = () => (
     <form onSubmit={handleCategorySubmit}>
       <p className="text-gray-400 mb-6">What best describes you?</p>
       <div className="space-y-3 mb-6">
@@ -540,8 +551,8 @@ const RegisterPage = () => {
     </form>
   );
 
-  // Step 3: Sub-categories (was Step 4 with email verification)
-  const renderStep3 = () => (
+  // Step 4: Sub-categories
+  const renderStep4 = () => (
     <form onSubmit={handleSubCategoriesSubmit}>
       <p className="text-gray-400 mb-4">Do you wear multiple hats? Select any additional categories that apply to you.</p>
       <p className="text-gray-500 text-sm mb-6">This is optional but helps you connect with the right community.</p>
@@ -580,7 +591,7 @@ const RegisterPage = () => {
       <div className="flex gap-3">
         <button
           type="button"
-          onClick={() => setStep(2)}
+          onClick={() => setStep(3)}
           className="btn btn-secondary py-3 px-4"
         >
           <ChevronLeft className="w-4 h-4" />
@@ -592,8 +603,8 @@ const RegisterPage = () => {
     </form>
   );
 
-  // Step 4: Category Details (was Step 5 with email verification)
-  const renderStep4 = () => {
+  // Step 5: Category Details
+  const renderStep5 = () => {
     const allCategories = [formData.category, ...formData.sub_categories].filter(Boolean);
 
     return (
@@ -807,7 +818,7 @@ const RegisterPage = () => {
         <div className="flex gap-3">
           <button
             type="button"
-            onClick={() => setStep(3)}
+            onClick={() => setStep(4)}
             className="btn btn-secondary py-3 px-4"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -820,8 +831,8 @@ const RegisterPage = () => {
     );
   };
 
-  // Step 5: Contact Info (was Step 6 with email verification)
-  const renderStep5 = () => {
+  // Step 6: Contact Info
+  const renderStep6 = () => {
     const states = getStatesForCountry(formData.country);
     const showStates = countryHasStates(formData.country);
     const physicalStates = getStatesForCountry(formData.physical_country);
@@ -1103,7 +1114,7 @@ const RegisterPage = () => {
         <div className="flex gap-3">
           <button
             type="button"
-            onClick={() => setStep(4)}
+            onClick={() => setStep(5)}
             className="btn btn-secondary py-3 px-4"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -1144,14 +1155,15 @@ const RegisterPage = () => {
     );
   };
 
-  // Get step labels for progress indicator (5 steps without email verification)
+  // Get step labels for progress indicator (6 steps with email verification)
   const getStepLabel = () => {
     switch (step) {
       case 1: return 'Create your account';
-      case 2: return 'Choose your primary category';
-      case 3: return 'Add secondary categories (optional)';
-      case 4: return 'Tell us more about yourself';
-      case 5: return 'Contact & shipping information';
+      case 2: return 'Verify your email';
+      case 3: return 'Choose your primary category';
+      case 4: return 'Add secondary categories (optional)';
+      case 5: return 'Tell us more about yourself';
+      case 6: return 'Contact & shipping information';
       default: return '';
     }
   };
@@ -1165,9 +1177,9 @@ const RegisterPage = () => {
           <p className="text-gray-400 mt-2">{getStepLabel()}</p>
         </div>
 
-        {/* Progress - 5 steps without email verification */}
+        {/* Progress - 6 steps with email verification */}
         <div className="flex items-center justify-center gap-2 mb-8">
-          {[1, 2, 3, 4, 5].map(s => (
+          {[1, 2, 3, 4, 5, 6].map(s => (
             <div
               key={s}
               className={`w-3 h-3 rounded-full transition-all ${
@@ -1190,7 +1202,7 @@ const RegisterPage = () => {
           {step === 3 && renderStep3()}
           {step === 4 && renderStep4()}
           {step === 5 && renderStep5()}
-          {/* Email verification step disabled - to re-enable, add: {step === X && renderEmailVerificationStep()} */}
+          {step === 6 && renderStep6()}
         </div>
 
         {step === 1 && (

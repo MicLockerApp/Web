@@ -56,6 +56,7 @@ import PayoutsAndCreditsPage from './pages/PayoutsAndCreditsPage';
 import IntellectualPropertyPage from './pages/IntellectualPropertyPage';
 import SearchAndAdRankingPage from './pages/SearchAndAdRankingPage';
 import EUDataPolicyPage from './pages/EUDataPolicyPage';
+import AdminReportsPage from './pages/AdminReportsPage';
 
 // Initialize analytics on app load
 analytics.init();
@@ -132,6 +133,7 @@ function AppContent() {
               <Route path="/help" element={<HelpCenterPage />} />
               <Route path="/admin/tickets" element={<AdminTicketsPage />} />
               <Route path="/admin/tickets/:id" element={<AdminTicketsPage />} />
+              <Route path="/admin/reports" element={<AdminReportsPage />} />
               <Route path="/legal" element={<LegalPage />} />
               <Route path="/legal/terms-of-use" element={<TermsOfUsePage />} />
               <Route path="/legal/privacy-policy" element={<PrivacyPolicyPage />} />

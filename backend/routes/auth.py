@@ -35,6 +35,8 @@ class EmailVerificationRequest(BaseModel):
     username: str
     email: EmailStr
     password: str
+    first_name: str
+    last_name: str
 
 class EmailVerificationVerify(BaseModel):
     """Request to verify email code and complete registration"""
@@ -115,6 +117,8 @@ async def send_registration_verification(data: EmailVerificationRequest):
         "id": str(uuid.uuid4()),
         "username": data.username,
         "email": data.email,
+        "first_name": data.first_name,
+        "last_name": data.last_name,
         "hashed_password": get_password_hash(data.password),
         "verification_code": code,
         "expires_at": expires_at,
@@ -201,13 +205,16 @@ async def verify_registration_email(data: EmailVerificationVerify):
     is_gold_member = user_count < 300  # First 300 users get Gold Member badge
     signup_number = user_count + 1
     
-    # Create the actual user account
+    # Create the actual user account - all new users are normal "user" role
     user = UserInDB(
         username=pending["username"],
         email=pending["email"],
+        first_name=pending.get("first_name"),
+        last_name=pending.get("last_name"),
         hashed_password=pending["hashed_password"],
         email_verified=True,
-        is_admin=is_first_user,
+        role="user",  # All new signups are normal users
+        is_admin=False,  # Only owners set this manually
         is_first_user=is_first_user,
         has_lifetime_free_fees=has_lifetime_free_fees,
         is_gold_member=is_gold_member,

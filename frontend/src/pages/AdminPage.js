@@ -38,10 +38,30 @@ const AdminPage = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [banReason, setBanReason] = useState('');
   const [userActionError, setUserActionError] = useState('');
+  const [selectedRole, setSelectedRole] = useState('');
+
+  // Reset analytics modal state
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetOptions, setResetOptions] = useState({
+    reset_orders: false,
+    reset_analytics_events: false,
+    reset_analytics_rollups: false,
+    reset_support_tickets: false,
+    reset_all: false
+  });
+  const [resetConfirmation, setResetConfirmation] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState('');
+
+  // Role hierarchy for UI
+  const ROLE_OPTIONS = ['owner', 'admin', 'manager', 'employee', 'user'];
+  const PROTECTED_EMAILS = ['james.mcdougall@miclockerapp.com', 'info@miclockerapp.com'];
 
   // Determine user role permissions
-  const userRole = analytics?.user_role || (user?.is_admin ? 'admin' : null);
-  const isOwner = analytics?.is_owner || (user?.is_admin && !user?.employee_role);
+  const currentUserRole = user?.role || (user?.is_admin ? 'admin' : 'user');
+  const userRole = analytics?.user_role || currentUserRole;
+  const isOwner = userRole === 'owner' || (user?.is_admin && !user?.employee_role);
+  const isAdminOrOwner = currentUserRole === 'owner' || currentUserRole === 'admin' || user?.is_admin;
   const isManager = userRole === 'manager';
   const isEmployee = userRole === 'employee';
 
@@ -49,6 +69,7 @@ const AdminPage = () => {
   const canSeeFinancials = isOwner; // Only owner sees GMV, fees, etc.
   const canSeeAllStats = isOwner || isManager; // Owner and manager see activity stats
   const canManageEmployees = isOwner || isManager; // Owner and manager can manage employees
+  const canResetAnalytics = isAdminOrOwner; // Only admin or owner can reset analytics
 
   useEffect(() => {
     if (authLoading) return;
@@ -141,6 +162,7 @@ const AdminPage = () => {
     setSelectedUser(userToManage);
     setBanReason('');
     setUserActionError('');
+    setSelectedRole(userToManage.role || 'user');
     setShowUserActionModal(true);
   };
 
@@ -196,6 +218,26 @@ const AdminPage = () => {
     }
   };
 
+  // Handle role change
+  const handleRoleChange = async () => {
+    if (!selectedUser || !selectedRole) return;
+    if (selectedRole === (selectedUser.role || 'user')) {
+      setUserActionError('Role is already set to this value');
+      return;
+    }
+    setActionLoading(selectedUser.id);
+    setUserActionError('');
+    try {
+      await adminAPI.changeUserRole(selectedUser.id, selectedRole);
+      setShowUserActionModal(false);
+      fetchUsers(usersPagination.page);
+    } catch (error) {
+      setUserActionError(error.response?.data?.detail || 'Failed to change user role');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   // Handle delete user
   const handleDeleteUser = async () => {
     if (!selectedUser) return;
@@ -209,9 +251,61 @@ const AdminPage = () => {
       setShowUserActionModal(false);
       fetchUsers(usersPagination.page);
     } catch (error) {
-      setUserActionError(error.response?.data?.detail || 'Failed to delete user');
+      const errorMessage = error.response?.data?.detail || 'Failed to delete user';
+      if (error.response?.status === 403) {
+        setUserActionError(errorMessage);
+      } else {
+        setUserActionError(errorMessage);
+      }
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  // Handle reset analytics
+  const handleResetAnalytics = async () => {
+    if (resetConfirmation !== 'CONFIRM_RESET') {
+      setResetError('Please type CONFIRM_RESET to proceed');
+      return;
+    }
+    
+    const hasSelection = resetOptions.reset_all || resetOptions.reset_orders || 
+                         resetOptions.reset_analytics_events || resetOptions.reset_analytics_rollups ||
+                         resetOptions.reset_support_tickets;
+    
+    if (!hasSelection) {
+      setResetError('Please select at least one option to reset');
+      return;
+    }
+    
+    setResetLoading(true);
+    setResetError('');
+    
+    try {
+      await adminAPI.resetAnalytics({
+        ...resetOptions,
+        confirmation: resetConfirmation
+      });
+      
+      // Refresh analytics data
+      fetchData();
+      
+      // Close modal and reset state
+      setShowResetModal(false);
+      setResetOptions({
+        reset_orders: false,
+        reset_analytics_events: false,
+        reset_analytics_rollups: false,
+        reset_support_tickets: false,
+        reset_all: false
+      });
+      setResetConfirmation('');
+      
+      alert('Analytics data reset successfully!');
+    } catch (error) {
+      setResetError(error.response?.data?.detail || 'Failed to reset analytics');
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -382,21 +476,48 @@ const AdminPage = () => {
             </button>
           ))}
           
-          {/* Link to Analytics Dashboard - only for owner/manager */}
-          {canSeeAllStats && (
+          {/* Quick Links */}
+          <div className="flex gap-2 ml-auto">
+            {/* Link to Reports - for all admin/employee */}
             <Link
-              to="/admin/analytics"
-              className="px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors whitespace-nowrap bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-500 hover:to-blue-500 ml-auto"
+              to="/admin/reports"
+              className="px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors whitespace-nowrap bg-gradient-to-r from-red-600 to-orange-600 text-white hover:from-red-500 hover:to-orange-500"
+              data-testid="reports-link"
             >
-              <TrendingUp className="w-4 h-4" />
-              Advanced Analytics
+              <AlertCircle className="w-4 h-4" />
+              Flagged Listings
             </Link>
-          )}
+            
+            {/* Link to Analytics Dashboard - only for owner/manager */}
+            {canSeeAllStats && (
+              <Link
+                to="/admin/analytics"
+                className="px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors whitespace-nowrap bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-500 hover:to-blue-500"
+              >
+                <TrendingUp className="w-4 h-4" />
+                Advanced Analytics
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* Overview Tab - Only for owner and manager */}
         {activeTab === 'overview' && canSeeAllStats && (
           <>
+            {/* Reset Analytics Button - Only for Admin/Owner */}
+            {canResetAnalytics && (
+              <div className="flex justify-end mb-4">
+                <button
+                  onClick={() => setShowResetModal(true)}
+                  className="px-4 py-2 bg-red-900/30 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-900/50 transition-colors flex items-center gap-2 text-sm"
+                  data-testid="reset-analytics-btn"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Reset Analytics Data
+                </button>
+              </div>
+            )}
+            
             {/* Stats Cards */}
             <div className={`grid gap-4 mb-8 ${canSeeFinancials ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-6' : 'grid-cols-2 md:grid-cols-4'}`}>
               {/* Financial stats - only for owner */}
@@ -1133,16 +1254,27 @@ const AdminPage = () => {
                 <div className="flex-1">
                   <p className="text-white font-bold text-lg">{selectedUser.username}</p>
                   <p className="text-gray-400 text-sm">{selectedUser.email}</p>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    {/* Role Badge */}
+                    <span className={`badge text-xs capitalize ${
+                      selectedUser.role === 'owner' ? 'bg-yellow-500/20 text-yellow-400' :
+                      selectedUser.role === 'admin' ? 'bg-purple-500/20 text-purple-400' :
+                      selectedUser.role === 'manager' ? 'bg-blue-500/20 text-blue-400' :
+                      selectedUser.role === 'employee' ? 'bg-cyan-500/20 text-cyan-400' :
+                      'bg-gray-500/20 text-gray-400'
+                    }`}>
+                      {selectedUser.role || 'user'}
+                    </span>
+                    {/* Status Badge */}
                     {selectedUser.is_banned ? (
-                      <span className="badge bg-red-700/30 text-red-300 text-xs">Permanently Banned</span>
+                      <span className="badge bg-red-700/30 text-red-300 text-xs">Banned</span>
                     ) : selectedUser.is_suspended ? (
                       <span className="badge bg-orange-500/20 text-orange-400 text-xs">Suspended</span>
                     ) : (
                       <span className="badge bg-green-500/20 text-green-400 text-xs">Active</span>
                     )}
-                    {selectedUser.has_lifetime_free_fees && (
-                      <span className="badge bg-primary/20 text-primary text-xs">VIP Member</span>
+                    {selectedUser.is_gold_member && (
+                      <span className="badge bg-primary/20 text-primary text-xs">Gold Member</span>
                     )}
                   </div>
                 </div>
@@ -1236,6 +1368,52 @@ const AdminPage = () => {
                   </button>
                 )}
 
+                {/* Role Management Section */}
+                <div className="border-2 border-purple-500/30 bg-purple-500/10 rounded-xl p-4">
+                  <div className="flex items-center gap-4 mb-3">
+                    <div className="w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center">
+                      <Shield className="w-6 h-6 text-purple-400" />
+                    </div>
+                    <div className="text-left flex-1">
+                      <p className="font-bold text-purple-400">Change Role</p>
+                      <p className="text-gray-400 text-sm">
+                        Current: <span className="text-purple-300 font-semibold capitalize">{selectedUser.role || 'user'}</span>
+                        {PROTECTED_EMAILS.includes(selectedUser.email) && (
+                          <span className="ml-2 text-yellow-400">(Protected Owner)</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mb-3">
+                    <select
+                      value={selectedRole}
+                      onChange={(e) => setSelectedRole(e.target.value)}
+                      className="flex-1 bg-dark-300 border border-dark-200 rounded-lg px-3 py-2 text-white"
+                      disabled={PROTECTED_EMAILS.includes(selectedUser.email) && currentUserRole !== 'owner'}
+                    >
+                      {ROLE_OPTIONS.map(role => (
+                        <option key={role} value={role} className="capitalize">
+                          {role.charAt(0).toUpperCase() + role.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={handleRoleChange}
+                      disabled={actionLoading === selectedUser.id || selectedRole === (selectedUser.role || 'user')}
+                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {actionLoading === selectedUser.id ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
+                  <div className="text-xs text-gray-500 space-y-1">
+                    <p><strong>Owner:</strong> Full access, can manage all roles</p>
+                    <p><strong>Admin:</strong> Can manage admin and below</p>
+                    <p><strong>Manager:</strong> Can manage employees and users</p>
+                    <p><strong>Employee:</strong> Limited admin access</p>
+                    <p><strong>User:</strong> Standard user account</p>
+                  </div>
+                </div>
+
                 {/* Delete User Option */}
                 <div className="border-2 border-red-900/50 bg-red-950/20 rounded-xl p-4">
                   <div className="flex items-center gap-4">
@@ -1250,8 +1428,9 @@ const AdminPage = () => {
                       onClick={handleDeleteUser}
                       disabled={actionLoading === selectedUser.id}
                       className="px-4 py-2 bg-red-900 hover:bg-red-800 text-red-300 font-medium rounded-lg transition-colors disabled:opacity-50 text-sm"
+                      data-testid="delete-user-btn"
                     >
-                      Delete
+                      {actionLoading === selectedUser.id ? 'Deleting...' : 'Delete'}
                     </button>
                   </div>
                   <div className="mt-3 p-2 bg-red-950/50 rounded-lg flex items-start gap-2">
@@ -1270,6 +1449,151 @@ const AdminPage = () => {
               >
                 Cancel
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Reset Analytics Modal */}
+        {showResetModal && canResetAnalytics && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div className="bg-dark-400 rounded-xl max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-red-900/30 rounded-full flex items-center justify-center">
+                    <AlertTriangle className="w-6 h-6 text-red-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Reset Analytics Data</h2>
+                    <p className="text-gray-500 text-sm">This action cannot be undone</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowResetModal(false);
+                    setResetError('');
+                    setResetConfirmation('');
+                  }}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              {resetError && (
+                <div className="bg-red-500/20 text-red-400 px-4 py-3 rounded-lg mb-4 text-sm">
+                  {resetError}
+                </div>
+              )}
+
+              <div className="space-y-3 mb-6">
+                <p className="text-gray-400 text-sm mb-4">Select the data you want to reset:</p>
+                
+                <label className="flex items-center gap-3 p-3 bg-dark-300 rounded-lg cursor-pointer hover:bg-dark-200">
+                  <input
+                    type="checkbox"
+                    checked={resetOptions.reset_orders}
+                    onChange={(e) => setResetOptions({ ...resetOptions, reset_orders: e.target.checked, reset_all: false })}
+                    className="w-4 h-4 rounded border-gray-600"
+                  />
+                  <div>
+                    <p className="text-white font-medium">Orders</p>
+                    <p className="text-gray-500 text-xs">Delete all order records</p>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-3 p-3 bg-dark-300 rounded-lg cursor-pointer hover:bg-dark-200">
+                  <input
+                    type="checkbox"
+                    checked={resetOptions.reset_analytics_events}
+                    onChange={(e) => setResetOptions({ ...resetOptions, reset_analytics_events: e.target.checked, reset_all: false })}
+                    className="w-4 h-4 rounded border-gray-600"
+                  />
+                  <div>
+                    <p className="text-white font-medium">Analytics Events</p>
+                    <p className="text-gray-500 text-xs">Delete raw analytics event data</p>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-3 p-3 bg-dark-300 rounded-lg cursor-pointer hover:bg-dark-200">
+                  <input
+                    type="checkbox"
+                    checked={resetOptions.reset_analytics_rollups}
+                    onChange={(e) => setResetOptions({ ...resetOptions, reset_analytics_rollups: e.target.checked, reset_all: false })}
+                    className="w-4 h-4 rounded border-gray-600"
+                  />
+                  <div>
+                    <p className="text-white font-medium">Analytics Rollups</p>
+                    <p className="text-gray-500 text-xs">Delete aggregated analytics (Overview stats)</p>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-3 p-3 bg-dark-300 rounded-lg cursor-pointer hover:bg-dark-200">
+                  <input
+                    type="checkbox"
+                    checked={resetOptions.reset_support_tickets}
+                    onChange={(e) => setResetOptions({ ...resetOptions, reset_support_tickets: e.target.checked, reset_all: false })}
+                    className="w-4 h-4 rounded border-gray-600"
+                  />
+                  <div>
+                    <p className="text-white font-medium">Support Tickets</p>
+                    <p className="text-gray-500 text-xs">Delete all support ticket records</p>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-3 p-3 bg-red-900/20 border border-red-500/30 rounded-lg cursor-pointer hover:bg-red-900/30">
+                  <input
+                    type="checkbox"
+                    checked={resetOptions.reset_all}
+                    onChange={(e) => setResetOptions({
+                      reset_orders: e.target.checked,
+                      reset_analytics_events: e.target.checked,
+                      reset_analytics_rollups: e.target.checked,
+                      reset_support_tickets: e.target.checked,
+                      reset_all: e.target.checked
+                    })}
+                    className="w-4 h-4 rounded border-gray-600"
+                  />
+                  <div>
+                    <p className="text-red-400 font-medium">Reset All</p>
+                    <p className="text-gray-500 text-xs">Delete ALL analytics and order data</p>
+                  </div>
+                </label>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-gray-400 text-sm mb-2">
+                  Type <span className="text-red-400 font-mono">CONFIRM_RESET</span> to proceed:
+                </label>
+                <input
+                  type="text"
+                  value={resetConfirmation}
+                  onChange={(e) => setResetConfirmation(e.target.value)}
+                  placeholder="CONFIRM_RESET"
+                  className="w-full bg-dark-300 border border-dark-200 rounded-lg px-4 py-3 text-white font-mono"
+                  data-testid="reset-confirmation-input"
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowResetModal(false);
+                    setResetError('');
+                    setResetConfirmation('');
+                  }}
+                  className="flex-1 py-3 bg-dark-300 hover:bg-dark-200 text-gray-400 font-medium rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleResetAnalytics}
+                  disabled={resetLoading || resetConfirmation !== 'CONFIRM_RESET'}
+                  className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  data-testid="confirm-reset-btn"
+                >
+                  {resetLoading ? 'Resetting...' : 'Reset Data'}
+                </button>
+              </div>
             </div>
           </div>
         )}
