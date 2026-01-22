@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Upload, X, Image, Video, DollarSign, Tag, Box, Truck, Save, Trash2 } from 'lucide-react';
+import { ArrowLeft, DollarSign, Tag, Box, Truck, Save, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { listingsAPI, filesAPI } from '../services/api';
+import { listingsAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
+import S3MediaUploader from '../components/S3MediaUploader';
 
 const CATEGORIES = [
   'Guitars', 'Bass', 'Drums & Percussion', 'Keyboards & Synths', 'Pro Audio',
@@ -25,12 +26,10 @@ const EditListingPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-  const fileInputRef = useRef(null);
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   
   const [formData, setFormData] = useState({
