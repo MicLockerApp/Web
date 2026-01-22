@@ -378,6 +378,183 @@ async def process_seller_payout(db, order: dict):
             )
 
 
+async def run_delivery_check_ins():
+    """
+    Multi-day check-in process for the review gating system.
+    
+    At each milestone (5, 7, 10, 12, 14 days), we:
+    1. Send a check-in message asking if the item was received
+    2. Update the order's delivery_checkin_level
+    3. At 14 days, if no confirmation, force buyer to submit support ticket
+    """
+    db = get_database()
+    
+    CHECK_IN_DAYS = [5, 7, 10, 12, 14]
+    
+    logger.info("Running delivery check-ins for review gating system")
+    
+    system_user = await db.users.find_one({"is_system_user": True})
+    system_user_id = system_user["id"] if system_user else "system-support"
+    
+    for days in CHECK_IN_DAYS:
+        cutoff_start = datetime.utcnow() - timedelta(days=days, hours=1)
+        cutoff_end = datetime.utcnow() - timedelta(days=days-1)
+        
+        # Find shipped orders at this check-in milestone
+        orders = await db.orders.find({
+            "status": "shipped",
+            "shipped_at": {"$gt": cutoff_start, "$lt": cutoff_end},
+            f"checkin_day_{days}_sent": {"$ne": True}
+        }).to_list(length=100)
+        
+        for order in orders:
+            try:
+                buyer_id = order["buyer_id"]
+                frontend_url = settings.frontend_url
+                order_link = f"{frontend_url}/orders/{order['id']}"
+                
+                if days == 14:
+                    # Final check-in - force support ticket
+                    message_content = f"""🚨 **Action Required: Item Not Received?**
+                    
+Your order **#{order['order_number']}** was shipped 14 days ago, but we haven't received confirmation that you got your item.
+
+**If you have NOT received your item**, please submit a support ticket immediately so we can investigate and help resolve this issue.
+
+**[Submit Support Ticket]({frontend_url}/help)**
+
+**If you DID receive your item**, please confirm delivery and leave a review to complete your transaction.
+
+**[Confirm Delivery]({order_link})**
+
+---
+*Your account may have limited functionality until this is resolved.*
+"""
+                    # Lock buyer's account to force support ticket
+                    await db.users.update_one(
+                        {"id": buyer_id},
+                        {"$set": {
+                            "must_submit_ticket_order_id": order["id"],
+                            "updated_at": datetime.utcnow()
+                        }}
+                    )
+                else:
+                    message_content = f"""📦 **Delivery Check-In: Day {days}**
+
+Hi! It's been {days} days since your order **#{order['order_number']}** was shipped.
+
+**Have you received your item?**
+
+If yes, please confirm delivery and leave a review for the seller:
+**[Confirm & Review]({order_link})**
+
+If not yet, no worries! We'll check in again soon.
+
+If you're having issues or the item hasn't arrived, please let us know:
+**[Contact Support]({frontend_url}/help)**
+
+Thank you for using MicLocker!
+"""
+                
+                # Send message to buyer
+                await send_check_in_message(db, system_user_id, buyer_id, message_content, order["id"])
+                
+                # Mark this check-in as sent
+                await db.orders.update_one(
+                    {"id": order["id"]},
+                    {"$set": {
+                        f"checkin_day_{days}_sent": True,
+                        "delivery_checkin_level": days,
+                        "updated_at": datetime.utcnow()
+                    }}
+                )
+                
+                logger.info(f"Sent day-{days} check-in for order {order['order_number']}")
+                
+            except Exception as e:
+                logger.error(f"Error sending day-{days} check-in for order {order['id']}: {e}")
+
+
+async def send_check_in_message(db, system_user_id: str, user_id: str, content: str, order_id: str):
+    """Send a check-in message to a user"""
+    thread = await db.message_threads.find_one({
+        "participants": {"$all": [system_user_id, user_id], "$size": 2}
+    })
+    
+    if not thread:
+        thread = {
+            "id": str(uuid.uuid4()),
+            "participants": [system_user_id, user_id],
+            "created_at": datetime.utcnow(),
+            "last_message_at": datetime.utcnow()
+        }
+        await db.message_threads.insert_one(thread)
+    
+    message = {
+        "id": str(uuid.uuid4()),
+        "thread_id": thread["id"],
+        "sender_id": system_user_id,
+        "content": content,
+        "created_at": datetime.utcnow(),
+        "read_at": None,
+        "related_order_id": order_id,
+        "message_type": "delivery_checkin"
+    }
+    await db.messages.insert_one(message)
+    
+    await db.message_threads.update_one(
+        {"id": thread["id"]},
+        {"$set": {"last_message_at": datetime.utcnow()}}
+    )
+
+
+async def lock_pending_reviewers():
+    """
+    Lock accounts for users who need to submit reviews.
+    
+    After delivery is confirmed (either by buyer or auto-confirmed after 14 days),
+    lock the buyer's account until they submit a review for the seller.
+    """
+    db = get_database()
+    
+    logger.info("Checking for pending reviewers to lock")
+    
+    # Find delivered orders where buyer hasn't reviewed and isn't already locked
+    orders = await db.orders.find({
+        "status": {"$in": ["delivered", "completed"]},
+        "buyer_confirmed_receipt": True,
+        "buyer_review_submitted": {"$ne": True}
+    }).to_list(length=100)
+    
+    for order in orders:
+        try:
+            buyer_id = order["buyer_id"]
+            
+            # Check if buyer already has a pending review lock
+            buyer = await db.users.find_one({"id": buyer_id})
+            if not buyer:
+                continue
+                
+            if buyer.get("pending_review_locked"):
+                continue  # Already locked
+            
+            # Lock buyer's account until they review
+            await db.users.update_one(
+                {"id": buyer_id},
+                {"$set": {
+                    "pending_review_order_id": order["id"],
+                    "pending_review_type": "buyer",
+                    "pending_review_locked": True,
+                    "updated_at": datetime.utcnow()
+                }}
+            )
+            
+            logger.info(f"Locked buyer {buyer_id} for pending review on order {order['order_number']}")
+            
+        except Exception as e:
+            logger.error(f"Error locking buyer for review on order {order['id']}: {e}")
+
+
 async def run_scheduled_tasks():
     """Run all scheduled tasks"""
     logger.info("Starting scheduled tasks...")
@@ -389,6 +566,12 @@ async def run_scheduled_tasks():
             
             # Run 5-day review reminders
             await send_five_day_review_reminders()
+            
+            # Run delivery check-ins (5, 7, 10, 12, 14 days)
+            await run_delivery_check_ins()
+            
+            # Lock pending reviewers
+            await lock_pending_reviewers()
             
         except Exception as e:
             logger.error(f"Error in scheduled tasks: {e}")
