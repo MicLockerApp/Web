@@ -30,18 +30,23 @@ class S3Service:
         
         if self.enabled:
             try:
-                # Configure for faster uploads
+                # Configure for faster uploads with regional endpoint
                 config = Config(
                     region_name=self.region,
                     signature_version='s3v4',
-                    retries={'max_attempts': 3, 'mode': 'standard'}
+                    retries={'max_attempts': 3, 'mode': 'standard'},
+                    s3={'addressing_style': 'virtual'}
                 )
+                
+                # Use regional endpoint URL
+                endpoint_url = f"https://s3.{self.region}.amazonaws.com"
                 
                 self.s3_client = boto3.client(
                     's3',
                     aws_access_key_id=self.access_key,
                     aws_secret_access_key=self.secret_key,
                     region_name=self.region,
+                    endpoint_url=endpoint_url,
                     config=config
                 )
                 logger.info(f"S3 Service initialized for bucket: {self.bucket_name} in {self.region}")
