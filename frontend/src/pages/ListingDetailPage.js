@@ -231,7 +231,11 @@ const ListingDetailPage = () => {
 
   const isOwnListing = user?.id === listing?.seller_id;
   const images = listing?.media?.filter(m => m.media_type === 'image') || [];
-  const currentImage = images[currentImageIndex]?.url || 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=800';
+  const videos = listing?.media?.filter(m => m.media_type === 'video') || [];
+  const allMedia = [...images, ...videos];
+  const currentMedia = allMedia[currentImageIndex];
+  const isCurrentVideo = currentMedia?.media_type === 'video';
+  const currentImage = currentMedia?.url || 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=800';
 
   if (loading) return <LoadingSpinner />;
   if (!listing) return <div className="text-center py-16 text-gray-400">Listing not found</div>;
