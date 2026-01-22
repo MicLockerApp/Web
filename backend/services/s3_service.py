@@ -313,8 +313,8 @@ class S3Service:
             self.s3_client.copy_object(
                 Bucket=self.bucket_name,
                 CopySource={'Bucket': self.bucket_name, 'Key': source_key},
-                Key=dest_key,
-                ACL='public-read'
+                Key=dest_key
+                # Note: ACL removed - bucket uses bucket policy for public access
             )
             logger.info(f"Copied S3 object from {source_key} to {dest_key}")
             return True
