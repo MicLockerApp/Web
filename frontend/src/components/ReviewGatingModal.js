@@ -25,7 +25,6 @@ const ReviewGatingModal = ({ pendingReview, onComplete, onClose }) => {
   const [ticketSubject, setTicketSubject] = useState('');
   const [ticketDescription, setTicketDescription] = useState('');
 
-  const isReview = pendingReview?.type === 'review';
   const isSupportTicket = pendingReview?.type === 'support_ticket';
   const reviewType = pendingReview?.review_type === 'buyer' ? 'buyer_to_seller' : 'seller_to_buyer';
   const isBuyerReview = reviewType === 'buyer_to_seller';
