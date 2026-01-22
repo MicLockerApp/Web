@@ -305,6 +305,10 @@ const ListingDetailPage = () => {
                   alt={listing.title}
                   className="w-full h-full object-contain"
                   data-testid="image-display"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=800';
+                  }}
                 />
               )}
               {allMedia.length > 1 && (
