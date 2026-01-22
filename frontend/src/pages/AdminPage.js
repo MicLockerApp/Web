@@ -14,6 +14,7 @@ import {
 const AdminPage = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { startDate, endDate, setStartDate, setEndDate, formatDateRange, setLast7Days, setLast30Days, setLast90Days } = useDateRange();
   const [analytics, setAnalytics] = useState(null);
   const [users, setUsers] = useState([]);
   const [usersPagination, setUsersPagination] = useState({ page: 1, pages: 1, total: 0 });
