@@ -411,6 +411,50 @@ AUTO_DELIVERY_DAYS=14
 
 ## Completed This Session (January 22, 2026)
 
+### AWS S3 Integration for Photo & Video Uploads (Major Feature)
+**Status: ✅ FULLY IMPLEMENTED & TESTED**
+
+1. **Backend S3 Service** - `/app/backend/services/s3_service.py`:
+   - S3Service class with full CRUD operations
+   - Presigned URL generation (POST and PUT methods)
+   - Direct upload support
+   - Object deletion (single and batch)
+   - Object listing and existence checks
+   - Automatic object key generation with timestamps
+
+2. **Upload API Routes** - `/app/backend/routes/uploads.py`:
+   - `GET /api/uploads/status` - Check S3 configuration status
+   - `POST /api/uploads/presigned-url` - Generate presigned POST URL for frontend uploads
+   - `POST /api/uploads/presigned-put-url` - Generate presigned PUT URL for large files
+   - `POST /api/uploads/direct` - Direct upload through backend
+   - `DELETE /api/uploads/{key}` - Delete uploaded file
+   - `GET /api/uploads/listing/{listing_id}` - List files for a listing
+
+3. **Frontend Components**:
+   - `/app/frontend/src/hooks/useS3Upload.js` - React hook for S3 uploads with progress tracking
+   - `/app/frontend/src/components/S3MediaUploader.js` - Full-featured media uploader component
+     - Drag & drop support
+     - Upload progress bars
+     - File validation (type & size)
+     - Preview display
+     - Remove functionality
+
+4. **Integration**:
+   - CreateListingPage updated to use S3MediaUploader
+   - EditListingPage updated to use S3MediaUploader
+   - ListingCreate model extended with S3MediaItem for media URLs
+   - Listing creation handles S3 media conversion to ListingMedia format
+
+5. **S3 Bucket Configuration** (`miclocker-saint-louis-bucket` in `us-east-2`):
+   - CORS configured: AllowedOrigins: *, AllowedMethods: GET/POST/PUT/DELETE/HEAD
+   - Bucket policy for public read access on `listings/*` folder
+   - Public access block disabled for bucket policy to work
+
+6. **Testing Results**:
+   - Backend: 15/15 tests passed (100%)
+   - Frontend: S3MediaUploader component renders correctly
+   - Test file: `/app/backend/tests/test_s3_uploads.py`
+
 ### Review-Gating System (Major Feature)
 1. **Frontend Components**:
    - `/app/frontend/src/components/ReviewGatingModal.js` - Full-screen modal for forced reviews
