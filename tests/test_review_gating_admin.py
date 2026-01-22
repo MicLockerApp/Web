@@ -84,15 +84,16 @@ class TestReviewGatingAPI:
         data = response.json()
         
         # Verify response structure
-        assert "has_pending_review" in data, "Response should have 'has_pending_review' field"
-        assert isinstance(data["has_pending_review"], bool), "'has_pending_review' should be boolean"
+        assert "has_pending" in data, "Response should have 'has_pending' field"
+        assert "locked" in data, "Response should have 'locked' field"
+        assert isinstance(data["has_pending"], bool), "'has_pending' should be boolean"
         
-        print(f"✓ GET /api/reviews/pending returns status: has_pending_review={data['has_pending_review']}")
+        print(f"✓ GET /api/reviews/pending returns status: has_pending={data['has_pending']}, locked={data['locked']}")
         
         # If there's a pending review, verify additional fields
-        if data["has_pending_review"]:
-            assert "pending_review" in data, "Should have 'pending_review' details when pending"
-            print(f"  - Pending review details: {data.get('pending_review', {}).get('type', 'N/A')}")
+        if data["has_pending"]:
+            assert "type" in data, "Should have 'type' field when pending"
+            print(f"  - Pending type: {data.get('type', 'N/A')}")
     
     def test_reviews_pending_admin_user(self):
         """GET /api/reviews/pending works for admin user"""
@@ -104,8 +105,9 @@ class TestReviewGatingAPI:
         
         assert response.status_code == 200, f"Expected 200, got {response.status_code}"
         data = response.json()
-        assert "has_pending_review" in data
-        print(f"✓ GET /api/reviews/pending works for admin: has_pending_review={data['has_pending_review']}")
+        assert "has_pending" in data, f"Response should have 'has_pending' field, got: {data}"
+        assert "locked" in data, f"Response should have 'locked' field, got: {data}"
+        print(f"✓ GET /api/reviews/pending works for admin: has_pending={data['has_pending']}, locked={data['locked']}")
     
     # ==================== Admin Reports Tests ====================
     
