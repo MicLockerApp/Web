@@ -347,7 +347,15 @@ const ListingDetailPage = () => {
                         </div>
                       </>
                     ) : (
-                      <img src={media.url} alt="" className="w-full h-full object-cover" />
+                      <img 
+                        src={media.url} 
+                        alt="" 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=100';
+                        }}
+                      />
                     )}
                   </button>
                 ))}
