@@ -115,14 +115,21 @@ const ListingCard = ({ listing, onFavoriteChange }) => {
                 src={listing.seller_profile_image} 
                 alt={listing.seller_username}
                 className="w-6 h-6 rounded-full object-cover"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'flex';
+                }}
               />
-            ) : (
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center ${isDark ? 'bg-dark-300' : 'bg-gray-200'}`}>
-                <span className="text-xs font-medium text-primary">
-                  {listing.seller_username?.[0]?.toUpperCase()}
-                </span>
-              </div>
-            )}
+            ) : null}
+            <div 
+              className={`w-6 h-6 rounded-full flex items-center justify-center ${isDark ? 'bg-dark-300' : 'bg-gray-200'}`}
+              style={{ display: listing.seller_profile_image && listing.seller_profile_image !== 'None' ? 'none' : 'flex' }}
+            >
+              <span className="text-xs font-medium text-primary">
+                {listing.seller_username?.[0]?.toUpperCase()}
+              </span>
+            </div>
             <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{listing.seller_username}</span>
             {listing.seller_rating > 0 && (
               <div className="flex items-center gap-1 ml-1">
