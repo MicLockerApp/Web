@@ -99,6 +99,7 @@ async def create_listing(
     result = listing.model_dump()
     result["seller_rating"] = current_user.get("rating", 0)
     result["seller_review_count"] = current_user.get("review_count", 0)
+    result["seller_profile_image"] = current_user.get("profile_image")
     return serialize_doc(result)
 
 @router.get("", response_model=dict)
