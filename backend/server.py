@@ -258,6 +258,9 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Setup centralized error handling (request ID tracking + standardized errors)
+setup_error_handlers(app)
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
