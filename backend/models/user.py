@@ -61,6 +61,23 @@ MERCHANT_PRODUCT_TYPES = [
     "Cables", "Strings", "Picks", "Capos", "Tuners", "Other Merchandise"
 ]
 
+# Comedian Specialties
+COMEDIAN_SPECIALTIES = [
+    "Stand-up", "Improv", "Sketch Comedy", "Musical Comedy", "Physical Comedy",
+    "Observational", "Political", "Roast", "Clean/Family-Friendly",
+    "Corporate Comedy", "Comedy Podcaster", "Comedy Actor", "Comedy Duo/Group"
+]
+
+# Actor Specialties
+ACTOR_SPECIALTIES = [
+    "Film Actor", "TV Actor", "Theater Actor", "Voice Actor", "Commercial Actor",
+    "Background Actor", "Stunt Performer", "Motion Capture", "Child Actor",
+    "Method Actor", "Improv Actor", "Musical Theater", "Dramatic Actor",
+    "Comedy Actor", "Action Actor", "Voice Over Artist", "Narrator",
+    "Audiobook Narrator", "Character Actor", "Leading Actor", "Supporting Actor",
+    "Indie Film Actor", "Stage Actor"
+]
+
 class UserBase(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
