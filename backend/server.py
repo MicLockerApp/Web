@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 
 from config import settings
 from database import connect_to_mongo, close_mongo_connection, get_database
+from middleware import setup_error_handlers
 from routes import (
     auth_router, users_router, listings_router, cart_router,
     orders_router, offers_router, messages_router, reviews_router,
