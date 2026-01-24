@@ -110,7 +110,7 @@ const ListingCard = ({ listing, onFavoriteChange }) => {
         <div className={`flex items-center justify-between mt-3 pt-3 border-t ${isDark ? 'border-dark-300' : 'border-gray-200'}`}>
           <div className="flex items-center gap-2">
             {/* Seller profile image */}
-            {listing.seller_profile_image ? (
+            {listing.seller_profile_image && listing.seller_profile_image !== 'None' ? (
               <img 
                 src={listing.seller_profile_image} 
                 alt={listing.seller_username}
