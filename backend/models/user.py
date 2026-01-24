@@ -3,8 +3,8 @@ from typing import Optional, List
 from datetime import datetime
 import uuid
 
-# User Categories
-USER_CATEGORIES = ["musician", "audio_engineer", "recording_studio", "venue", "merchant"]
+# User Categories (expanded with Comedians and Actors to match Gig Board)
+USER_CATEGORIES = ["musician", "audio_engineer", "recording_studio", "venue", "merchant", "comedian", "actor"]
 
 # Musician Instruments
 MUSICIAN_INSTRUMENTS = [
