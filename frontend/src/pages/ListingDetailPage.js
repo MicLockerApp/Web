@@ -434,7 +434,7 @@ const ListingDetailPage = () => {
               className="flex items-center gap-3 p-4 bg-dark-400 rounded-lg mb-6 hover:bg-dark-300 transition-colors"
               data-testid="seller-link"
             >
-              {listing.seller_profile_image ? (
+              {listing.seller_profile_image && listing.seller_profile_image !== 'None' ? (
                 <img 
                   src={listing.seller_profile_image} 
                   alt={listing.seller_username}
