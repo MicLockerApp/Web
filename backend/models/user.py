@@ -98,6 +98,7 @@ class UserCategoryUpdate(BaseModel):
     same_as_mailing: Optional[bool] = None  # Whether physical = mailing
 
 class UserProfileUpdate(BaseModel):
+    username: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     bio: Optional[str] = None

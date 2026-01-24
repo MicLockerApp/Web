@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, User, Menu, X, MessageSquare, LogOut, Package, Edit, Heart, Sun, Moon, Tag, ShoppingBag, LayoutDashboard, Shield, Settings, ArrowLeftRight } from 'lucide-react';
+import { Search, ShoppingCart, User, Menu, X, MessageSquare, LogOut, Package, Edit, Heart, Sun, Moon, Tag, ShoppingBag, LayoutDashboard, Shield, Settings, ArrowLeftRight, List, GraduationCap } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useTheme } from '../context/ThemeContext';
@@ -289,6 +289,24 @@ const Navbar = () => {
 
             {isAuthenticated ? (
               <>
+                {/* New Feature Buttons */}
+                <Link 
+                  to="/gigs" 
+                  className={`p-2 ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`} 
+                  data-testid="gigs-link"
+                  title="Gigs"
+                >
+                  <List className="w-5 h-5" />
+                </Link>
+                <Link 
+                  to="/learn" 
+                  className={`p-2 ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`} 
+                  data-testid="learn-link"
+                  title="Learn"
+                >
+                  <GraduationCap className="w-5 h-5" />
+                </Link>
+                
                 <Link to="/messages" className={`p-2 relative ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`} data-testid="messages-link">
                   <MessageSquare className="w-5 h-5" />
                   {unreadCount > 0 && (
@@ -370,13 +388,13 @@ const Navbar = () => {
                         Favorites
                       </Link>
                       <Link
-                        to="/account"
+                        to="/profile/edit"
                         className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-gray-300 hover:bg-dark-300' : 'text-gray-700 hover:bg-gray-50'}`}
                         onClick={() => setUserMenuOpen(false)}
                         data-testid="account-settings-link"
                       >
                         <Settings className="w-4 h-4" />
-                        Account Settings
+                        Settings
                       </Link>
                       {/* Theme Toggle */}
                       <button
@@ -476,6 +494,22 @@ const Navbar = () => {
               </Link>
               {isAuthenticated ? (
                 <>
+                  <Link
+                    to="/gigs"
+                    className={`flex items-center gap-2 py-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <List className="w-5 h-5" />
+                    Gigs
+                  </Link>
+                  <Link
+                    to="/learn"
+                    className={`flex items-center gap-2 py-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <GraduationCap className="w-5 h-5" />
+                    Learn
+                  </Link>
                   <Link
                     to="/messages"
                     className={`flex items-center gap-2 py-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}

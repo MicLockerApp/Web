@@ -89,6 +89,8 @@ export const usersAPI = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
+  changeEmail: (data) => api.put('/users/profile/email', data),
+  changePassword: (data) => api.put('/users/profile/password', data),
   searchUsers: (params) => api.get('/users/search', { params }),
   getUserListings: (userId, params) => api.get(`/users/${userId}/listings`, { params }),
   getUserReviews: (userId, params) => api.get(`/reviews/user/${userId}`, { params }),
@@ -264,6 +266,30 @@ export const paymentsAPI = {
   getConnectStatus: () => api.get('/payments/connect/status'),
   refreshOnboardingLink: () => api.post('/payments/connect/refresh-link'),
   getSellerBalance: () => api.get('/payments/connect/balance'),
+};
+
+// Gig Board API
+export const gigsAPI = {
+  // Get categories and subcategories
+  getCategories: () => api.get('/gig-board/categories'),
+  
+  // Create a new gig
+  create: (data) => api.post('/gig-board', data),
+  
+  // Get all gigs with filters
+  getAll: (params) => api.get('/gig-board', { params }),
+  
+  // Get current user's gigs
+  getMyGigs: (gigType) => api.get('/gig-board/my-gigs', { params: { gig_type: gigType } }),
+  
+  // Get single gig
+  getById: (gigId) => api.get(`/gig-board/${gigId}`),
+  
+  // Update gig
+  update: (gigId, data) => api.put(`/gig-board/${gigId}`, data),
+  
+  // Delete gig
+  delete: (gigId) => api.delete(`/gig-board/${gigId}`),
 };
 
 export default api;

@@ -25,7 +25,6 @@ import CheckoutSuccessPage from './pages/CheckoutSuccessPage';
 import CheckoutCancelPage from './pages/CheckoutCancelPage';
 import ProfilePage from './pages/ProfilePage';
 import EditProfilePage from './pages/EditProfilePage';
-import AccountSettingsPage from './pages/AccountSettingsPage';
 import FavoritesPage from './pages/FavoritesPage';
 import DashboardPage from './pages/DashboardPage';
 import CreateListingPage from './pages/CreateListingPage';
@@ -58,6 +57,8 @@ import IntellectualPropertyPage from './pages/IntellectualPropertyPage';
 import SearchAndAdRankingPage from './pages/SearchAndAdRankingPage';
 import EUDataPolicyPage from './pages/EUDataPolicyPage';
 import AdminReportsPage from './pages/AdminReportsPage';
+import GigsPage from './pages/GigsPage';
+import LearnPage from './pages/LearnPage';
 
 // Initialize analytics on app load
 analytics.init();
@@ -113,9 +114,11 @@ function AppContent() {
               <Route path="/profile/edit" element={<EditProfilePage />} />
               <Route path="/profile/:id/edit" element={<EditProfilePage />} />
               <Route path="/settings" element={<EditProfilePage />} />
-              <Route path="/account" element={<AccountSettingsPage />} />
-              <Route path="/account/settings" element={<AccountSettingsPage />} />
+              <Route path="/account" element={<EditProfilePage />} />
+              <Route path="/account/settings" element={<EditProfilePage />} />
               <Route path="/favorites" element={<FavoritesPage />} />
+              <Route path="/gigs" element={<GigsPage />} />
+              <Route path="/learn" element={<LearnPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/dashboard/listings/:id/edit" element={<EditListingPage />} />
               <Route path="/sell" element={<CreateListingPage />} />

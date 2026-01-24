@@ -8,6 +8,8 @@ MicLocker is a production-ready full-stack marketplace where musicians, audio en
 - **Backend**: FastAPI (Python)
 - **Database**: MongoDB
 - **Payments**: Stripe + Stripe Connect
+- **Storage**: AWS S3 for media uploads
+- **Email**: AWS SES with full authentication (SPF, DKIM, DMARC)
 
 ## Core Features
 
@@ -22,12 +24,40 @@ MicLocker is a production-ready full-stack marketplace where musicians, audio en
   - Users cannot complete signup until email is verified
 - User login
 - Profile management with image upload
-- **Account Settings** (NEW - January 2026)
-  - Change username (requires password verification)
+- **Account Settings** (merged into Edit Profile page)
+  - Change username (requires password verification, propagates across all collections)
   - Change email (requires password + verification to new email)
   - Change password (requires current password, auto-logout for security)
-  - Accessible via /account or user dropdown menu
+  - Accessible via /profile/edit
 - Seller profiles with ratings and reviews
+
+#### Gig Board - /gigs (January 2026)
+- Full-featured Gig Board for posting and finding opportunities
+- **Two Gig Types**: "Looking For" (what users need) and "Services" (what users offer)
+- **7 Main Categories with Subcategories**:
+  - Musicians (37 subcategories: Acoustic Guitar, Bass Electric, Drums, Keyboards, etc.)
+  - Audio Engineers (32 subcategories: Mixing, Mastering, Live Sound, Post Production, etc.)
+  - Recording Studios (33 subcategories: Recording, Rehearsal Rooms, Podcast, etc.)
+  - Venues (18 subcategories: Concert Hall, Club, Arena, Festival Grounds, etc.)
+  - Merchants (30 subcategories: Merchandise, Vinyl Records, Accessories, etc.)
+  - **Comedians** (20 subcategories: Stand-Up, Improv, Sketch, Musical Comedy, etc.)
+  - **Actors** (25 subcategories: Film, TV, Theater, Voice Actor, Commercial, etc.)
+- **Music Genre Filter**: 20 genres (Rock, Jazz, Hip-Hop, Classical, etc.)
+- **Gig Card Features**:
+  - Slideable thumbnail gallery with Pexels placeholder images
+  - User profile photo displayed next to category icon
+  - Title and description
+  - Up to 5 photos and 5 videos per gig (via S3)
+  - Contact info (email, phone), Location, Budget/rate range
+  - Social media links (website, Instagram, Facebook, Twitter, YouTube, SoundCloud, Spotify, Bandcamp)
+- **Filter System**: Filter by category, subcategories, music genres, and search
+- **My Posts**: View and manage user's own gig postings
+- **View Count**: Track how many views each gig receives
+- Accessible from navbar "Gigs" icon (desktop and mobile)
+
+#### Learn Page - Coming Soon (January 2026)
+- **/learn** - Placeholder for future "Learn" feature (tutorials, guides)
+- Currently displays "Coming Soon" placeholder
 
 #### 2. Marketplace Core
 - Listing creation with media upload (images/videos)
@@ -495,10 +525,189 @@ AUTO_DELIVERY_DAYS=14
 - Test file: `/app/tests/test_review_gating_admin.py`
 - Report: `/app/test_reports/iteration_18.json`
 
+## Completed This Session (January 22, 2026 - Continued)
+
+### Support Ticket S3 Attachments (Priority 3 Task)
+**Status: ✅ FULLY IMPLEMENTED & TESTED**
+
+1. **Updated HelpCenterPage.js** to use S3 for attachments:
+   - Imported `useS3Upload` hook
+   - Replaced local `/api/files/upload` endpoint with S3 presigned URL uploads
+   - Added upload progress display with percentage
+   - Added S3 upload error handling
+   - Added data-testid attributes for testing
+
+2. **Files Modified**:
+   - `/app/frontend/src/pages/HelpCenterPage.js` - Lines 6, 31, 83: Now uses S3
+
+### Priority 1-3 Tasks Status (All Complete)
+1. ✅ **Listing Flagging System** - Already complete from previous session
+   - Admin Reports Page at `/admin/reports`
+   - Action modal with Dismiss, Warn Seller, Remove Listing, Ban Seller
+   - Backend endpoints fully implemented
+   
+2. ✅ **Admin User Deletion Feedback** - Already complete from previous session
+   - Error message shows in modal when trying to delete protected accounts
+   - 403 status code properly handled
+   
+3. ✅ **Support Ticket S3 Attachments** - Completed this session
+   - Help Center now uploads attachments to S3
+   - Uses same S3 bucket as listing media
+
+### Testing Results (January 22, 2026)
+- **Backend**: 100% (11/12 tests passed, 1 skipped)
+- **Frontend**: 100% (All UI features working)
+- Test file: `/app/tests/test_priority_features.py`
+- Report: `/app/test_reports/iteration_20.json`
+
+### Admin Ticket Attachments Display (January 22, 2026)
+**Issue**: Admins could not see images/files attached to support tickets
+**Status: ✅ FIXED**
+
+1. **Backend Fix** - `/app/backend/routes/tickets.py`:
+   - Line 93: Now passes `attachments` field when creating `TicketInDB`
+   - Attachments are properly saved to MongoDB with url, filename, and type
+
+2. **Frontend Fix** - `/app/frontend/src/pages/AdminTicketsPage.js`:
+   - Added Attachments section in ticket detail view
+   - Shows paperclip icon with count header
+   - Grid display of attachment thumbnails
+   - Image previews for image types
+   - File icon for non-image attachments
+   - Filename and file type display
+   - "Open" link to view full attachment
+   - Added attachment indicator in ticket list view
+
+3. **New Icons Added**: `Paperclip`, `Image`, `FileText`, `ExternalLink`
+
+### Stripe Connect Webhooks & Embedded Payments (January 22, 2026)
+**Status: ✅ FULLY IMPLEMENTED**
+
+#### Webhook Endpoints Created:
+1. **Account Webhook** - `/api/payments/webhook`
+   - Handles: checkout.session.completed, expired, payment_intent events, refunds, disputes
+   
+2. **Connect Webhook** - `/api/payments/webhook/connect`
+   - Handles seller account events: account.updated, deauthorized
+   - Handles transfers: transfer.created, transfer.reversed
+   - Handles payouts: payout.paid, payout.failed
+   - Handles capabilities and person verification updates
+
+#### Embedded Payment Endpoints:
+- `POST /api/payments/create-payment-intent` - Creates Payment Intent for embedded checkout
+- `POST /api/payments/confirm-payment/{order_id}` - Confirms payment completion
+
+#### Automatic Notifications:
+- Seller notified when Stripe account becomes active
+- Seller notified when Stripe account disconnected
+- Seller notified when payout fails
+
+#### Files Modified:
+- `/app/backend/routes/payments.py` - Comprehensive webhook handlers
+- `/app/backend/config.py` - Added `stripe_connect_webhook_secret`
+- `/app/STRIPE_SETUP_GUIDE.md` - Complete setup documentation
+
+#### Required Environment Variables:
+- `STRIPE_WEBHOOK_SECRET` - For account webhook signature verification
+- `STRIPE_CONNECT_WEBHOOK_SECRET` - For connect webhook signature verification
+
+### Stripe Connect Destination Charges Fix (January 22, 2026)
+**Status: ✅ CRITICAL FIX IMPLEMENTED**
+
+**Problem:** Payments were being processed but funds were NOT being routed to sellers.
+
+**Root Cause:** The checkout session was missing `transfer_data.destination` parameter which tells Stripe to send funds to the seller's connected account.
+
+**Fix Applied:**
+1. **Updated `/app/backend/services/stripe_service.py`**:
+   - Rewrote to use native Stripe SDK instead of emergentintegrations
+   - Added `transfer_data.destination` for Connect destination charges
+   - Added `application_fee_amount` for platform fee collection
+
+2. **Updated `/app/backend/routes/payments.py`**:
+   - Now fetches seller's `stripe_connect_account_id` before creating checkout
+   - Passes seller's Connect account and platform fee to checkout session
+
+**How Funds Now Flow:**
+```
+Buyer pays $100 → Stripe → $97 to Seller + $3 to MicLocker (platform fee)
+```
+
+The `transfer_data.destination` parameter automatically routes funds to the seller's connected Stripe account minus the platform fee.
+
+### 6 Critical Updates (January 22, 2026)
+**Status: ✅ ALL IMPLEMENTED & TESTED**
+
+1. **Username Editing** - Users can now change their username in Edit Profile
+   - Added `username` field to `UserProfileUpdate` model
+   - Validation: lowercase, 3-30 chars, only letters/numbers/underscores/dots/hyphens
+   - Checks for uniqueness before updating
+
+2. **Back Button on Listing Pages** - Added "← Back" button at top of ListingDetailPage
+   - Uses `navigate(-1)` to go to previous page
+   - Data-testid: `back-button`
+
+3. **Heart/Favorite Buttons** - Now visible for ALL users (not just authenticated)
+   - Unauthenticated users redirected to login when clicking
+   - Uses `usersAPI.addFavorite()` and `usersAPI.removeFavorite()`
+
+4. **Checkout Success Page** - Enhanced with full order details
+   - Shows order number, date, items purchased with images
+   - Seller info, shipping address, price breakdown
+   - "Done - Return to Home" button at bottom
+
+5. **$5 Minimum Listing Price** - Enforced at model and route level
+   - Model: `price: float = Field(..., ge=5.0)`
+   - Route: Additional validation on update rejects prices under $5
+   - Frontend: Shows "(min $5.00)" hint, input min="5"
+
+6. **30-Day Trade Cooldown** - After a trade is accepted between two users
+   - Stored in `trade_cooldowns` collection with `expires_at`
+   - Checked when initiating AND accepting trades
+   - Prevents same-user trading for 30 calendar days
+
+**Test Results:** 100% pass rate - `/app/test_reports/iteration_21.json`
+
+### Profile & Account Updates (January 23, 2026)
+**Status: ✅ IMPLEMENTED**
+
+1. **Username Changes Propagate Everywhere**
+   - When a user changes their username, it updates across:
+     - All their listings (`seller_username`)
+     - All orders (as buyer/seller)
+     - All trades (as initiator/recipient)
+     - All offers (as buyer/seller)
+     - All reviews (as reviewer/reviewee)
+
+2. **Email & Password Changes in Edit Profile**
+   - Moved from Account Settings to Edit Profile page
+   - Email change requires password confirmation
+   - Password change requires current password
+
+3. **Account Settings Page Removed**
+   - `/account` and `/account/settings` now redirect to Edit Profile
+   - All functionality consolidated in `/profile/edit`
+
+4. **New Navbar Buttons (Coming Soon)**
+   - List icon → `/my-list` (Coming Soon page)
+   - GraduationCap icon → `/learn` (Coming Soon page)
+   - Both show: "Coming Soon!" with message from The MicLocker Team
+
+**Files Modified:**
+- `/app/backend/routes/users.py` - Username propagation, email/password endpoints
+- `/app/frontend/src/pages/EditProfilePage.js` - Added Account Settings section
+- `/app/frontend/src/components/Navbar.js` - Added List & GraduationCap buttons
+- `/app/frontend/src/pages/MyListPage.js` - New Coming Soon page
+- `/app/frontend/src/pages/LearnPage.js` - New Coming Soon page
+- `/app/frontend/src/App.js` - Updated routes
+- Deleted: `/app/frontend/src/pages/AccountSettingsPage.js`
+
 ## Notes
 - Stripe Connect requires enabling in Stripe Dashboard before use
+- **See `/app/STRIPE_SETUP_GUIDE.md` for complete webhook configuration steps**
 - Auto-delivery confirmation runs every hour
 - Funds are held until buyer confirms delivery or 14 days pass
 - Platform fee is 3% (configurable via PLATFORM_FEE_PERCENT)
 - Review-gating system activates after first purchase/sale is completed
+- **Minimum listing price is $5.00** - cannot be overridden
 

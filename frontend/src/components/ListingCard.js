@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Star, Heart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { usersAPI } from '../services/api';
 
 const ListingCard = ({ listing, onFavoriteChange }) => {
+  const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { isDark } = useTheme();
   const [isFavorite, setIsFavorite] = useState(false);
@@ -32,7 +33,10 @@ const ListingCard = ({ listing, onFavoriteChange }) => {
     e.preventDefault();
     e.stopPropagation();
     
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
     
     setLoading(true);
     try {
@@ -75,23 +79,21 @@ const ListingCard = ({ listing, onFavoriteChange }) => {
             {listing.condition}
           </span>
         )}
-        {/* Favorite Button */}
-        {isAuthenticated && (
-          <button
-            onClick={handleFavoriteClick}
-            disabled={loading}
-            className={`absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-              isFavorite 
-                ? 'bg-primary text-black' 
-                : isDark 
-                  ? 'bg-dark-400/80 text-gray-300 hover:bg-dark-300 hover:text-white'
-                  : 'bg-white/90 text-gray-500 hover:bg-white hover:text-gray-700 shadow-sm'
-            }`}
-            data-testid={`favorite-button-${listing.id}`}
-          >
-            <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
-          </button>
-        )}
+        {/* Favorite Button - show for all users */}
+        <button
+          onClick={handleFavoriteClick}
+          disabled={loading}
+          className={`absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+            isFavorite 
+              ? 'bg-primary text-black' 
+              : isDark 
+                ? 'bg-dark-400/80 text-gray-300 hover:bg-dark-300 hover:text-white'
+                : 'bg-white/90 text-gray-500 hover:bg-white hover:text-gray-700 shadow-sm'
+          }`}
+          data-testid={`favorite-button-${listing.id}`}
+        >
+          <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
+        </button>
       </div>
       <div className="p-4">
         <h3 className={`font-medium line-clamp-2 group-hover:text-primary transition-colors ${isDark ? 'text-white' : 'text-gray-900'}`}>

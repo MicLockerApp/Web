@@ -57,6 +57,14 @@ const CreateListingPage = () => {
     setLoading(true);
     setError('');
 
+    // Validate minimum price
+    const price = parseFloat(formData.price);
+    if (isNaN(price) || price < 5) {
+      setError('Minimum listing price is $5.00');
+      setLoading(false);
+      return;
+    }
+
     try {
       // Prepare media data from S3 uploads
       const mediaData = uploadedMedia.map((item, index) => ({
@@ -216,7 +224,7 @@ const CreateListingPage = () => {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-gray-400 mb-2">Price *</label>
+                  <label className="block text-gray-400 mb-2">Price * <span className="text-xs text-gray-500">(min $5.00)</span></label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
                     <input
@@ -225,9 +233,9 @@ const CreateListingPage = () => {
                       onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                       className="pl-8"
                       required
-                      min="1"
+                      min="5"
                       step="0.01"
-                      placeholder="0.00"
+                      placeholder="5.00"
                       data-testid="listing-price"
                     />
                   </div>

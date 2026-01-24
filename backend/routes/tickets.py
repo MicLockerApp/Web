@@ -87,6 +87,7 @@ async def create_ticket(
         message=ticket_data.message,
         order_id=ticket_data.order_id,
         listing_id=ticket_data.listing_id,
+        attachments=[a.model_dump() for a in ticket_data.attachments] if ticket_data.attachments else None,
         priority=priority,
         user_agent=request.headers.get("user-agent")
     )

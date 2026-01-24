@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { usersAPI, authAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { Camera, Check, Save, X, User, Mail, Phone, Globe, Eye, EyeOff, MapPin, AlertTriangle } from 'lucide-react';
+import { Camera, Check, Save, X, User, Mail, Phone, Globe, Eye, EyeOff, MapPin, AlertTriangle, AtSign, Settings } from 'lucide-react';
 import { COUNTRIES, getStatesForCountry, countryHasStates } from '../data/countries';
 
 // Privacy toggle component
@@ -95,7 +95,18 @@ const EditProfilePage = () => {
   const [success, setSuccess] = useState('');
   const [showPhysicalAddressWarning, setShowPhysicalAddressWarning] = useState(false);
   
+  // Account settings state (email & password)
+  const [emailForm, setEmailForm] = useState({ newEmail: '', password: '' });
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [emailSuccess, setEmailSuccess] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
+  
   const [formData, setFormData] = useState({
+    username: '',
     firstName: '',
     lastName: '',
     bio: '',
@@ -175,6 +186,7 @@ const EditProfilePage = () => {
         const physicalAddress = profile.physical_address || {};
         
         setFormData({
+          username: profile.username || '',
           firstName: profile.first_name || '',
           lastName: profile.last_name || '',
           bio: profile.bio || '',
@@ -291,6 +303,71 @@ const EditProfilePage = () => {
 
   const cancelShowPhysicalAddress = () => {
     setShowPhysicalAddressWarning(false);
+  };
+
+  // Handle email change
+  const handleEmailChange = async (e) => {
+    e.preventDefault();
+    setEmailError('');
+    setEmailSuccess('');
+    
+    if (!emailForm.newEmail || !emailForm.password) {
+      setEmailError('Please fill in all fields');
+      return;
+    }
+    
+    setSavingEmail(true);
+    try {
+      const response = await usersAPI.changeEmail({
+        new_email: emailForm.newEmail,
+        password: emailForm.password
+      });
+      setEmailSuccess('Email changed successfully!');
+      setEmailForm({ newEmail: '', password: '' });
+      if (refreshUser) refreshUser();
+      setTimeout(() => setEmailSuccess(''), 5000);
+    } catch (err) {
+      setEmailError(err.response?.data?.detail || 'Failed to change email');
+    } finally {
+      setSavingEmail(false);
+    }
+  };
+
+  // Handle password change
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+    
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      setPasswordError('Please fill in all fields');
+      return;
+    }
+    
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+    
+    if (passwordForm.newPassword.length < 8) {
+      setPasswordError('Password must be at least 8 characters');
+      return;
+    }
+    
+    setSavingPassword(true);
+    try {
+      await usersAPI.changePassword({
+        current_password: passwordForm.currentPassword,
+        new_password: passwordForm.newPassword
+      });
+      setPasswordSuccess('Password changed successfully!');
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setTimeout(() => setPasswordSuccess(''), 5000);
+    } catch (err) {
+      setPasswordError(err.response?.data?.detail || 'Failed to change password');
+    } finally {
+      setSavingPassword(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -478,6 +555,23 @@ const EditProfilePage = () => {
           <div className={`rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
             <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Basic Information</h2>
             
+            {/* Username */}
+            <div className="mb-4">
+              <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <AtSign className="w-4 h-4 inline mr-2" />
+                Username
+              </label>
+              <input
+                type="text"
+                value={formData.username}
+                onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase().replace(/[^a-z0-9_.-]/g, '') })}
+                placeholder="username"
+                data-testid="edit-username"
+                className="w-full"
+              />
+              <p className="text-gray-500 text-xs mt-1">Only lowercase letters, numbers, underscores, dots, and hyphens allowed.</p>
+            </div>
+
             {/* First Name and Last Name */}
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
@@ -1218,6 +1312,140 @@ const EditProfilePage = () => {
             </button>
           </div>
         </form>
+
+        {/* Account Settings Section - Email & Password */}
+        <div className={`mt-8 rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
+          <h2 className={`text-xl font-semibold mb-6 flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            <Settings className="w-5 h-5" />
+            Account Settings
+          </h2>
+          
+          {/* Change Email */}
+          <div className="mb-8">
+            <h3 className={`text-lg font-medium mb-4 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+              Change Email Address
+            </h3>
+            <p className={`text-sm mb-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              Current email: <span className="font-medium">{user?.email}</span>
+            </p>
+            
+            {emailError && (
+              <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm">
+                {emailError}
+              </div>
+            )}
+            {emailSuccess && (
+              <div className="mb-4 p-3 bg-green-500/20 border border-green-500/50 rounded-lg text-green-400 text-sm">
+                {emailSuccess}
+              </div>
+            )}
+            
+            <form onSubmit={handleEmailChange} className="space-y-4">
+              <div>
+                <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <Mail className="w-4 h-4 inline mr-2" />
+                  New Email Address
+                </label>
+                <input
+                  type="email"
+                  value={emailForm.newEmail}
+                  onChange={(e) => setEmailForm({ ...emailForm, newEmail: e.target.value })}
+                  placeholder="new@email.com"
+                  className="w-full"
+                  data-testid="new-email-input"
+                />
+              </div>
+              <div>
+                <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <Eye className="w-4 h-4 inline mr-2" />
+                  Current Password
+                </label>
+                <input
+                  type="password"
+                  value={emailForm.password}
+                  onChange={(e) => setEmailForm({ ...emailForm, password: e.target.value })}
+                  placeholder="Enter your password to confirm"
+                  className="w-full"
+                  data-testid="email-password-input"
+                />
+              </div>
+              <button
+                type="submit"
+                className="btn btn-secondary"
+                disabled={savingEmail}
+              >
+                {savingEmail ? 'Changing...' : 'Change Email'}
+              </button>
+            </form>
+          </div>
+          
+          {/* Change Password */}
+          <div className="pt-6 border-t border-dark-300">
+            <h3 className={`text-lg font-medium mb-4 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+              Change Password
+            </h3>
+            
+            {passwordError && (
+              <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm">
+                {passwordError}
+              </div>
+            )}
+            {passwordSuccess && (
+              <div className="mb-4 p-3 bg-green-500/20 border border-green-500/50 rounded-lg text-green-400 text-sm">
+                {passwordSuccess}
+              </div>
+            )}
+            
+            <form onSubmit={handlePasswordChange} className="space-y-4">
+              <div>
+                <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Current Password
+                </label>
+                <input
+                  type="password"
+                  value={passwordForm.currentPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                  placeholder="Enter current password"
+                  className="w-full"
+                  data-testid="current-password-input"
+                />
+              </div>
+              <div>
+                <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  value={passwordForm.newPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                  placeholder="Enter new password (min 8 characters)"
+                  className="w-full"
+                  data-testid="new-password-input"
+                />
+              </div>
+              <div>
+                <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                  placeholder="Confirm new password"
+                  className="w-full"
+                  data-testid="confirm-password-input"
+                />
+              </div>
+              <button
+                type="submit"
+                className="btn btn-secondary"
+                disabled={savingPassword}
+              >
+                {savingPassword ? 'Changing...' : 'Change Password'}
+              </button>
+            </form>
+          </div>
+        </div>
       </div>
     </div>
   );

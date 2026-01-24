@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HelpCircle, Send, CheckCircle, AlertCircle, ChevronDown, Ticket, MessageSquare, Book, Shield, Upload, X, Image } from 'lucide-react';
+import { HelpCircle, Send, CheckCircle, AlertCircle, ChevronDown, Ticket, MessageSquare, Book, Shield, Upload, X, Image, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import useS3Upload from '../hooks/useS3Upload';
 
 const TICKET_CATEGORIES = [
   { value: 'Order Issue', label: 'Order Issue', description: 'Problems with your order, delivery, or tracking' },
@@ -27,6 +28,7 @@ const HelpCenterPage = () => {
   const { user, isAuthenticated } = useAuth();
   const { isDark } = useTheme();
   const fileInputRef = useRef(null);
+  const { uploadFile, progress, error: uploadError, setError: setUploadError } = useS3Upload();
   const [formData, setFormData] = useState({
     category: '',
     subject: '',
@@ -71,33 +73,24 @@ const HelpCenterPage = () => {
 
     setUploading(true);
     setError('');
+    setUploadError(null);
 
     try {
-      const token = localStorage.getItem('token');
       const uploadedFiles = [];
 
       for (const file of validFiles) {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/files/upload`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          body: formData
-        });
-
-        if (response.ok) {
-          const data = await response.json();
+        // Upload to S3 using the hook
+        const result = await uploadFile(file, `support-tickets/${Date.now()}`);
+        
+        if (result.success) {
           uploadedFiles.push({
-            url: data.url,
+            url: result.url,
             filename: file.name,
             size: file.size,
             type: file.type
           });
         } else {
-          throw new Error(`Failed to upload ${file.name}`);
+          throw new Error(result.error || `Failed to upload ${file.name}`);
         }
       }
 
@@ -441,6 +434,7 @@ const HelpCenterPage = () => {
                     accept="image/jpeg,image/png,image/gif,image/webp,application/pdf"
                     multiple
                     className="hidden"
+                    data-testid="attachment-input"
                   />
                   <button
                     type="button"
@@ -451,11 +445,17 @@ const HelpCenterPage = () => {
                         ? 'border-dark-300 hover:border-primary text-gray-400 hover:text-primary' 
                         : 'border-gray-300 hover:border-primary text-gray-500 hover:text-primary'
                     } ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    data-testid="add-attachment-btn"
                   >
                     {uploading ? (
                       <>
-                        <div className="w-5 h-5 border-2 border-gray-400/30 border-t-gray-400 rounded-full animate-spin" />
-                        Uploading...
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Uploading to S3...
+                        {Object.keys(progress).length > 0 && (
+                          <span className="text-xs">
+                            ({Object.values(progress)[Object.values(progress).length - 1]}%)
+                          </span>
+                        )}
                       </>
                     ) : (
                       <>
@@ -464,6 +464,9 @@ const HelpCenterPage = () => {
                       </>
                     )}
                   </button>
+                  {uploadError && (
+                    <p className="text-red-400 text-sm mt-2">{uploadError}</p>
+                  )}
                 </div>
               )}
             </div>

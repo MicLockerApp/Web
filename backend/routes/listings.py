@@ -299,6 +299,13 @@ async def update_listing(
             detail="Not authorized to update this listing"
         )
     
+    # Enforce minimum price of $5
+    if listing_data.price is not None and listing_data.price < 5.0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Minimum listing price is $5.00"
+        )
+    
     update_data = {"updated_at": datetime.utcnow()}
     for field, value in listing_data.model_dump(exclude_unset=True).items():
         if value is not None:

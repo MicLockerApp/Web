@@ -48,7 +48,7 @@ class ListingCreate(BaseModel):
     model: Optional[str] = None
     category: str
     condition: str
-    price: float = Field(..., gt=0)
+    price: float = Field(..., ge=5.0, description="Minimum price is $5.00")
     quantity: int = Field(default=1, ge=1)
     accepts_offers: bool = True
     shipping: Optional[ShippingOption] = None

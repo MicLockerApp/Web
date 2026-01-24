@@ -79,6 +79,7 @@ class Settings(BaseSettings):
     stripe_api_key: Optional[str] = os.getenv("STRIPE_API_KEY") or None
     stripe_publishable_key: Optional[str] = os.getenv("STRIPE_PUBLISHABLE_KEY") or None
     stripe_webhook_secret: Optional[str] = os.getenv("STRIPE_WEBHOOK_SECRET") or None
+    stripe_connect_webhook_secret: Optional[str] = os.getenv("STRIPE_CONNECT_WEBHOOK_SECRET") or None
     
     # Stripe Connect (for seller payouts)
     stripe_connect_enabled: bool = os.getenv("STRIPE_CONNECT_ENABLED", "true").lower() == "true"
