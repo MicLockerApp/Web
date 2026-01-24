@@ -434,17 +434,27 @@ const ListingDetailPage = () => {
               className="flex items-center gap-3 p-4 bg-dark-400 rounded-lg mb-6 hover:bg-dark-300 transition-colors"
               data-testid="seller-link"
             >
-              <div className="w-12 h-12 bg-dark-300 rounded-full flex items-center justify-center">
-                <span className="text-xl font-bold text-primary">
-                  {listing.seller_username?.[0]?.toUpperCase()}
-                </span>
-              </div>
+              {listing.seller_profile_image ? (
+                <img 
+                  src={listing.seller_profile_image} 
+                  alt={listing.seller_username}
+                  className="w-12 h-12 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-12 h-12 bg-dark-300 rounded-full flex items-center justify-center">
+                  <span className="text-xl font-bold text-primary">
+                    {listing.seller_username?.[0]?.toUpperCase()}
+                  </span>
+                </div>
+              )}
               <div className="flex-1">
                 <p className="text-white font-medium">{listing.seller_username}</p>
                 <div className="flex items-center gap-2">
                   <StarRating rating={listing.seller_rating || 0} size={14} />
                   {listing.seller_rating > 0 && (
-                    <span className="text-sm text-gray-400">{listing.seller_rating?.toFixed(1)}</span>
+                    <span className="text-sm text-gray-400">
+                      {listing.seller_rating?.toFixed(1)} ({listing.seller_review_count || 0})
+                    </span>
                   )}
                 </div>
               </div>
