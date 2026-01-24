@@ -8,7 +8,7 @@ import requests
 import os
 import uuid
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://review-gating.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://industry-pros.preview.emergentagent.com').rstrip('/')
 
 # Test credentials
 ADMIN_USERNAME = "miclocker.support"
