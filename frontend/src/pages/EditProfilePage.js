@@ -123,6 +123,8 @@ const EditProfilePage = () => {
     venue_capacity: '',
     merchant_products: [],
     business_name: '',
+    comedian_specialties: [],
+    actor_specialties: [],
     // Contact info
     phone: '',
     website: '',
@@ -161,6 +163,8 @@ const EditProfilePage = () => {
     { value: 'recording_studio', label: 'Recording Studio', icon: '🎙️' },
     { value: 'venue', label: 'Venue', icon: '🏟️' },
     { value: 'merchant', label: 'Merchant', icon: '🛍️' },
+    { value: 'comedian', label: 'Comedian', icon: '🎭' },
+    { value: 'actor', label: 'Actor', icon: '🎬' },
   ];
 
   useEffect(() => {
