@@ -67,6 +67,8 @@ const RegisterPage = () => {
     { value: 'recording_studio', label: 'Recording Studio', icon: '🎙️', description: 'Own or operate a studio' },
     { value: 'venue', label: 'Venue', icon: '🏟️', description: 'Own or manage a music venue' },
     { value: 'merchant', label: 'Merchant', icon: '🛍️', description: 'Sell merchandise & apparel' },
+    { value: 'comedian', label: 'Comedian', icon: '🎭', description: 'Perform comedy shows or acts' },
+    { value: 'actor', label: 'Actor', icon: '🎬', description: 'Act in film, TV, or theater' },
   ];
 
   useEffect(() => {
