@@ -113,7 +113,12 @@ const ListingCard = ({ listing, onFavoriteChange }) => {
             {listing.seller_rating > 0 && (
               <div className="flex items-center gap-1 ml-2">
                 <Star className="w-3 h-3 text-primary fill-primary" />
-                <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{listing.seller_rating?.toFixed(1)}</span>
+                <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  {listing.seller_rating?.toFixed(1)}
+                </span>
+                <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                  ({listing.seller_review_count || 0})
+                </span>
               </div>
             )}
           </div>
