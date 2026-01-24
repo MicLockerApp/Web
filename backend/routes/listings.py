@@ -335,6 +335,7 @@ async def update_listing(
     updated_listing = await db.listings.find_one({"id": listing_id})
     updated_listing["seller_rating"] = current_user.get("rating", 0)
     updated_listing["seller_review_count"] = current_user.get("review_count", 0)
+    updated_listing["seller_profile_image"] = current_user.get("profile_image")
     return serialize_doc(updated_listing)
 
 @router.delete("/{listing_id}")
