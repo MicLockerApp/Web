@@ -711,3 +711,46 @@ The `transfer_data.destination` parameter automatically routes funds to the sell
 - Review-gating system activates after first purchase/sale is completed
 - **Minimum listing price is $5.00** - cannot be overridden
 
+
+
+## Session Updates (January 24, 2026)
+
+### Architecture Improvements
+**Status: ✅ IMPLEMENTED**
+
+1. **Centralized Error Handling Middleware**
+   - Created `/app/backend/middleware/error_handler.py`
+   - Request ID tracking via UUID for log correlation
+   - Standardized error responses with `X-Request-ID` header
+   - Catches unhandled exceptions without breaking HTTPException behavior
+
+2. **GigsPage Component Extraction** - Reduced from 1,183 to 517 lines (56%)
+   - `/app/frontend/src/components/gigs/GigCard.js` - Individual gig card with slider
+   - `/app/frontend/src/components/gigs/CreateGigModal.js` - Multi-step creation form
+   - `/app/frontend/src/components/gigs/ViewGigModal.js` - Full gig detail view
+   - `/app/frontend/src/components/gigs/constants.js` - Shared icons and placeholders
+
+3. **Admin Component Library**
+   - `/app/frontend/src/components/admin/UserActionModal.js` - User moderation
+   - `/app/frontend/src/components/admin/AddEmployeeModal.js` - Employee invites
+   - `/app/frontend/src/components/admin/EditEmployeeModal.js` - Employee editing
+   - `/app/frontend/src/components/admin/ResetAnalyticsModal.js` - Data reset
+
+4. **Gig Service Layer** - Business logic separated from routes
+   - `/app/backend/services/gig_service.py` - Validation, document creation, query building
+   - `/app/backend/routes/gigs.py` - Now thin HTTP routing only
+
+### Feature Updates
+
+1. **Comedian & Actor Categories in Signup**
+   - Added to `/app/backend/models/user.py` as USER_CATEGORIES
+   - 13 comedian specialties: Stand-up, Improv, Sketch Comedy, etc.
+   - 23 actor specialties: Film Actor, TV Actor, Voice Actor, etc.
+   - Updated `/app/frontend/src/pages/RegisterPage.js` with specialty selection
+   - API endpoint `/api/auth/categories` returns new options
+
+2. **Seller Review Count on Listings**
+   - Added `seller_review_count` field to listing API responses
+   - Updated `/app/backend/routes/listings.py` - All listing endpoints
+   - Updated `/app/frontend/src/components/ListingCard.js` - Shows "(0)" next to star rating
+
