@@ -113,36 +113,37 @@ const ListingCard = ({ listing, onFavoriteChange }) => {
             + ${listing.shipping.price} shipping
           </p>
         )}
-        <div className={`flex items-center justify-between mt-3 pt-3 border-t ${isDark ? 'border-dark-300' : 'border-gray-200'}`}>
-          <div className="flex items-center gap-2">
+        <div className={`flex items-center mt-3 pt-3 border-t ${isDark ? 'border-dark-300' : 'border-gray-200'}`}>
+          <div className="flex items-center gap-2 min-w-0">
             {/* Seller profile image */}
             {hasSellerImage ? (
               <img 
                 src={listing.seller_profile_image} 
                 alt={listing.seller_username}
-                className="w-6 h-6 rounded-full object-cover"
+                className="w-6 h-6 rounded-full object-cover flex-shrink-0"
                 onError={() => setSellerImageError(true)}
               />
             ) : (
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center ${isDark ? 'bg-dark-300' : 'bg-gray-200'}`}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${isDark ? 'bg-dark-300' : 'bg-gray-200'}`}>
                 <span className="text-xs font-medium text-primary">
                   {listing.seller_username?.[0]?.toUpperCase()}
                 </span>
               </div>
             )}
             <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{listing.seller_username}</span>
-            {listing.seller_rating > 0 && (
-              <div className="flex items-center gap-1 ml-1">
-                <Star className="w-3 h-3 text-primary fill-primary" />
-                <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {listing.seller_rating?.toFixed(1)}
-                </span>
-                <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                  ({listing.seller_review_count || 0})
-                </span>
-              </div>
-            )}
           </div>
+          {/* Rating - always visible, flex-shrink-0 prevents cutoff */}
+          {(listing.seller_rating !== undefined && listing.seller_rating !== null) && (
+            <div className="flex items-center gap-1 ml-auto flex-shrink-0">
+              <Star className="w-3 h-3 text-primary fill-primary" />
+              <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                {listing.seller_rating?.toFixed(1)}
+              </span>
+              <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                ({listing.seller_review_count || 0})
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </Link>

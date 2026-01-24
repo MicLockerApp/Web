@@ -11,17 +11,18 @@
  * UI/UX: Unchanged from original implementation
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   X, ChevronLeft, ChevronRight, MapPin, DollarSign, Eye,
   Mail, Phone, Trash2, User, Play, Globe, ExternalLink,
-  Instagram, Facebook, Twitter, Youtube, Music, Briefcase
+  Instagram, Facebook, Twitter, Youtube, Music, Briefcase, Maximize
 } from 'lucide-react';
 import { CATEGORY_ICONS, CATEGORY_LABELS } from './constants';
 
 const ViewGigModal = ({ gig, isOwner, onClose, onDelete }) => {
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
+  const videoRef = useRef(null);
   const allMedia = gig.media?.length > 0 ? gig.media : [];
   const socialLinks = gig.social_links ? Object.entries(gig.social_links).filter(([_, v]) => v) : [];
 
@@ -31,6 +32,22 @@ const ViewGigModal = ({ gig, isOwner, onClose, onDelete }) => {
 
   const prevMedia = () => {
     setActiveMediaIndex(prev => (prev - 1 + allMedia.length) % allMedia.length);
+  };
+
+  const handleFullscreen = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    
+    if (video.requestFullscreen) {
+      video.requestFullscreen();
+    } else if (video.webkitRequestFullscreen) {
+      video.webkitRequestFullscreen();
+    } else if (video.webkitEnterFullscreen) {
+      // iOS Safari
+      video.webkitEnterFullscreen();
+    } else if (video.msRequestFullscreen) {
+      video.msRequestFullscreen();
+    }
   };
 
   return (
@@ -59,18 +76,31 @@ const ViewGigModal = ({ gig, isOwner, onClose, onDelete }) => {
           {allMedia.length > 0 && (
             <div className="mb-6">
               {/* Main image/video display */}
-              <div className="relative h-96 bg-dark-500 rounded-xl overflow-hidden mb-3">
+              <div className="relative h-96 bg-dark-500 rounded-xl mb-3">
                 {allMedia[activeMediaIndex]?.media_type === 'video' ? (
-                  <video 
-                    src={allMedia[activeMediaIndex].url} 
-                    controls 
-                    className="w-full h-full object-cover"
-                  />
+                  <>
+                    <video 
+                      ref={videoRef}
+                      src={allMedia[activeMediaIndex].url} 
+                      controls
+                      playsInline
+                      className="w-full h-full object-contain bg-black rounded-xl"
+                      style={{ display: 'block' }}
+                    />
+                    {/* Custom fullscreen button */}
+                    <button 
+                      onClick={handleFullscreen}
+                      className="absolute top-3 left-3 p-2 bg-black/70 rounded-lg text-white hover:bg-primary hover:text-black transition-colors z-10"
+                      title="Fullscreen"
+                    >
+                      <Maximize className="w-5 h-5" />
+                    </button>
+                  </>
                 ) : (
                   <img 
                     src={allMedia[activeMediaIndex]?.url} 
                     alt={gig.title} 
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover rounded-xl"
                     style={{ objectPosition: 'center' }}
                   />
                 )}

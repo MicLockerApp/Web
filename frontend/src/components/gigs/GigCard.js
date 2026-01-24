@@ -44,8 +44,8 @@ const GigCard = ({ gig, onClick, placeholderIndex }) => {
 
   return (
     <div onClick={onClick} className="bg-dark-400 rounded-xl overflow-hidden cursor-pointer hover:bg-dark-300 transition-colors" data-testid={`gig-card-${gig.id}`}>
-      {/* Thumbnail Slider - increased height to 72 (288px) from 48 (192px) = +96px */}
-      <div className="relative h-72 bg-dark-500">
+      {/* Thumbnail Slider - 488px height (288px + 200px) */}
+      <div className="relative h-[488px] bg-dark-500">
         {allMedia[currentSlide]?.media_type === 'video' ? (
           <div className="w-full h-full flex items-center justify-center bg-dark-600">
             <Play className="w-16 h-16 text-primary" />

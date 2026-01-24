@@ -125,18 +125,23 @@ def validate_genres(genres: Optional[List[str]]) -> None:
 
 def validate_media_limits(media: Optional[List[Any]]) -> None:
     """
-    Validate that media uploads don't exceed limits.
+    Validate that media uploads don't exceed limits and meet requirements.
     
-    Business rule: Maximum 5 photos and 5 videos per gig.
+    Business rules: 
+    - Minimum 1 photo or video required
+    - Maximum 5 photos and 5 videos per gig.
     
     Args:
         media: List of media objects with 'media_type' field
     
     Raises:
-        HTTPException: If photo or video count exceeds limits
+        HTTPException: If media requirements are not met
     """
-    if not media:
-        return
+    if not media or len(media) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="At least one photo or video is required"
+        )
     
     photos = [m for m in media if m.media_type == "image"]
     videos = [m for m in media if m.media_type == "video"]
@@ -177,6 +182,15 @@ def validate_gig_data(gig_data: GigCreate) -> str:
     validate_subcategories(gig_data.subcategories, gig_data.category)
     validate_genres(gig_data.genres)
     validate_media_limits(gig_data.media)
+    
+    # Validate that genres are required for non-comedian/actor categories
+    genre_optional_categories = ['comedian', 'actor']
+    if gig_data.category not in genre_optional_categories:
+        if not gig_data.genres or len(gig_data.genres) == 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"At least one music genre is required for {gig_data.category} category"
+            )
     
     return gig_type
 

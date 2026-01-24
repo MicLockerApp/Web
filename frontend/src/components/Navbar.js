@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, User, Menu, X, MessageSquare, LogOut, Package, Edit, Heart, Sun, Moon, Tag, ShoppingBag, LayoutDashboard, Shield, Settings, ArrowLeftRight, List, GraduationCap } from 'lucide-react';
+import { Search, ShoppingCart, User, Menu, X, MessageSquare, LogOut, Package, Edit, Heart, Sun, Moon, Tag, ShoppingBag, LayoutDashboard, Shield, Settings, ArrowLeftRight, List, GraduationCap, Guitar } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useTheme } from '../context/ThemeContext';
@@ -287,6 +287,16 @@ const Navbar = () => {
               Sell Your Gear
             </Link>
 
+            {/* Guitar icon - navigates to homepage */}
+            <Link 
+              to="/" 
+              className={`p-2 ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`} 
+              data-testid="home-guitar-link"
+              title="Home"
+            >
+              <Guitar className="w-5 h-5" />
+            </Link>
+
             {isAuthenticated ? (
               <>
                 {/* New Feature Buttons */}
@@ -491,6 +501,14 @@ const Navbar = () => {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Sell Your Gear
+              </Link>
+              <Link
+                to="/"
+                className={`flex items-center gap-2 py-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Guitar className="w-5 h-5" />
+                Home
               </Link>
               {isAuthenticated ? (
                 <>

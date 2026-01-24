@@ -137,7 +137,7 @@ async def get_gigs(
     Get all gigs with optional filters and pagination.
     
     Returns a paginated list of active gigs matching the
-    provided filter criteria.
+    provided filter criteria, with up-to-date user profile images.
     """
     db = get_database()
     
@@ -157,9 +157,39 @@ async def get_gigs(
     # Get total count for pagination info
     total = await db.gigs.count_documents(query)
     
-    # Fetch gigs (newest first)
-    cursor = db.gigs.find(query).sort("created_at", -1).skip(skip).limit(limit)
-    gigs = await cursor.to_list(length=limit)
+    # Use aggregation to join with users for latest profile image
+    pipeline = [
+        {"$match": query},
+        {"$sort": {"created_at": -1}},
+        {"$skip": skip},
+        {"$limit": limit},
+        # Join with users to get current profile image
+        {
+            "$lookup": {
+                "from": "users",
+                "localField": "user_id",
+                "foreignField": "id",
+                "as": "user_info"
+            }
+        },
+        # Update user_profile_image with latest from users collection
+        {
+            "$addFields": {
+                "user_profile_image": {
+                    "$arrayElemAt": ["$user_info.profile_image", 0]
+                },
+                "user_rating": {
+                    "$ifNull": [{"$arrayElemAt": ["$user_info.rating", 0]}, 0]
+                },
+                "user_review_count": {
+                    "$ifNull": [{"$arrayElemAt": ["$user_info.review_count", 0]}, 0]
+                }
+            }
+        },
+        {"$project": {"user_info": 0}}
+    ]
+    
+    gigs = await db.gigs.aggregate(pipeline).to_list(length=limit)
     
     # Format each gig for response
     formatted_gigs = [format_gig_for_response(gig) for gig in gigs]

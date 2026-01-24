@@ -98,8 +98,17 @@ const CreateGigModal = ({ categories, onClose, onSuccess }) => {
     } finally { setLoading(false); }
   };
 
-  const canProceedStep1 = formData.gig_type && formData.category;
+  // Categories that don't require music genre selection
+  const genreOptionalCategories = ['comedian', 'actor'];
+  const isGenreRequired = formData.category && !genreOptionalCategories.includes(formData.category);
+  const hasRequiredGenres = !isGenreRequired || formData.genres.length > 0;
+
+  // Media is required - at least one photo or video
+  const hasRequiredMedia = formData.media.length > 0;
+
+  const canProceedStep1 = formData.gig_type && formData.category && hasRequiredGenres;
   const canProceedStep2 = formData.title.length >= 5 && formData.description.length >= 20;
+  const canSubmit = hasRequiredMedia;
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 overflow-y-auto">
@@ -171,8 +180,18 @@ const CreateGigModal = ({ categories, onClose, onSuccess }) => {
 
               {/* Genre selection */}
               <div>
-                <label className="block text-gray-300 font-medium mb-3">Select music genres (optional)</label>
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-36 overflow-y-auto p-2 bg-dark-500 rounded-xl">
+                <label className="block text-gray-300 font-medium mb-3">
+                  Select music genres {isGenreRequired ? <span className="text-red-400">*</span> : '(optional)'}
+                  {isGenreRequired && formData.genres.length === 0 && (
+                    <span className="text-red-400 text-sm font-normal ml-2">— At least one genre required</span>
+                  )}
+                </label>
+                <p className="text-gray-500 text-sm mb-2">
+                  {isGenreRequired 
+                    ? 'Select all genres that apply to help others find your gig'
+                    : 'Optional for Comedy and Acting categories'}
+                </p>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-48 overflow-y-auto p-2 bg-dark-500 rounded-xl">
                   {categories?.genres?.map(genre => (
                     <button key={genre} type="button" onClick={() => toggleGenre(genre)}
                       className={`px-3 py-2 rounded-lg text-sm transition-colors ${formData.genres.includes(genre) ? 'bg-primary text-black font-medium' : 'bg-dark-400 text-gray-400 hover:text-white hover:bg-dark-300'}`}>
@@ -180,6 +199,11 @@ const CreateGigModal = ({ categories, onClose, onSuccess }) => {
                     </button>
                   ))}
                 </div>
+                {formData.genres.length > 0 && (
+                  <p className="text-primary text-sm mt-2">
+                    Selected: {formData.genres.join(', ')}
+                  </p>
+                )}
               </div>
 
               <button onClick={() => setStep(2)} disabled={!canProceedStep1} className="w-full btn btn-primary disabled:opacity-50">Continue</button>
@@ -234,8 +258,13 @@ const CreateGigModal = ({ categories, onClose, onSuccess }) => {
           {step === 3 && (
             <div className="space-y-6">
               <div>
-                <label className="block text-gray-300 font-medium mb-2">Photos & Videos (optional)</label>
-                <p className="text-gray-500 text-sm mb-3">Up to 5 photos and 5 videos</p>
+                <label className="block text-gray-300 font-medium mb-2">
+                  Photos & Videos <span className="text-red-400">*</span>
+                  {!hasRequiredMedia && (
+                    <span className="text-red-400 text-sm font-normal ml-2">— At least one photo or video required</span>
+                  )}
+                </label>
+                <p className="text-gray-500 text-sm mb-3">Upload at least 1 photo or video (up to 5 each)</p>
                 
                 {formData.media.length > 0 && (
                   <div className="grid grid-cols-3 gap-2 mb-3">
@@ -303,7 +332,7 @@ const CreateGigModal = ({ categories, onClose, onSuccess }) => {
 
               <div className="flex gap-3">
                 <button onClick={() => setStep(2)} className="btn btn-secondary flex-1">Back</button>
-                <button onClick={handleSubmit} disabled={loading} className="btn btn-primary flex-1 disabled:opacity-50">{loading ? 'Posting...' : 'Post Gig'}</button>
+                <button onClick={handleSubmit} disabled={loading || !canSubmit} className="btn btn-primary flex-1 disabled:opacity-50">{loading ? 'Posting...' : 'Post Gig'}</button>
               </div>
             </div>
           )}

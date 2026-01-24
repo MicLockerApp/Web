@@ -200,13 +200,38 @@ async def get_featured_listings(limit: int = Query(8, ge=1, le=20)):
     """Get featured/trending listings"""
     db = get_database()
     
-    # Get listings with most views/favorites
-    cursor = db.listings.find({"status": "active"}).sort([
-        ("view_count", -1),
-        ("created_at", -1)
-    ]).limit(limit)
+    # Aggregation pipeline to get featured listings with seller info
+    pipeline = [
+        {"$match": {"status": "active"}},
+        {"$sort": {"view_count": -1, "created_at": -1}},
+        {"$limit": limit},
+        # Join with users to get seller profile info
+        {
+            "$lookup": {
+                "from": "users",
+                "localField": "seller_id",
+                "foreignField": "id",
+                "as": "seller_info"
+            }
+        },
+        # Extract seller rating, review count, and profile image
+        {
+            "$addFields": {
+                "seller_rating": {
+                    "$ifNull": [{"$arrayElemAt": ["$seller_info.rating", 0]}, 0]
+                },
+                "seller_review_count": {
+                    "$ifNull": [{"$arrayElemAt": ["$seller_info.review_count", 0]}, 0]
+                },
+                "seller_profile_image": {
+                    "$arrayElemAt": ["$seller_info.profile_image", 0]
+                }
+            }
+        },
+        {"$project": {"seller_info": 0}}
+    ]
     
-    listings = await cursor.to_list(length=limit)
+    listings = await db.listings.aggregate(pipeline).to_list(length=limit)
     return {"listings": serialize_docs(listings)}
 
 @router.get("/recent")
@@ -214,8 +239,38 @@ async def get_recent_listings(limit: int = Query(12, ge=1, le=50)):
     """Get most recent listings"""
     db = get_database()
     
-    cursor = db.listings.find({"status": "active"}).sort("created_at", -1).limit(limit)
-    listings = await cursor.to_list(length=limit)
+    # Aggregation pipeline to get recent listings with seller info
+    pipeline = [
+        {"$match": {"status": "active"}},
+        {"$sort": {"created_at": -1}},
+        {"$limit": limit},
+        # Join with users to get seller profile info
+        {
+            "$lookup": {
+                "from": "users",
+                "localField": "seller_id",
+                "foreignField": "id",
+                "as": "seller_info"
+            }
+        },
+        # Extract seller rating, review count, and profile image
+        {
+            "$addFields": {
+                "seller_rating": {
+                    "$ifNull": [{"$arrayElemAt": ["$seller_info.rating", 0]}, 0]
+                },
+                "seller_review_count": {
+                    "$ifNull": [{"$arrayElemAt": ["$seller_info.review_count", 0]}, 0]
+                },
+                "seller_profile_image": {
+                    "$arrayElemAt": ["$seller_info.profile_image", 0]
+                }
+            }
+        },
+        {"$project": {"seller_info": 0}}
+    ]
+    
+    listings = await db.listings.aggregate(pipeline).to_list(length=limit)
     return {"listings": serialize_docs(listings)}
 
 @router.get("/stats/count")
