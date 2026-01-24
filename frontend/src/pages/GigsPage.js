@@ -467,7 +467,7 @@ const GigsPage = () => {
             <p className="text-gray-400 mb-6">
               {activeFilterCount > 0
                 ? 'Try adjusting your filters or search query'
-                : `Be the first to post ${activeTab === 'looking_for' ? 'what you\'re looking for' : 'your services'}!`}
+                : `Be the first to post ${activeTab === 'looking_for' ? "what you're looking for" : 'your services'}!`}
             </p>
             <button onClick={() => setShowCreateModal(true)} className="btn btn-primary">
               <Plus className="w-4 h-4" />
