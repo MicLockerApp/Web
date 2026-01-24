@@ -137,6 +137,8 @@ class UserProfileUpdate(BaseModel):
     venue_capacity: Optional[str] = None
     merchant_products: Optional[List[str]] = None
     business_name: Optional[str] = None
+    comedian_specialties: Optional[List[str]] = None
+    actor_specialties: Optional[List[str]] = None
     # Contact information
     phone: Optional[str] = None
     website: Optional[str] = None
