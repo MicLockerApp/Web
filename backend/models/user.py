@@ -108,6 +108,10 @@ class UserCategoryUpdate(BaseModel):
     # Merchant fields
     merchant_products: Optional[List[str]] = None
     business_name: Optional[str] = None
+    # Comedian fields
+    comedian_specialties: Optional[List[str]] = None
+    # Actor fields
+    actor_specialties: Optional[List[str]] = None
     # Contact info (optional during registration)
     phone: Optional[str] = None
     shipping_address: Optional[dict] = None
