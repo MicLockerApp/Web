@@ -119,10 +119,10 @@ const HomePage = () => {
         
         <div className="relative max-w-7xl mx-auto text-center">
           <h1 className={`text-4xl md:text-6xl font-bold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            For Music Pros. <span className="text-primary">By Music Pros.</span>
+            By Industry Pros. <span className="text-primary">For Industry Pros.</span>
           </h1>
           <p className={`text-xl mb-8 max-w-2xl mx-auto ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            The gold standard of the music industry
+            The gold standard of the music and entertainment industry
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/search" className="btn btn-primary px-8 py-3 text-lg">
