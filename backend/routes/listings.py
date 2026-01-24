@@ -98,6 +98,7 @@ async def create_listing(
     
     result = listing.model_dump()
     result["seller_rating"] = current_user.get("rating", 0)
+    result["seller_review_count"] = current_user.get("review_count", 0)
     return serialize_doc(result)
 
 @router.get("", response_model=dict)
@@ -277,9 +278,10 @@ async def get_listing(
             }
         )
     
-    # Get seller rating
+    # Get seller rating and review count
     seller = await db.users.find_one({"id": listing["seller_id"]})
     listing["seller_rating"] = seller.get("rating", 0) if seller else 0
+    listing["seller_review_count"] = seller.get("review_count", 0) if seller else 0
     
     return serialize_doc(listing)
 
@@ -324,6 +326,7 @@ async def update_listing(
     
     updated_listing = await db.listings.find_one({"id": listing_id})
     updated_listing["seller_rating"] = current_user.get("rating", 0)
+    updated_listing["seller_review_count"] = current_user.get("review_count", 0)
     return serialize_doc(updated_listing)
 
 @router.delete("/{listing_id}")
