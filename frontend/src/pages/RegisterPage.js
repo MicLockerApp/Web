@@ -35,6 +35,10 @@ const RegisterPage = () => {
     // Merchant fields
     merchant_products: [],
     business_name: '',
+    // Comedian fields
+    comedian_specialties: [],
+    // Actor fields
+    actor_specialties: [],
     // Contact info (Step 6)
     phone: '',
     // Mailing address
