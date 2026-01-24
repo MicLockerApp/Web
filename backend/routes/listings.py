@@ -285,10 +285,11 @@ async def get_listing(
             }
         )
     
-    # Get seller rating and review count
+    # Get seller rating, review count, and profile image
     seller = await db.users.find_one({"id": listing["seller_id"]})
     listing["seller_rating"] = seller.get("rating", 0) if seller else 0
     listing["seller_review_count"] = seller.get("review_count", 0) if seller else 0
+    listing["seller_profile_image"] = seller.get("profile_image") if seller else None
     
     return serialize_doc(listing)
 
