@@ -177,10 +177,7 @@ async def search_listings(
                 ]
             },
             "seller_profile_image": {
-                "$ifNull": [
-                    {"$arrayElemAt": ["$seller_info.profile_image", 0]},
-                    None
-                ]
+                "$arrayElemAt": ["$seller_info.profile_image", 0]
             }
         }
     })
