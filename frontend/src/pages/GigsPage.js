@@ -425,7 +425,7 @@ const GigsPage = () => {
           <div className="bg-dark-400 rounded-xl p-6 mb-6">
             <h3 className="text-lg font-semibold text-white mb-4">My Posted Gigs</h3>
             {myGigs.length === 0 ? (
-              <p className="text-gray-400 text-center py-8">You haven't posted any gigs yet.</p>
+              <p className="text-gray-400 text-center py-8">You haven&apos;t posted any gigs yet.</p>
             ) : (
               <div className="grid gap-4">
                 {myGigs.map(gig => (
