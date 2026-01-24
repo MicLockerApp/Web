@@ -536,7 +536,8 @@ async def get_categories():
     """Get available user categories and their options"""
     from models.user import (
         MUSICIAN_INSTRUMENTS, AUDIO_ENGINEER_SPECS,
-        RECORDING_STUDIO_OFFERINGS, MUSIC_GENRES, MERCHANT_PRODUCT_TYPES
+        RECORDING_STUDIO_OFFERINGS, MUSIC_GENRES, MERCHANT_PRODUCT_TYPES,
+        COMEDIAN_SPECIALTIES, ACTOR_SPECIALTIES
     )
     
     return {
@@ -553,6 +554,12 @@ async def get_categories():
         },
         "merchant_options": {
             "product_types": MERCHANT_PRODUCT_TYPES
+        },
+        "comedian_options": {
+            "specialties": COMEDIAN_SPECIALTIES
+        },
+        "actor_options": {
+            "specialties": ACTOR_SPECIALTIES
         }
     }
 
