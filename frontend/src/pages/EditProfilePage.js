@@ -207,6 +207,8 @@ const EditProfilePage = () => {
           venue_capacity: profile.venue_capacity || '',
           merchant_products: profile.merchant_products || [],
           business_name: profile.business_name || '',
+          comedian_specialties: profile.comedian_specialties || [],
+          actor_specialties: profile.actor_specialties || [],
           // Contact info
           phone: profile.phone || '',
           website: profile.website || '',
