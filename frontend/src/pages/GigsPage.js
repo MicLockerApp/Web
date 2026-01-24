@@ -199,7 +199,7 @@ const GigsPage = () => {
           <List className="w-16 h-16 text-primary mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-white mb-2">Gig Board</h1>
           <p className="text-gray-400 mb-6">
-            Sign in to browse gigs, post what you're looking for, or share your services.
+            Sign in to browse gigs, post what you&apos;re looking for, or share your services.
           </p>
           <Link to="/login?redirect=/gigs" className="btn btn-primary w-full">
             Sign In to Continue
