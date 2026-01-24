@@ -159,7 +159,7 @@ async def search_listings(
         }
     })
     
-    # Extract seller rating from the lookup result
+    # Extract seller rating and review count from the lookup result
     pipeline.append({
         "$addFields": {
             "seller_rating": {
@@ -167,11 +167,17 @@ async def search_listings(
                     {"$arrayElemAt": ["$seller_info.rating", 0]},
                     0
                 ]
+            },
+            "seller_review_count": {
+                "$ifNull": [
+                    {"$arrayElemAt": ["$seller_info.review_count", 0]},
+                    0
+                ]
             }
         }
     })
     
-    # Remove the seller_info array (we only needed the rating)
+    # Remove the seller_info array (we only needed the rating and review_count)
     pipeline.append({"$project": {"seller_info": 0}})
     
     listings = await db.listings.aggregate(pipeline).to_list(length=limit)
