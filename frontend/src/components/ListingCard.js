@@ -11,10 +11,16 @@ const ListingCard = ({ listing, onFavoriteChange }) => {
   const { isDark } = useTheme();
   const [isFavorite, setIsFavorite] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [sellerImageError, setSellerImageError] = useState(false);
 
   const primaryImage = listing.media?.find(m => m.is_primary)?.url || 
                        listing.media?.[0]?.url || 
                        'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=400';
+
+  // Check if seller has a valid profile image
+  const hasSellerImage = listing.seller_profile_image && 
+                         listing.seller_profile_image !== 'None' && 
+                         !sellerImageError;
 
   useEffect(() => {
     const checkFavorite = async () => {
