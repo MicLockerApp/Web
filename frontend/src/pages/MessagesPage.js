@@ -459,7 +459,27 @@ const MessagesPage = () => {
                                 ? 'bg-dark-300 text-white' 
                                 : 'bg-white text-gray-900 border border-gray-200'
                           }`}>
-                            <p className="whitespace-pre-wrap">{msg.content}</p>
+                            {/* Message Images */}
+                            {msg.images && msg.images.length > 0 && (
+                              <div className={`flex flex-wrap gap-2 ${msg.content.trim() ? 'mb-2' : ''}`}>
+                                {msg.images.map((imgUrl, idx) => (
+                                  <a 
+                                    key={idx} 
+                                    href={imgUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="block"
+                                  >
+                                    <img 
+                                      src={imgUrl} 
+                                      alt={`Attachment ${idx + 1}`}
+                                      className="max-w-[200px] max-h-[200px] rounded-lg object-cover hover:opacity-90 transition-opacity"
+                                    />
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+                            {msg.content.trim() && <p className="whitespace-pre-wrap">{msg.content}</p>}
                           </div>
                           <div className={`flex items-center gap-2 mt-1 text-xs ${
                             isOwnMessage ? 'justify-end' : 'justify-start'
