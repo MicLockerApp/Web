@@ -254,7 +254,7 @@ const MapPage = () => {
       console.error('Error creating map markers:', error);
     }
 
-  }, [users, centerLocation]);
+  }, [users, centerLocation, mapError]);
 
   // Get user's current location
   const getMyLocation = () => {
