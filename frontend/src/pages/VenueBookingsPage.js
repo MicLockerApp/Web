@@ -137,6 +137,14 @@ const VenueBookingsPage = () => {
     });
   };
 
+  // Get provider type label based on user category
+  const getProviderLabel = () => {
+    const category = user?.category?.toLowerCase();
+    if (category === 'recording_studio') return 'studio';
+    if (category === 'audio_engineer') return 'services';
+    return 'venue';
+  };
+
   if (loading) {
     return <LoadingSpinner />;
   }
@@ -161,7 +169,7 @@ const VenueBookingsPage = () => {
                 Booking Requests
               </h1>
               <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                Manage booking requests for your venue
+                Manage booking requests for your {getProviderLabel()}
               </p>
             </div>
             {pendingCount > 0 && (
