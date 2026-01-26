@@ -46,6 +46,12 @@ const VenueCalendarPage = () => {
     special_requests: ''
   });
   const [submitting, setSubmitting] = useState(false);
+  
+  // Response modal state for venue owner actions
+  const [showResponseModal, setShowResponseModal] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [responseType, setResponseType] = useState(null); // 'accept' or 'decline'
+  const [responseMessage, setResponseMessage] = useState('');
 
   const isVenueOwner = user && user.id === venueId;
 
