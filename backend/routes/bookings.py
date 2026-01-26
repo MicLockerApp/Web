@@ -32,27 +32,28 @@ async def create_booking_request(
 ):
     """
     Send a booking request to a venue.
-    Only non-venue users can send booking requests.
+    Only non-bookable users can send booking requests.
     """
     db = get_database()
     
-    # Get venue
-    venue = await db.users.find_one({"id": booking_data.venue_id})
-    if not venue:
+    # Get the provider (venue/studio/engineer)
+    provider = await db.users.find_one({"id": booking_data.venue_id})
+    if not provider:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Venue not found"
+            detail="Provider not found"
         )
     
-    # Verify target is a venue
-    if venue.get("category") != "venue":
+    # Verify target is a bookable category
+    provider_category = provider.get("category", "").lower()
+    if provider_category not in BOOKABLE_CATEGORIES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Booking requests can only be sent to venues"
+            detail="Booking requests can only be sent to venues, audio engineers, or recording studios"
         )
     
-    # Cannot book own venue
-    if venue["id"] == current_user["id"]:
+    # Cannot book yourself
+    if provider["id"] == current_user["id"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot send booking request to yourself"
