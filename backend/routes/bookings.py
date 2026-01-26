@@ -117,31 +117,33 @@ async def get_venue_calendar(
     current_user: Optional[dict] = Depends(get_current_user_optional)
 ):
     """
-    Get a venue's calendar with all accepted bookings.
-    Pending bookings are only visible to the venue owner.
+    Get a provider's calendar with all accepted bookings.
+    Pending bookings are only visible to the provider (owner).
+    Works for venues, audio engineers, and recording studios.
     """
     db = get_database()
     
-    # Verify venue exists and is a venue
-    venue = await db.users.find_one({"id": venue_id})
-    if not venue:
+    # Verify provider exists and is a bookable category
+    provider = await db.users.find_one({"id": venue_id})
+    if not provider:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Venue not found"
+            detail="Provider not found"
         )
     
-    if venue.get("category") != "venue":
+    provider_category = provider.get("category", "").lower()
+    if provider_category not in BOOKABLE_CATEGORIES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User is not a venue"
+            detail="User is not a bookable provider (venue, audio engineer, or recording studio)"
         )
     
     # Build query
     query = {"venue_id": venue_id}
     
-    # Only show accepted bookings to public, show all to venue owner
-    is_venue_owner = current_user and current_user["id"] == venue_id
-    if not is_venue_owner:
+    # Only show accepted bookings to public, show all to provider
+    is_provider = current_user and current_user["id"] == venue_id
+    if not is_provider:
         query["status"] = BookingStatus.ACCEPTED
     else:
         query["status"] = {"$in": [BookingStatus.PENDING, BookingStatus.ACCEPTED]}
