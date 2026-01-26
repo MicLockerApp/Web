@@ -119,13 +119,15 @@ const MessagesPage = () => {
   const handleSendMessage = async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() && pendingImages.length === 0) return;
 
     setSending(true);
     try {
       const recipientId = selectedThread?.other_user_id || toUserId;
-      await messagesAPI.send(recipientId, newMessage.trim());
+      await messagesAPI.send(recipientId, newMessage.trim() || ' ', null, pendingImages.length > 0 ? pendingImages : null);
       setNewMessage('');
+      setPendingImages([]);
+      setShowImageUploader(false);
       
       // Track message sent
       analytics.messageSent(selectedThread?.id || 'new', recipientId);
