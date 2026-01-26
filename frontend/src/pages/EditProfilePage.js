@@ -1301,6 +1301,18 @@ const EditProfilePage = () => {
                   </select>
                 </div>
               </div>
+              <div className="mt-4">
+                <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Venue Website</label>
+                <input
+                  type="url"
+                  value={formData.venue_website}
+                  onChange={(e) => setFormData({ ...formData, venue_website: e.target.value })}
+                  placeholder="https://www.yourvenue.com"
+                />
+                <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                  Add your venue's website URL for visitors to learn more about your establishment
+                </p>
+              </div>
             </div>
           )}
 
