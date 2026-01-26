@@ -181,6 +181,9 @@ async def get_map_users(
     map_users = []
     
     for user in users:
+        # Calculate presence status
+        presence_status = calculate_presence_status(user.get("last_activity"))
+        
         user_data = {
             "id": user.get("id"),
             "username": user.get("username"),
@@ -195,7 +198,8 @@ async def get_map_users(
             "bio": (user.get("bio") or "")[:100],  # First 100 chars of bio
             "location_type": None,
             "coordinates": None,
-            "display_location": user.get("location", "")
+            "display_location": user.get("location", ""),
+            "presence_status": presence_status
         }
         
         # Determine location based on privacy settings
