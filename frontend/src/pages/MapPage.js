@@ -105,27 +105,32 @@ const MapPage = () => {
 
   // Initialize map
   useEffect(() => {
-    if (!mapLoaded || !mapRef.current || mapInstanceRef.current) return;
+    if (!mapLoaded || !mapRef.current || mapInstanceRef.current || mapError) return;
 
-    const mapOptions = {
-      center: { lat: 39.8283, lng: -98.5795 }, // Center of USA
-      zoom: 4,
-      styles: isDark ? darkMapStyle : [],
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: false,
-    };
+    try {
+      const mapOptions = {
+        center: { lat: 39.8283, lng: -98.5795 }, // Center of USA
+        zoom: 4,
+        styles: isDark ? darkMapStyle : [],
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+      };
 
-    mapInstanceRef.current = new window.google.maps.Map(mapRef.current, mapOptions);
-    infoWindowRef.current = new window.google.maps.InfoWindow();
+      mapInstanceRef.current = new window.google.maps.Map(mapRef.current, mapOptions);
+      infoWindowRef.current = new window.google.maps.InfoWindow();
 
-    // Close modal when clicking on map (not marker)
-    mapInstanceRef.current.addListener('click', () => {
-      setSelectedUser(null);
-      setClusteredUsers([]);
-    });
+      // Close modal when clicking on map (not marker)
+      mapInstanceRef.current.addListener('click', () => {
+        setSelectedUser(null);
+        setClusteredUsers([]);
+      });
+    } catch (error) {
+      console.error('Error initializing Google Maps:', error);
+      setMapError('Failed to initialize the map. Please refresh the page and try again.');
+    }
 
-  }, [mapLoaded, isDark]);
+  }, [mapLoaded, isDark, mapError]);
 
   // Fetch users
   const fetchUsers = useCallback(async () => {
