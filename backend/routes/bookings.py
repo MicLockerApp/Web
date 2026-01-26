@@ -9,6 +9,8 @@ from models.booking import (
     BookingCreate, BookingInDB, BookingResponse, BookingUpdate,
     BookingStatus, CalendarEvent
 )
+from models.notification import NotificationType
+from routes.notifications import create_notification
 from services.auth import get_current_user, get_current_user_optional
 from database import get_database
 from datetime import datetime, timezone
@@ -86,6 +88,16 @@ async def create_booking_request(
     await db.venue_bookings.insert_one(booking.model_dump())
     
     logger.info(f"Booking request created: {booking.id} from {current_user['username']} to {venue['username']}")
+    
+    # Create notification for venue owner
+    await create_notification(
+        user_id=venue["id"],
+        notification_type=NotificationType.BOOKING_REQUEST,
+        title="New Booking Request",
+        message=f"{current_user['username']} wants to book your venue for '{booking_data.event_name}'",
+        link="/venue/bookings",
+        metadata={"booking_id": booking.id, "artist_id": current_user["id"]}
+    )
     
     return BookingResponse(**booking.model_dump())
 
@@ -275,6 +287,26 @@ async def update_booking(
         
         if update_data.venue_response:
             update_fields["venue_response"] = update_data.venue_response
+        
+        # Create notification for artist about booking status
+        if update_data.status == BookingStatus.ACCEPTED:
+            await create_notification(
+                user_id=booking["artist_id"],
+                notification_type=NotificationType.BOOKING_ACCEPTED,
+                title="Booking Confirmed!",
+                message=f"{booking['venue_username']} has accepted your booking for '{booking['event_name']}'",
+                link="/my-bookings",
+                metadata={"booking_id": booking["id"], "venue_id": booking["venue_id"]}
+            )
+        elif update_data.status == BookingStatus.DECLINED:
+            await create_notification(
+                user_id=booking["artist_id"],
+                notification_type=NotificationType.BOOKING_DECLINED,
+                title="Booking Declined",
+                message=f"{booking['venue_username']} has declined your booking for '{booking['event_name']}'",
+                link="/my-bookings",
+                metadata={"booking_id": booking["id"], "venue_id": booking["venue_id"]}
+            )
     
     # Handle document uploads
     if update_data.venue_documents is not None and is_venue:
