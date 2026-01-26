@@ -907,6 +907,11 @@ const EditProfilePage = () => {
                   ⚠️ Enabling this will show your physical address publicly. Use caution if this is your home address.
                 </p>
               </div>
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mb-3">
+                <p className="text-blue-400 text-xs">
+                  ℹ️ <strong>Note:</strong> If your physical address is located in or near a government-protected building (such as a school, church, courthouse, military facility, or government office), the map may not display your exact location due to privacy restrictions.
+                </p>
+              </div>
               <PrivacyToggle
                 label="Show physical address on public profile"
                 description="Allow others to see your physical address with a map"
