@@ -238,12 +238,13 @@ const MapPage = () => {
           setSelectedUser(firstUser);
         }
 
-        // Zoom to city level and offset marker position up so it appears above the modal
+        // Zoom to city level and offset the map center downward
+        // so the marker appears above the modal at the bottom of the screen
         mapInstanceRef.current.setZoom(11);
         const markerPos = marker.getPosition();
-        // Calculate offset to move marker up by ~30px worth of latitude at current zoom
-        // At zoom 11, roughly 0.002 degrees = ~30px offset
-        const offsetLat = markerPos.lat() + 0.015;
+        // Offset latitude down (subtract) so marker appears in upper portion of map
+        // At zoom 11, roughly 0.02 degrees moves the center down enough
+        const offsetLat = markerPos.lat() - 0.025;
         mapInstanceRef.current.panTo({ lat: offsetLat, lng: markerPos.lng() });
       });
 
