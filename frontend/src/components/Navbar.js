@@ -396,6 +396,73 @@ const Navbar = () => {
                   <MapPin className="w-5 h-5" />
                 </Link>
                 
+                {/* Notifications Bell */}
+                <div className="relative" ref={notificationRef}>
+                  <button 
+                    onClick={handleNotificationClick}
+                    className={`p-2 relative ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}
+                    data-testid="notifications-bell"
+                    title="Notifications"
+                  >
+                    <Bell className="w-5 h-5" />
+                    {notificationCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                        {notificationCount > 99 ? '99+' : notificationCount}
+                      </span>
+                    )}
+                  </button>
+                  {showNotifications && (
+                    <div className={`absolute right-0 mt-2 w-80 rounded-lg shadow-xl overflow-hidden z-50 ${
+                      isDark ? 'bg-dark-400 border border-dark-300' : 'bg-white border border-gray-200'
+                    }`}>
+                      <div className={`px-4 py-3 border-b flex items-center justify-between ${isDark ? 'border-dark-300' : 'border-gray-200'}`}>
+                        <span className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Notifications</span>
+                        {notificationCount > 0 && (
+                          <button 
+                            onClick={markAllNotificationsRead}
+                            className="text-xs text-primary hover:underline"
+                          >
+                            Mark all read
+                          </button>
+                        )}
+                      </div>
+                      <div className="max-h-96 overflow-y-auto">
+                        {notifications.length === 0 ? (
+                          <div className={`p-6 text-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                            No notifications yet
+                          </div>
+                        ) : (
+                          notifications.map(notif => (
+                            <Link
+                              key={notif.id}
+                              to={notif.link || '#'}
+                              onClick={() => {
+                                if (!notif.is_read) markNotificationRead(notif.id);
+                                setShowNotifications(false);
+                              }}
+                              className={`block px-4 py-3 border-b transition-colors ${
+                                isDark 
+                                  ? `border-dark-300 ${notif.is_read ? 'bg-dark-400' : 'bg-dark-300'} hover:bg-dark-200` 
+                                  : `border-gray-100 ${notif.is_read ? 'bg-white' : 'bg-blue-50'} hover:bg-gray-50`
+                              }`}
+                            >
+                              <p className={`text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                                {notif.title}
+                              </p>
+                              <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                                {notif.message}
+                              </p>
+                              <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                                {new Date(notif.created_at).toLocaleDateString()}
+                              </p>
+                            </Link>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
                 <Link to="/messages" className={`p-2 relative ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`} data-testid="messages-link">
                   <MessageSquare className="w-5 h-5" />
                   {unreadCount > 0 && (
@@ -444,10 +511,32 @@ const Navbar = () => {
                         <LayoutDashboard className="w-4 h-4" />
                         Dashboard
                       </Link>
+                      {/* Booking Links - Show based on user type */}
+                      {user?.category === 'venue' ? (
+                        <Link
+                          to="/venue/bookings"
+                          className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-gray-300 hover:bg-dark-300' : 'text-gray-700 hover:bg-gray-50'}`}
+                          onClick={() => setUserMenuOpen(false)}
+                          data-testid="venue-bookings-link"
+                        >
+                          <Calendar className="w-4 h-4" />
+                          Manage Bookings
+                        </Link>
+                      ) : (
+                        <Link
+                          to="/my-bookings"
+                          className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-gray-300 hover:bg-dark-300' : 'text-gray-700 hover:bg-gray-50'}`}
+                          onClick={() => setUserMenuOpen(false)}
+                          data-testid="artist-bookings-link"
+                        >
+                          <Calendar className="w-4 h-4" />
+                          My Bookings
+                        </Link>
+                      )}
                       <Link
                         to="/orders"
                         className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-gray-300 hover:bg-dark-300' : 'text-gray-700 hover:bg-gray-50'}`}
-                        onClick={() => setUserMenuOpen(false)}
+                        onClick={() => setUserMenuOpen(false)}}
                       >
                         <ShoppingBag className="w-4 h-4" />
                         Orders
