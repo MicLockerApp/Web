@@ -510,7 +510,59 @@ const MessagesPage = () => {
                 <form onSubmit={handleSendMessage} className={`p-4 border-t ${
                   isDark ? 'border-dark-300' : 'border-gray-200'
                 }`}>
+                  {/* Pending Images Preview */}
+                  {pendingImages.length > 0 && (
+                    <div className="flex gap-2 mb-3 flex-wrap">
+                      {pendingImages.map((url, idx) => (
+                        <div key={idx} className="relative">
+                          <img 
+                            src={url} 
+                            alt={`Attachment ${idx + 1}`} 
+                            className="w-16 h-16 object-cover rounded-lg"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setPendingImages(prev => prev.filter((_, i) => i !== idx))}
+                            className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center"
+                          >
+                            <X className="w-3 h-3 text-white" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Image Uploader */}
+                  {showImageUploader && (
+                    <div className={`mb-3 p-3 rounded-lg ${isDark ? 'bg-dark-300' : 'bg-gray-100'}`}>
+                      <S3MediaUploader
+                        onUploadComplete={(urls) => {
+                          setPendingImages(prev => [...prev, ...urls]);
+                          setShowImageUploader(false);
+                        }}
+                        maxFiles={5}
+                        acceptedTypes={['image/*']}
+                        label="Upload images"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowImageUploader(false)}
+                        className={`mt-2 text-sm ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                  
                   <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowImageUploader(!showImageUploader)}
+                      className={`p-2 rounded-lg ${isDark ? 'bg-dark-300 hover:bg-dark-200 text-gray-400' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}
+                      title="Attach image"
+                    >
+                      <Image className="w-5 h-5" />
+                    </button>
                     <input
                       type="text"
                       value={newMessage}
@@ -523,10 +575,10 @@ const MessagesPage = () => {
                     <button
                       type="submit"
                       className="btn btn-primary px-4"
-                      disabled={sending || !newMessage.trim()}
+                      disabled={sending || (!newMessage.trim() && pendingImages.length === 0)}
                       data-testid="send-message-button"
                     >
-                      <Send className="w-5 h-5" />
+                      {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                     </button>
                   </div>
                 </form>
