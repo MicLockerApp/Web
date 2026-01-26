@@ -305,22 +305,22 @@ const ProfilePage = () => {
 
             {/* Actions */}
             <div className="flex flex-col gap-2">
-              {/* Calendar Button for Venues */}
-              {profile.category === 'venue' && (
+              {/* Calendar Button for Bookable Categories (Venues, Audio Engineers, Recording Studios) */}
+              {['venue', 'audio_engineer', 'recording_studio'].includes(profile.category?.toLowerCase()) && (
                 <Link
                   to={`/venue/${profile.id}/calendar`}
                   className="btn btn-primary flex items-center justify-center gap-2"
-                  data-testid="venue-calendar-button"
+                  data-testid="provider-calendar-button"
                 >
                   <Calendar className="w-4 h-4" />
-                  View Calendar
+                  {profile.category === 'venue' ? 'View Calendar' : 'Book Session'}
                 </Link>
               )}
               
               {!isOwnProfile && (
                 <Link
                   to={`/messages?to=${profile.id}`}
-                  className={`btn ${profile.category === 'venue' ? 'btn-secondary' : 'btn-primary'}`}
+                  className={`btn ${['venue', 'audio_engineer', 'recording_studio'].includes(profile.category?.toLowerCase()) ? 'btn-secondary' : 'btn-primary'}`}
                   data-testid="message-seller-button"
                 >
                   <MessageSquare className="w-4 h-4" />
