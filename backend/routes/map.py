@@ -118,6 +118,8 @@ def build_full_address(address_dict: dict) -> str:
 @router.get("/users")
 async def get_map_users(
     category: Optional[str] = Query(None, description="Filter by category (musician, audio_engineer, etc.)"),
+    sub_category: Optional[str] = Query(None, description="Filter by subcategory/specialty"),
+    genre: Optional[str] = Query(None, description="Filter by music genre"),
     lat: Optional[float] = Query(None, description="Center latitude for distance filtering"),
     lng: Optional[float] = Query(None, description="Center longitude for distance filtering"),
     radius_miles: Optional[float] = Query(None, description="Radius in miles for distance filtering"),
@@ -133,6 +135,8 @@ async def get_map_users(
     
     Users can be filtered by:
     - Category (profession)
+    - Subcategory/specialty
+    - Music genre (for music industry professions)
     - Distance from a center point
     """
     db = get_database()
@@ -147,6 +151,50 @@ async def get_map_users(
     # Filter by category if provided
     if category:
         query["category"] = category
+    
+    # Filter by subcategory if provided
+    if sub_category:
+        # Subcategories are stored in different fields based on profession
+        query["$or"] = [
+            {"sub_categories": sub_category},
+            {"instruments": sub_category},
+            {"specializations": sub_category},
+            {"studio_offerings": sub_category},
+            {"merchant_products": sub_category},
+            {"comedian_specialties": sub_category},
+            {"actor_specialties": sub_category}
+        ]
+    
+    # Filter by genre if provided
+    if genre:
+        query["$or"] = query.get("$or", []) + [
+            {"genres": genre},
+            {"genre": genre}
+        ]
+        # If we already have $or from subcategory, we need to use $and
+        if sub_category:
+            query = {
+                "$and": [
+                    {
+                        "is_active": {"$ne": False},
+                        "is_suspended": {"$ne": True},
+                        "is_banned": {"$ne": True}
+                    },
+                    {"category": category} if category else {},
+                    {"$or": [
+                        {"sub_categories": sub_category},
+                        {"instruments": sub_category},
+                        {"specializations": sub_category},
+                        {"studio_offerings": sub_category},
+                        {"merchant_products": sub_category},
+                        {"comedian_specialties": sub_category},
+                        {"actor_specialties": sub_category}
+                    ]},
+                    {"$or": [{"genres": genre}, {"genre": genre}]}
+                ]
+            }
+            # Remove empty dicts from $and
+            query["$and"] = [q for q in query["$and"] if q]
     
     # Fetch users
     users_cursor = db.users.find(query, {
