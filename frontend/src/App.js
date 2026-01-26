@@ -93,10 +93,17 @@ const Layout = ({ children }) => {
   );
 };
 
+// Presence Tracker Component - must be inside AuthProvider
+const PresenceTrackerComponent = () => {
+  usePresenceTracker();
+  return null;
+};
+
 function AppContent() {
   return (
     <Router>
       <AuthProvider>
+        <PresenceTrackerComponent />
         <CartProvider>
           <ReviewGatingWrapper>
             <Layout>
