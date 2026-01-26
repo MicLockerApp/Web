@@ -367,15 +367,24 @@ const VenueCalendarPage = () => {
               <div className="divide-y divide-dark-300">
                 {dateEvents.map(event => (
                   <div key={event.id} className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                      <div className="flex items-start gap-4 flex-1">
                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isDark ? 'bg-dark-300' : 'bg-gray-100'}`}>
                           <Music className="w-6 h-6 text-primary" />
                         </div>
-                        <div>
-                          <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                            {event.event_name}
-                          </h3>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                              {event.event_name}
+                            </h3>
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              event.status === 'accepted' 
+                                ? 'bg-green-500/20 text-green-400'
+                                : 'bg-yellow-500/20 text-yellow-400'
+                            }`}>
+                              {event.status === 'accepted' ? 'Confirmed' : 'Pending'}
+                            </span>
+                          </div>
                           <div className={`flex flex-wrap items-center gap-3 mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                             <span className="flex items-center gap-1">
                               <Clock className="w-4 h-4" />
@@ -397,13 +406,50 @@ const VenueCalendarPage = () => {
                           </div>
                         </div>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        event.status === 'accepted' 
-                          ? 'bg-green-500/20 text-green-400'
-                          : 'bg-yellow-500/20 text-yellow-400'
-                      }`}>
-                        {event.status === 'accepted' ? 'Confirmed' : 'Pending'}
-                      </span>
+                      
+                      {/* Action Buttons for Venue Owner */}
+                      {isVenueOwner && event.status === 'pending' && (
+                        <div className="flex gap-2 sm:flex-col">
+                          <button
+                            onClick={() => handleRespond(event, 'accept')}
+                            data-testid={`accept-booking-${event.id}`}
+                            className="flex-1 sm:flex-none px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 flex items-center justify-center gap-2 text-sm"
+                          >
+                            <Check className="w-4 h-4" />
+                            Accept
+                          </button>
+                          <button
+                            onClick={() => handleRespond(event, 'decline')}
+                            data-testid={`decline-booking-${event.id}`}
+                            className="flex-1 sm:flex-none px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 flex items-center justify-center gap-2 text-sm"
+                          >
+                            <X className="w-4 h-4" />
+                            Decline
+                          </button>
+                          <Link
+                            to={`/messages?to=${event.artist_id}`}
+                            className={`flex-1 sm:flex-none px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2 text-sm ${
+                              isDark ? 'bg-dark-300 text-white hover:bg-dark-200' : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
+                            }`}
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                            Message
+                          </Link>
+                        </div>
+                      )}
+                      
+                      {/* Message button for confirmed bookings */}
+                      {isVenueOwner && event.status === 'accepted' && (
+                        <Link
+                          to={`/messages?to=${event.artist_id}`}
+                          className={`px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2 text-sm ${
+                            isDark ? 'bg-dark-300 text-white hover:bg-dark-200' : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
+                          }`}
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                          Message Artist
+                        </Link>
+                      )}
                     </div>
                   </div>
                 ))}
