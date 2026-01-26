@@ -17,11 +17,11 @@ const PayoutsAndCreditsPage = () => {
     },
     {
       icon: CreditCard,
-      name: 'PayPal',
-      description: 'Instant transfer to your PayPal account',
+      name: 'Stripe',
+      description: 'Instant transfer to your Stripe account after user declares that they have received the item or 14 days, whichever comes first',
       timing: 'Instant',
       fee: 'Free',
-      details: 'Must have a verified PayPal account linked to your MicLocker profile.'
+      details: 'Must have a verified Stripe account linked to your MicLocker profile.'
     },
     {
       icon: Wallet,
@@ -36,23 +36,23 @@ const PayoutsAndCreditsPage = () => {
   const payoutSchedule = [
     {
       scenario: 'Standard Sale',
-      description: 'Buyer receives item and confirms delivery',
-      releaseTime: '3 days after delivery confirmation'
+      description: 'Buyer confirms delivery or 14 days pass without issues',
+      releaseTime: 'After delivery confirmation or 14 days, whichever comes first'
     },
     {
-      scenario: 'No Issues Reported',
-      description: 'Buyer does not report any issues within the review window',
-      releaseTime: '7 days after delivery'
+      scenario: 'Buyer Confirms Receipt',
+      description: 'Buyer explicitly confirms they received the item',
+      releaseTime: 'Immediate release upon confirmation'
     },
     {
-      scenario: 'High-Value Item (over $1,000)',
-      description: 'Additional security hold for expensive items',
-      releaseTime: '7 days after delivery confirmation'
+      scenario: 'No Response from Buyer',
+      description: 'Buyer does not confirm or dispute within the review window',
+      releaseTime: '14 days after delivery'
     },
     {
-      scenario: 'New Seller (first 5 sales)',
-      description: 'Standard holding period for new seller accounts',
-      releaseTime: '7 days after delivery confirmation'
+      scenario: 'Dispute Filed',
+      description: 'Buyer files a dispute or reports an issue',
+      releaseTime: 'Held until dispute is resolved'
     }
   ];
 
