@@ -7,7 +7,7 @@ Returns users with their locations for display on Google Maps.
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import os
 import httpx
 
@@ -17,6 +17,30 @@ from services.auth import get_current_user_optional
 router = APIRouter(prefix="/map", tags=["Map"])
 
 GOOGLE_MAPS_API_KEY = os.environ.get("GOOGLE_MAPS_API_KEY", "")
+
+# Presence status thresholds
+STANDBY_THRESHOLD_MINUTES = 15
+AWAY_THRESHOLD_MINUTES = 30
+
+def calculate_presence_status(last_activity) -> str:
+    """Calculate user status based on last activity time"""
+    if not last_activity:
+        return "away"
+    
+    now = datetime.now(timezone.utc)
+    # Handle naive datetime
+    if last_activity.tzinfo is None:
+        last_activity = last_activity.replace(tzinfo=timezone.utc)
+    
+    time_diff = now - last_activity
+    minutes_inactive = time_diff.total_seconds() / 60
+    
+    if minutes_inactive < STANDBY_THRESHOLD_MINUTES:
+        return "online"
+    elif minutes_inactive < AWAY_THRESHOLD_MINUTES:
+        return "standby"
+    else:
+        return "away"
 
 
 async def geocode_address(address: str) -> Optional[dict]:
