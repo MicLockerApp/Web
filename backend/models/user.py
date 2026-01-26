@@ -375,6 +375,8 @@ class UserPublicProfile(BaseModel):
     studio_offerings: Optional[List[str]] = None
     venue_name: Optional[str] = None
     venue_city: Optional[str] = None
+    venue_capacity: Optional[str] = None
+    venue_website: Optional[str] = None  # Venue's website URL
     merchant_products: Optional[List[str]] = None
     business_name: Optional[str] = None
     # Privacy settings
