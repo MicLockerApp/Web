@@ -505,6 +505,82 @@ const MapPage = () => {
               </div>
             </div>
 
+            {/* Subcategory Filter - Shows when a category with subcategories is selected */}
+            {category && SUBCATEGORIES[category] && (
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Specialty / Subcategory
+                </label>
+                <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                  <button
+                    onClick={() => setSubCategory('')}
+                    className={`
+                      px-3 py-1.5 rounded-full text-sm transition-colors
+                      ${subCategory === ''
+                        ? 'bg-primary text-black font-medium'
+                        : isDark ? 'bg-dark-300 text-gray-300 hover:bg-dark-200' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                      }
+                    `}
+                  >
+                    All
+                  </button>
+                  {SUBCATEGORIES[category].map((sub) => (
+                    <button
+                      key={sub}
+                      onClick={() => setSubCategory(sub)}
+                      className={`
+                        px-3 py-1.5 rounded-full text-sm transition-colors
+                        ${subCategory === sub
+                          ? 'bg-primary text-black font-medium'
+                          : isDark ? 'bg-dark-300 text-gray-300 hover:bg-dark-200' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                        }
+                      `}
+                    >
+                      {sub}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Genre Filter - Shows for music industry professions */}
+            {category && MUSIC_CATEGORIES.includes(category) && (
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Music Genre
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setGenre('')}
+                    className={`
+                      px-3 py-1.5 rounded-full text-sm transition-colors
+                      ${genre === ''
+                        ? 'bg-primary text-black font-medium'
+                        : isDark ? 'bg-dark-300 text-gray-300 hover:bg-dark-200' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                      }
+                    `}
+                  >
+                    All Genres
+                  </button>
+                  {MUSIC_GENRES.map((g) => (
+                    <button
+                      key={g}
+                      onClick={() => setGenre(g)}
+                      className={`
+                        px-3 py-1.5 rounded-full text-sm transition-colors
+                        ${genre === g
+                          ? 'bg-primary text-black font-medium'
+                          : isDark ? 'bg-dark-300 text-gray-300 hover:bg-dark-200' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                        }
+                      `}
+                    >
+                      {g}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Location & Distance Filter */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* My Location */}
