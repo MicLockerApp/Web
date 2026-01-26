@@ -292,4 +292,24 @@ export const gigsAPI = {
   delete: (gigId) => api.delete(`/gig-board/${gigId}`),
 };
 
+// Profile Visits API (Top 8 Fans feature)
+export const profileVisitsAPI = {
+  // Track a profile visit
+  trackVisit: (profileId) => api.post('/profile-visits/track', { profile_id: profileId }),
+  
+  // Update time spent on a profile (call periodically)
+  updateTimeSpent: (profileId, secondsSpent) => 
+    api.put('/profile-visits/time', { profile_id: profileId, seconds_spent: secondsSpent }),
+  
+  // Track an interaction (message, purchase, review, favorite)
+  trackInteraction: (profileId, interactionType) => 
+    api.post('/profile-visits/interaction', { profile_id: profileId, interaction_type: interactionType }),
+  
+  // Get top 8 fans for a profile
+  getTopFans: (profileId) => api.get(`/profile-visits/top-fans/${profileId}`),
+  
+  // Get current user's fan stats for a profile
+  getMyFanStats: (profileId) => api.get(`/profile-visits/my-stats/${profileId}`),
+};
+
 export default api;

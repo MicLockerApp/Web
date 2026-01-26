@@ -13,7 +13,7 @@ import React, { useState, useRef } from 'react';
 import {
   X, ChevronDown, ChevronUp, MapPin, DollarSign, Mail, Phone,
   Image, Video, Search, Briefcase, Check, AlertCircle,
-  Instagram, Facebook, Twitter, Youtube, Globe, Music
+  Globe, Music
 } from 'lucide-react';
 import useS3Upload from '../../hooks/useS3Upload';
 import { gigsAPI } from '../../services/api';
@@ -30,7 +30,7 @@ const CreateGigModal = ({ categories, onClose, onSuccess }) => {
     subcategories: [],
     genres: [],
     media: [],
-    social_links: { website: '', instagram: '', facebook: '', twitter: '', youtube: '', tiktok: '', soundcloud: '', spotify: '', bandcamp: '', linkedin: '' },
+    social_links: { website: '', apple_music: '', spotify: '', soundcloud: '' },
     contact_email: '',
     contact_phone: '',
     location: '',
@@ -312,13 +312,9 @@ const CreateGigModal = ({ categories, onClose, onSuccess }) => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                     {[
                       { key: 'website', icon: Globe, placeholder: 'Website URL' },
-                      { key: 'instagram', icon: Instagram, placeholder: 'Instagram URL' },
-                      { key: 'facebook', icon: Facebook, placeholder: 'Facebook URL' },
-                      { key: 'twitter', icon: Twitter, placeholder: 'Twitter/X URL' },
-                      { key: 'youtube', icon: Youtube, placeholder: 'YouTube URL' },
-                      { key: 'soundcloud', icon: Music, placeholder: 'SoundCloud URL' },
+                      { key: 'apple_music', icon: Music, placeholder: 'Apple Music URL' },
                       { key: 'spotify', icon: Music, placeholder: 'Spotify URL' },
-                      { key: 'bandcamp', icon: Music, placeholder: 'Bandcamp URL' },
+                      { key: 'soundcloud', icon: Music, placeholder: 'SoundCloud URL' },
                     ].map(({ key, icon: Icon, placeholder }) => (
                       <div key={key} className="relative">
                         <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />

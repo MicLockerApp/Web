@@ -55,14 +55,12 @@ async def get_user_profile(
         if not user.get("show_physical_address", False):
             profile_data["physical_address"] = None
         
-        # Hide social media unless show_social is true
+        # Hide music platforms unless show_social is true
         if not user.get("show_social", True):
-            profile_data["instagram"] = None
-            profile_data["twitter"] = None
-            profile_data["facebook"] = None
-            profile_data["youtube"] = None
-            profile_data["soundcloud"] = None
+            profile_data["apple_music"] = None
             profile_data["spotify"] = None
+            profile_data["soundcloud"] = None
+            profile_data["spotify_embed_url"] = None
     
     return UserPublicProfile(**profile_data)
 

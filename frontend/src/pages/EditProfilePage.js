@@ -128,12 +128,11 @@ const EditProfilePage = () => {
     // Contact info
     phone: '',
     website: '',
-    instagram: '',
-    twitter: '',
-    facebook: '',
-    youtube: '',
-    soundcloud: '',
+    // Music platforms only
+    apple_music: '',
     spotify: '',
+    soundcloud: '',
+    spotify_embed_url: '',
     // Mailing address fields
     address_line1: '',
     address_line2: '',
@@ -155,6 +154,9 @@ const EditProfilePage = () => {
     show_address: false,
     show_social: true,
     show_physical_address: false,
+    // Top 8 Fans settings
+    top_fans_visibility: 'public',
+    opt_out_of_top_fans: false,
   });
 
   const CATEGORY_OPTIONS = [
@@ -212,12 +214,11 @@ const EditProfilePage = () => {
           // Contact info
           phone: profile.phone || '',
           website: profile.website || '',
-          instagram: profile.instagram || '',
-          twitter: profile.twitter || '',
-          facebook: profile.facebook || '',
-          youtube: profile.youtube || '',
-          soundcloud: profile.soundcloud || '',
+          // Music platforms only
+          apple_music: profile.apple_music || '',
           spotify: profile.spotify || '',
+          soundcloud: profile.soundcloud || '',
+          spotify_embed_url: profile.spotify_embed_url || '',
           // Mailing address fields from shipping_address
           address_line1: shippingAddress.address_line1 || '',
           address_line2: shippingAddress.address_line2 || '',
@@ -239,6 +240,9 @@ const EditProfilePage = () => {
           show_address: profile.show_address || false,
           show_social: profile.show_social !== false,
           show_physical_address: profile.show_physical_address || false,
+          // Top 8 Fans settings
+          top_fans_visibility: profile.top_fans_visibility || 'public',
+          opt_out_of_top_fans: profile.opt_out_of_top_fans || false,
         });
       } catch (err) {
         console.error('Error loading profile:', err);
@@ -958,62 +962,26 @@ const EditProfilePage = () => {
               />
             </div>
 
-            <h3 className="text-white font-medium mb-3">Social Media</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <h3 className="text-white font-medium mb-3">Music Platforms</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Instagram</label>
-                <div className="flex">
-                  <span className="px-3 py-2 bg-dark-300 rounded-l-lg text-gray-500 border border-r-0 border-dark-200">@</span>
-                  <input
-                    type="text"
-                    value={formData.instagram}
-                    onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
-                    placeholder="username"
-                    className="flex-1 rounded-l-none"
-                  />
-                </div>
+                <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Apple Music</label>
+                <input
+                  type="text"
+                  value={formData.apple_music || ''}
+                  onChange={(e) => setFormData({ ...formData, apple_music: e.target.value })}
+                  placeholder="Artist URL or ID"
+                />
               </div>
 
               <div>
-                <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Twitter / X</label>
-                <div className="flex">
-                  <span className="px-3 py-2 bg-dark-300 rounded-l-lg text-gray-500 border border-r-0 border-dark-200">@</span>
-                  <input
-                    type="text"
-                    value={formData.twitter}
-                    onChange={(e) => setFormData({ ...formData, twitter: e.target.value })}
-                    placeholder="username"
-                    className="flex-1 rounded-l-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Facebook</label>
-                <div className="flex">
-                  <span className="px-3 py-2 bg-dark-300 rounded-l-lg text-gray-500 border border-r-0 border-dark-200 text-xs">facebook.com/</span>
-                  <input
-                    type="text"
-                    value={formData.facebook}
-                    onChange={(e) => setFormData({ ...formData, facebook: e.target.value })}
-                    placeholder="username"
-                    className="flex-1 rounded-l-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>YouTube</label>
-                <div className="flex">
-                  <span className="px-3 py-2 bg-dark-300 rounded-l-lg text-gray-500 border border-r-0 border-dark-200 text-xs">youtube.com/</span>
-                  <input
-                    type="text"
-                    value={formData.youtube}
-                    onChange={(e) => setFormData({ ...formData, youtube: e.target.value })}
-                    placeholder="channel"
-                    className="flex-1 rounded-l-none"
-                  />
-                </div>
+                <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Spotify</label>
+                <input
+                  type="text"
+                  value={formData.spotify}
+                  onChange={(e) => setFormData({ ...formData, spotify: e.target.value })}
+                  placeholder="Artist URL or ID"
+                />
               </div>
 
               <div>
@@ -1029,25 +997,96 @@ const EditProfilePage = () => {
                   />
                 </div>
               </div>
+            </div>
 
-              <div>
-                <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Spotify Artist ID</label>
+            {/* Spotify Player Embed */}
+            <div className="mt-6 pt-6 border-t border-dark-300">
+              <h3 className="text-white font-medium mb-2">Spotify Player Embed</h3>
+              <p className={`text-sm mb-3 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                Add a Spotify link to display an interactive music player on your profile. 
+                Paste any Spotify artist, album, track, or playlist URL.
+              </p>
+              <div className="flex">
+                <span className={`px-3 py-2 rounded-l-lg text-gray-500 border border-r-0 text-xs flex items-center ${isDark ? 'bg-dark-300 border-dark-200' : 'bg-gray-200 border-gray-300'}`}>
+                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+                  </svg>
+                </span>
                 <input
                   type="text"
-                  value={formData.spotify}
-                  onChange={(e) => setFormData({ ...formData, spotify: e.target.value })}
-                  placeholder="artist ID"
+                  value={formData.spotify_embed_url || ''}
+                  onChange={(e) => setFormData({ ...formData, spotify_embed_url: e.target.value })}
+                  placeholder="https://open.spotify.com/artist/... or album/track/playlist URL"
+                  className="flex-1 rounded-l-none"
                 />
               </div>
+              <p className={`text-xs mt-2 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
+                Example: https://open.spotify.com/artist/4Z8W4fKeB5YxbusRsdQVPb
+              </p>
             </div>
 
             {/* Social media privacy toggle */}
             <div className="mt-4 pt-4 border-t border-dark-300">
               <PrivacyToggle
-                label="Show social media links on public profile"
+                label="Show music platforms on public profile"
                 checked={formData.show_social}
                 onChange={() => setFormData({ ...formData, show_social: !formData.show_social })}
               />
+            </div>
+          </div>
+
+          {/* Top 8 Fans Settings */}
+          <div className={`rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
+            <h2 className={`text-lg font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>Top 8 Fans</h2>
+            <p className={`text-sm mb-4 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+              Your top fans are users who visit your profile the most, spend time here, and interact with you.
+            </p>
+            
+            <div className="space-y-4">
+              {/* Visibility Setting */}
+              <div>
+                <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Who can see your Top 8 Fans?
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { value: 'public', label: 'Everyone', icon: '🌍' },
+                    { value: 'private', label: 'Only Me', icon: '🔒' },
+                    { value: 'hidden', label: 'Hidden', icon: '👁️‍🗨️' },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, top_fans_visibility: option.value })}
+                      className={`p-3 rounded-lg border-2 text-center transition-all ${
+                        formData.top_fans_visibility === option.value
+                          ? 'border-primary bg-primary/10'
+                          : isDark ? 'border-dark-300 hover:border-gray-600' : 'border-gray-200 hover:border-gray-400'
+                      }`}
+                    >
+                      <span className="text-xl block mb-1">{option.icon}</span>
+                      <span className={`text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{option.label}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className={`text-xs mt-2 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
+                  {formData.top_fans_visibility === 'public' && 'Everyone visiting your profile can see your top fans'}
+                  {formData.top_fans_visibility === 'private' && 'Only you can see who your top fans are'}
+                  {formData.top_fans_visibility === 'hidden' && 'Top 8 Fans section is completely hidden from your profile'}
+                </p>
+              </div>
+              
+              {/* Opt-out Setting */}
+              <div className={`pt-4 border-t ${isDark ? 'border-dark-300' : 'border-gray-200'}`}>
+                <PrivacyToggle
+                  label="Don't show me as a fan on other profiles"
+                  checked={formData.opt_out_of_top_fans}
+                  onChange={() => setFormData({ ...formData, opt_out_of_top_fans: !formData.opt_out_of_top_fans })}
+                />
+                <p className={`text-xs mt-1 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
+                  When enabled, you won't appear in anyone's Top 8 Fans list, even if you frequently visit their profile.
+                </p>
+              </div>
             </div>
           </div>
 

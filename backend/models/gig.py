@@ -112,15 +112,9 @@ class GigMedia(BaseModel):
 
 class GigSocialLinks(BaseModel):
     website: Optional[str] = None
-    instagram: Optional[str] = None
-    facebook: Optional[str] = None
-    twitter: Optional[str] = None
-    youtube: Optional[str] = None
-    tiktok: Optional[str] = None
-    soundcloud: Optional[str] = None
+    apple_music: Optional[str] = None
     spotify: Optional[str] = None
-    bandcamp: Optional[str] = None
-    linkedin: Optional[str] = None
+    soundcloud: Optional[str] = None
 
 
 class GigCreate(BaseModel):

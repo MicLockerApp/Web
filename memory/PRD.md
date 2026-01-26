@@ -104,6 +104,7 @@ MicLocker is a production-ready full-stack marketplace where musicians, audio en
 - User management (suspend, ban, delete)
 - Employee management with secure password setup
 - Analytics dashboard
+- **Refactored AdminPage.js** - Extracted into tab components (OverviewTab, UsersTab, ListingsTab, OrdersTab, EmployeesTab)
 
 #### 8. Additional Features
 - AI Chatbot (using Emergent LLM Key)
@@ -111,7 +112,56 @@ MicLocker is a production-ready full-stack marketplace where musicians, audio en
 - Event-driven analytics
 - Legal pages (Privacy, Terms, etc.)
 
+#### 9. Branding & UI (January 2026)
+- **New Logo**: Custom yellow dotted spiral design replacing the vinyl record
+  - Applied to: Navbar, Login, Register, About page, Footer, Loading spinner
+  - Spinning animation maintained (33.5 RPM)
+  - PWA icons updated (favicon-32, logo192, logo512)
+  - Email templates updated with logo image
+- **Homepage Tagline**: "By Industry Pros. For Industry Pros."
+- **Homepage Subtitle**: "The gold standard of the music and entertainment industry"
+- **Music Platforms Only**: Removed Instagram, Twitter, Facebook, YouTube
+  - Now shows only: Apple Music, Spotify, SoundCloud
+  - Updated in: Edit Profile, Create Gig, View Gig, Profile Page
+- **Mobile Responsive Listing Cards**: Username and star rating stack vertically on mobile, left-aligned
+- **Spotify Player Embed** (NEW):
+  - Neumorphic-styled embedded Spotify player on user profiles
+  - Users can add their Spotify artist/album/track/playlist URL in Edit Profile
+  - Custom neumorphic wrapper with:
+    - Header showing "{username}'s Music" with gold accent play indicator
+    - Soft shadow depth effects (inner and outer shadows)
+    - Volume toggle and external link buttons
+    - Gradient accent bar
+  - Respects "Show music platforms" privacy toggle
+
+#### 10. Top 8 Fans Feature (NEW - January 2026)
+- **Fan Ranking System**: Displays top 8 most engaged users on each profile
+  - Scoring algorithm (weighted):
+    - Visit frequency: 50 points per visit (highest weight)
+    - Time spent: 0.1 points per second (secondary)
+    - Interactions: 25 points per interaction (third)
+  - Interactions include: messages, purchases, reviews, favorites
+- **Privacy Controls**:
+  - Profile owner can set visibility: Public / Private / Hidden
+  - Users can opt-out of appearing on anyone's Top 8 list
+- **UI Features**:
+  - 4x2 grid displaying fan avatars with rank badges (gold #1, silver #2, bronze #3)
+  - Shows username and visit count
+  - Gold Member/Founder badges displayed on fan cards
+  - Empty state with dashed placeholders
+- **Tracking**:
+  - Visits tracked when logged-in users view profiles
+  - Time tracked every 30 seconds while viewing
+  - Only tracks users who haven't opted out
+
 ## API Endpoints
+
+### Profile Visits Endpoints (Top 8 Fans)
+- `POST /api/profile-visits/track` - Track a profile visit
+- `PUT /api/profile-visits/time` - Update time spent on profile
+- `POST /api/profile-visits/interaction` - Track interaction (message, purchase, review, favorite)
+- `GET /api/profile-visits/top-fans/{profile_id}` - Get top 8 fans for a profile
+- `GET /api/profile-visits/my-stats/{profile_id}` - Get current user's fan stats
 
 ### Stripe Connect Endpoints
 - `GET /api/payments/connect/status` - Get seller's Stripe connection status

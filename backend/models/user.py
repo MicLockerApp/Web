@@ -142,12 +142,11 @@ class UserProfileUpdate(BaseModel):
     # Contact information
     phone: Optional[str] = None
     website: Optional[str] = None
-    instagram: Optional[str] = None
-    twitter: Optional[str] = None
-    facebook: Optional[str] = None
-    youtube: Optional[str] = None
-    soundcloud: Optional[str] = None
+    # Music platforms only
+    apple_music: Optional[str] = None
     spotify: Optional[str] = None
+    soundcloud: Optional[str] = None
+    spotify_embed_url: Optional[str] = None
     # Shipping address (mailing)
     shipping_address: Optional[dict] = None
     # Physical address
@@ -159,6 +158,9 @@ class UserProfileUpdate(BaseModel):
     show_address: Optional[bool] = None
     show_social: Optional[bool] = None
     show_physical_address: Optional[bool] = None
+    # Top 8 Fans settings
+    top_fans_visibility: Optional[str] = None  # "public", "private", "hidden"
+    opt_out_of_top_fans: Optional[bool] = None
 
 class UserInDB(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -192,12 +194,11 @@ class UserInDB(BaseModel):
     # Contact information
     phone: Optional[str] = None
     website: Optional[str] = None
-    instagram: Optional[str] = None
-    twitter: Optional[str] = None
-    facebook: Optional[str] = None
-    youtube: Optional[str] = None
-    soundcloud: Optional[str] = None
+    # Music platforms only
+    apple_music: Optional[str] = None
     spotify: Optional[str] = None
+    soundcloud: Optional[str] = None
+    spotify_embed_url: Optional[str] = None
     
     # Category-specific fields
     genre: Optional[str] = None  # Keep for backward compatibility
@@ -227,6 +228,10 @@ class UserInDB(BaseModel):
     show_address: bool = False
     show_social: bool = True  # Default to showing social media
     show_physical_address: bool = False  # Default to NOT showing physical address
+    
+    # Top 8 Fans settings
+    top_fans_visibility: str = "public"  # "public", "private", "hidden"
+    opt_out_of_top_fans: bool = False  # Don't show me as a fan on other profiles
     
     # Role hierarchy: owner > admin > manager > employee > user
     role: str = "user"  # owner, admin, manager, employee, user
@@ -285,12 +290,11 @@ class UserResponse(BaseModel):
     # Contact info
     phone: Optional[str] = None
     website: Optional[str] = None
-    instagram: Optional[str] = None
-    twitter: Optional[str] = None
-    facebook: Optional[str] = None
-    youtube: Optional[str] = None
-    soundcloud: Optional[str] = None
+    # Music platforms only
+    apple_music: Optional[str] = None
     spotify: Optional[str] = None
+    soundcloud: Optional[str] = None
+    spotify_embed_url: Optional[str] = None
     # Category fields
     genre: Optional[str] = None  # Backward compatibility
     genres: Optional[List[str]] = None  # New multi-select genres
@@ -315,6 +319,9 @@ class UserResponse(BaseModel):
     show_address: bool = False
     show_social: bool = True
     show_physical_address: bool = False
+    # Top 8 Fans settings
+    top_fans_visibility: str = "public"
+    opt_out_of_top_fans: bool = False
     # Stats
     rating: float = 0.0
     review_count: int = 0
@@ -346,12 +353,11 @@ class UserPublicProfile(BaseModel):
     # Contact info (public)
     phone: Optional[str] = None
     website: Optional[str] = None
-    instagram: Optional[str] = None
-    twitter: Optional[str] = None
-    facebook: Optional[str] = None
-    youtube: Optional[str] = None
-    soundcloud: Optional[str] = None
+    # Music platforms only
+    apple_music: Optional[str] = None
     spotify: Optional[str] = None
+    soundcloud: Optional[str] = None
+    spotify_embed_url: Optional[str] = None
     # Shipping address
     shipping_address: Optional[dict] = None
     # Physical address
@@ -373,6 +379,8 @@ class UserPublicProfile(BaseModel):
     show_address: bool = False
     show_social: bool = True
     show_physical_address: bool = False
+    # Top 8 Fans settings (for public profiles)
+    top_fans_visibility: str = "public"
     # Stats
     rating: float = 0.0
     review_count: int = 0

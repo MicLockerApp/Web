@@ -5,7 +5,7 @@
  * - Image/video gallery with navigation
  * - Full description
  * - Contact information
- * - Social media links
+ * - Music platform links (Apple Music, Spotify, SoundCloud)
  * - Owner actions (delete)
  * 
  * UI/UX: Unchanged from original implementation
@@ -16,7 +16,7 @@ import { Link } from 'react-router-dom';
 import {
   X, ChevronLeft, ChevronRight, MapPin, DollarSign, Eye,
   Mail, Phone, Trash2, User, Play, Globe, ExternalLink,
-  Instagram, Facebook, Twitter, Youtube, Music, Briefcase, Maximize
+  Music, Maximize
 } from 'lucide-react';
 import { CATEGORY_ICONS, CATEGORY_LABELS } from './constants';
 
@@ -198,15 +198,17 @@ const ViewGigModal = ({ gig, isOwner, onClose, onDelete }) => {
 
           {socialLinks.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-lg font-semibold text-white mb-3">Social Media</h3>
+              <h3 className="text-lg font-semibold text-white mb-3">Music Platforms</h3>
               <div className="flex flex-wrap gap-3">
                 {socialLinks.map(([key, url]) => {
-                  const icons = { website: Globe, instagram: Instagram, facebook: Facebook, twitter: Twitter, youtube: Youtube, soundcloud: Music, spotify: Music, bandcamp: Music, tiktok: Music, linkedin: Briefcase };
+                  const icons = { website: Globe, apple_music: Music, spotify: Music, soundcloud: Music };
+                  const labels = { website: 'Website', apple_music: 'Apple Music', spotify: 'Spotify', soundcloud: 'SoundCloud' };
                   const Icon = icons[key] || Globe;
+                  const label = labels[key] || key;
                   return (
                     <a key={key} href={url} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-2 px-4 py-2 bg-dark-500 rounded-lg text-gray-300 hover:text-primary hover:bg-dark-400 transition-colors">
-                      <Icon className="w-5 h-5" /><span className="capitalize">{key}</span><ExternalLink className="w-4 h-4" />
+                      <Icon className="w-5 h-5" /><span>{label}</span><ExternalLink className="w-4 h-4" />
                     </a>
                   );
                 })}

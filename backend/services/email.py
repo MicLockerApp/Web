@@ -65,7 +65,8 @@ class EmailService:
                             <!-- Header -->
                             <tr>
                                 <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);">
-                                    <h1 style="margin: 0; color: #FFD700; font-size: 32px; font-weight: bold;">🎵 MicLocker</h1>
+                                    <img src="https://customer-assets.emergentagent.com/job_industry-pros/artifacts/8xpbka1s_MicLockerLogoWOBackground.png" alt="MicLocker" width="60" height="60" style="margin-bottom: 10px;" />
+                                    <h1 style="margin: 0; color: #FFD700; font-size: 32px; font-weight: bold;">MicLocker</h1>
                                     <p style="margin: 10px 0 0; color: #888; font-size: 14px;">The Marketplace for Music Pros</p>
                                 </td>
                             </tr>
@@ -227,6 +228,7 @@ async def send_email_verification_code(to_email: str, verification_code: str) ->
                         <!-- Header -->
                         <tr>
                             <td style="padding: 30px 30px 20px; text-align: center; border-bottom: 1px solid #eeeeee;">
+                                <img src="https://customer-assets.emergentagent.com/job_industry-pros/artifacts/8xpbka1s_MicLockerLogoWOBackground.png" alt="MicLocker" width="50" height="50" style="margin-bottom: 10px;" />
                                 <h1 style="margin: 0; color: #333333; font-size: 24px; font-weight: bold;">MicLocker</h1>
                             </td>
                         </tr>
@@ -359,7 +361,10 @@ async def send_ticket_notification(ticket) -> bool:
     </head>
     <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff;">
         <div style="max-width: 600px; margin: 0 auto; background-color: #2d2d2d; border-radius: 12px; padding: 30px;">
-            <h1 style="color: #FFD700; margin-bottom: 20px;">🎫 New Support Ticket</h1>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <img src="https://customer-assets.emergentagent.com/job_industry-pros/artifacts/8xpbka1s_MicLockerLogoWOBackground.png" alt="MicLocker" width="50" height="50" />
+            </div>
+            <h1 style="color: #FFD700; margin-bottom: 20px;">New Support Ticket</h1>
             
             <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
                 <tr>
@@ -501,7 +506,8 @@ async def send_ticket_reply_notification(ticket, reply, is_staff_reply: bool, fr
                         <!-- Header -->
                         <tr>
                             <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);">
-                                <h1 style="margin: 0; color: #FFD700; font-size: 32px; font-weight: bold;">🎵 MicLocker</h1>
+                                <img src="https://customer-assets.emergentagent.com/job_industry-pros/artifacts/8xpbka1s_MicLockerLogoWOBackground.png" alt="MicLocker" width="60" height="60" style="margin-bottom: 10px;" />
+                                    <h1 style="margin: 0; color: #FFD700; font-size: 32px; font-weight: bold;">MicLocker</h1>
                                 <p style="margin: 10px 0 0; color: #888; font-size: 14px;">The Marketplace for Music Pros</p>
                             </td>
                         </tr>
@@ -638,7 +644,8 @@ async def send_password_setup_email(to_email: str, username: str, setup_token: s
                         <!-- Header -->
                         <tr>
                             <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);">
-                                <h1 style="margin: 0; color: #FFD700; font-size: 32px; font-weight: bold;">🎵 MicLocker</h1>
+                                <img src="https://customer-assets.emergentagent.com/job_industry-pros/artifacts/8xpbka1s_MicLockerLogoWOBackground.png" alt="MicLocker" width="60" height="60" style="margin-bottom: 10px;" />
+                                    <h1 style="margin: 0; color: #FFD700; font-size: 32px; font-weight: bold;">MicLocker</h1>
                                 <p style="margin: 10px 0 0; color: #888; font-size: 14px;">The Marketplace for Music Pros</p>
                             </td>
                         </tr>
@@ -798,7 +805,8 @@ async def send_seller_sale_notification_email(
                     <table width="600" cellpadding="0" cellspacing="0" style="background-color: #1a1a1a; border-radius: 12px; overflow: hidden; border: 1px solid #3d3d3d;">
                         <tr>
                             <td style="padding: 30px 40px; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); text-align: center;">
-                                <h1 style="margin: 0; color: #000000; font-size: 28px;">🎉 You Made a Sale!</h1>
+                                <img src="https://customer-assets.emergentagent.com/job_industry-pros/artifacts/8xpbka1s_MicLockerLogoWOBackground.png" alt="MicLocker" width="50" height="50" style="margin-bottom: 10px;" />
+                                <h1 style="margin: 0; color: #000000; font-size: 28px;">You Made a Sale!</h1>
                             </td>
                         </tr>
                         
@@ -927,7 +935,8 @@ async def send_order_confirmation_email(
                     <table width="600" cellpadding="0" cellspacing="0" style="background-color: #1a1a1a; border-radius: 12px; overflow: hidden; border: 1px solid #3d3d3d;">
                         <tr>
                             <td style="padding: 30px 40px; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); text-align: center;">
-                                <h1 style="margin: 0; color: #000000; font-size: 28px;">✓ Order Confirmed!</h1>
+                                <img src="https://customer-assets.emergentagent.com/job_industry-pros/artifacts/8xpbka1s_MicLockerLogoWOBackground.png" alt="MicLocker" width="50" height="50" style="margin-bottom: 10px;" />
+                                <h1 style="margin: 0; color: #000000; font-size: 28px;">Order Confirmed!</h1>
                             </td>
                         </tr>
                         

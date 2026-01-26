@@ -59,6 +59,7 @@ import EUDataPolicyPage from './pages/EUDataPolicyPage';
 import AdminReportsPage from './pages/AdminReportsPage';
 import GigsPage from './pages/GigsPage';
 import LearnPage from './pages/LearnPage';
+import MapPage from './pages/MapPage';
 
 // Initialize analytics on app load
 analytics.init();
@@ -119,6 +120,7 @@ function AppContent() {
               <Route path="/favorites" element={<FavoritesPage />} />
               <Route path="/gigs" element={<GigsPage />} />
               <Route path="/learn" element={<LearnPage />} />
+              <Route path="/map" element={<MapPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/dashboard/listings/:id/edit" element={<EditListingPage />} />
               <Route path="/sell" element={<CreateListingPage />} />

@@ -306,6 +306,14 @@ app.include_router(uploads_router, prefix="/api")
 # Gig Board routes
 app.include_router(gigs_router, prefix="/api")
 
+# Profile visits routes (Top 8 Fans feature)
+from routes.profile_visits import router as profile_visits_router
+app.include_router(profile_visits_router, prefix="/api")
+
+# Map routes
+from routes.map import router as map_router
+app.include_router(map_router, prefix="/api")
+
 # Health check endpoints
 @app.get("/api/health")
 async def api_health_check():
