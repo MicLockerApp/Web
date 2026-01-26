@@ -558,9 +558,9 @@ const MapPage = () => {
       {/* User Info Modal (Bottom Sheet) */}
       {selectedUser && (
         <div className={`
-          absolute bottom-0 left-0 right-0 z-20
+          absolute bottom-5 left-1/2 -translate-x-1/2 z-20 w-80
           ${isDark ? 'bg-dark-400' : 'bg-white'}
-          rounded-t-2xl shadow-2xl
+          rounded-2xl shadow-2xl
           transform transition-transform duration-300
         `}>
           {/* Handle bar */}
