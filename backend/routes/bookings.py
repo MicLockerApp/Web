@@ -1,7 +1,7 @@
 """
 Venue Booking Routes
 
-API endpoints for venue calendar and booking request system.
+API endpoints for venue/studio/engineer calendar and booking request system.
 """
 
 from fastapi import APIRouter, HTTPException, status, Depends, Query
@@ -19,7 +19,10 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/bookings", tags=["Venue Bookings"])
+router = APIRouter(prefix="/bookings", tags=["Bookings"])
+
+# Categories that can receive booking requests
+BOOKABLE_CATEGORIES = ["venue", "audio_engineer", "recording_studio"]
 
 
 @router.post("", response_model=BookingResponse)
