@@ -25,7 +25,7 @@ const darkMapStyle = [
   { featureType: 'water', elementType: 'labels.text.stroke', stylers: [{ color: '#17263c' }] },
 ];
 
-const ProfileMap = ({ address, height = 250 }) => {
+const ProfileMap = ({ address, height = 450 }) => {
   const { isDark } = useTheme();
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
