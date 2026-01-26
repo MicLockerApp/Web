@@ -124,6 +124,15 @@ const MapPage = () => {
 
   }, [mapLoaded, isDark]);
 
+  // Update map style when theme changes
+  useEffect(() => {
+    if (mapInstanceRef.current && window.google && window.google.maps) {
+      mapInstanceRef.current.setOptions({
+        styles: isDark ? darkMapStyle : []
+      });
+    }
+  }, [isDark]);
+
   // Fetch users
   const fetchUsers = useCallback(async () => {
     setLoading(true);
