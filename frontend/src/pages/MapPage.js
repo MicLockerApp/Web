@@ -131,11 +131,19 @@ const MapPage = () => {
   // Filters
   const [showFilters, setShowFilters] = useState(false);
   const [category, setCategory] = useState('');
+  const [subCategory, setSubCategory] = useState('');
+  const [genre, setGenre] = useState('');
   const [radius, setRadius] = useState(null);
   const [centerLocation, setCenterLocation] = useState(null);
   const [searchLocation, setSearchLocation] = useState('');
   const [useMyLocation, setUseMyLocation] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
+
+  // Reset subcategory and genre when category changes
+  useEffect(() => {
+    setSubCategory('');
+    setGenre('');
+  }, [category]);
 
   // Load Google Maps script
   useEffect(() => {
