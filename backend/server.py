@@ -318,6 +318,10 @@ app.include_router(map_router, prefix="/api")
 from routes.presence import router as presence_router
 app.include_router(presence_router)
 
+# Venue Booking routes
+from routes.bookings import router as bookings_router
+app.include_router(bookings_router, prefix="/api")
+
 # Health check endpoints
 @app.get("/api/health")
 async def api_health_check():
