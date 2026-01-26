@@ -7,6 +7,7 @@ class MessageCreate(BaseModel):
     recipient_id: str
     content: str = Field(..., min_length=1, max_length=5000)
     listing_id: Optional[str] = None  # Optional reference to a listing
+    images: Optional[List[str]] = None  # Optional image URLs
 
 class MessageInDB(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -16,6 +17,7 @@ class MessageInDB(BaseModel):
     content: str
     listing_id: Optional[str] = None
     listing_title: Optional[str] = None
+    images: Optional[List[str]] = None  # Image URLs attached to message
     is_read: bool = False
     read_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
