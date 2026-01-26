@@ -40,6 +40,11 @@ const MessagesPage = () => {
   const [deletingMessage, setDeletingMessage] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const [threadMenuOpen, setThreadMenuOpen] = useState(null);
+  
+  // Image upload state
+  const [showImageUploader, setShowImageUploader] = useState(false);
+  const [pendingImages, setPendingImages] = useState([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
