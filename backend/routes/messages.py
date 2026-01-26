@@ -99,12 +99,21 @@ async def send_message(
         sender_username=current_user["username"],
         content=message_data.content,
         listing_id=message_data.listing_id,
-        listing_title=listing_title
+        listing_title=listing_title,
+        images=message_data.images  # Include attached images
     )
     
     await db.messages.insert_one(message.model_dump())
     
-    # Update thread
+    # Update thread - show image indicator in last message preview
+    last_message_preview = message_data.content[:100]
+    if message_data.images and len(message_data.images) > 0:
+        image_count = len(message_data.images)
+        if not message_data.content.strip():
+            last_message_preview = f"📷 {image_count} image{'s' if image_count > 1 else ''}"
+        else:
+            last_message_preview = f"📷 {last_message_preview}"
+    
     unread_count = thread.get("unread_count", {})
     unread_count[recipient["id"]] = unread_count.get(recipient["id"], 0) + 1
     
@@ -112,7 +121,7 @@ async def send_message(
         {"id": thread["id"]},
         {
             "$set": {
-                "last_message": message_data.content[:100],
+                "last_message": last_message_preview,
                 "last_message_at": datetime.utcnow(),
                 "last_sender_id": current_user["id"],
                 "unread_count": unread_count,
