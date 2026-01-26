@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 from pydantic import BaseModel
-from routes.auth import get_current_user, get_current_user_optional
+from services.auth import get_current_user
 from database import get_database
 
 router = APIRouter(prefix="/api/presence", tags=["presence"])
