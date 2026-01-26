@@ -661,11 +661,13 @@ const MapPage = () => {
             </div>
 
             {/* Clear Filters */}
-            {(category || centerLocation || radius) && (
+            {(category || subCategory || genre || centerLocation || radius) && (
               <div className="flex justify-end">
                 <button
                   onClick={() => {
                     setCategory('');
+                    setSubCategory('');
+                    setGenre('');
                     clearLocationFilter();
                   }}
                   className={`text-sm ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}
