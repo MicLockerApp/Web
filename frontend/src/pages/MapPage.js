@@ -591,8 +591,8 @@ const MapPage = () => {
           {/* User Info */}
           <div className="px-4 pb-6">
             <div className="flex items-start gap-4">
-              {/* Profile Image */}
-              <Link to={`/profile/${selectedUser.id}`}>
+              {/* Profile Image with Presence Indicator */}
+              <Link to={`/profile/${selectedUser.id}`} className="relative">
                 {selectedUser.profile_image ? (
                   <img
                     src={selectedUser.profile_image}
@@ -609,6 +609,19 @@ const MapPage = () => {
                     </span>
                   </div>
                 )}
+                {/* Presence Status Indicator */}
+                <div 
+                  className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 ${isDark ? 'border-dark-400' : 'border-white'} ${
+                    selectedUser.presence_status === 'online' ? 'bg-green-500' :
+                    selectedUser.presence_status === 'standby' ? 'bg-yellow-500' :
+                    'bg-gray-400'
+                  }`}
+                  title={
+                    selectedUser.presence_status === 'online' ? 'Online' :
+                    selectedUser.presence_status === 'standby' ? 'Away' :
+                    'Offline'
+                  }
+                />
               </Link>
 
               {/* User Details */}
