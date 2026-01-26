@@ -615,7 +615,7 @@ const VenueCalendarPage = () => {
               Back to Profile
             </Link>
             <h1 className={`text-2xl sm:text-3xl font-bold mt-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              {venue?.venue_name || venue?.username}'s Calendar
+              {venue?.venue_name || venue?.username}&apos;s Calendar
             </h1>
             {venue?.location && (
               <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
