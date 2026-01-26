@@ -107,8 +107,7 @@ const MapPage = () => {
     const mapOptions = {
       center: { lat: 39.8283, lng: -98.5795 }, // Center of USA
       zoom: 4,
-      // Temporarily removed styles for debugging
-      // styles: isDark ? darkMapStyle : [],
+      styles: isDark ? darkMapStyle : [],
       mapTypeControl: false,
       streetViewControl: false,
       fullscreenControl: false,
