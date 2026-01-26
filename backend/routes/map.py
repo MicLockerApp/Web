@@ -146,7 +146,10 @@ async def get_map_users(
         "bio": 1,
         # Geocoded coordinates (if stored)
         "map_coordinates": 1,
-        "map_coordinates_type": 1  # "physical", "mailing", "city"
+        "map_coordinates_type": 1,  # "physical", "mailing", "city"
+        # Presence status
+        "last_activity": 1,
+        "presence_status": 1
     })
     
     users = await users_cursor.to_list(length=500)  # Limit to 500 users for performance
