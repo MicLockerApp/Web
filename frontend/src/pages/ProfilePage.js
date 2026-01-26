@@ -274,14 +274,53 @@ const ProfilePage = () => {
                   <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Business: <span className={isDark ? 'text-white' : 'text-gray-900'}>{profile.business_name}</span></p>
                 </div>
               )}
+
+              {/* Venue Specific Info */}
+              {profile.category === 'venue' && (
+                <div className="mb-4">
+                  {profile.venue_name && (
+                    <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Venue: <span className={isDark ? 'text-white' : 'text-gray-900'}>{profile.venue_name}</span>
+                    </p>
+                  )}
+                  {profile.venue_capacity && (
+                    <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Capacity: <span className={isDark ? 'text-white' : 'text-gray-900'}>{profile.venue_capacity}</span>
+                    </p>
+                  )}
+                  {profile.venue_website && (
+                    <a 
+                      href={profile.venue_website.startsWith('http') ? profile.venue_website : `https://${profile.venue_website}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`text-sm mt-1 flex items-center gap-1 text-primary hover:underline`}
+                    >
+                      <Globe className="w-4 h-4" />
+                      Visit Venue Website
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Actions */}
             <div className="flex flex-col gap-2">
+              {/* Calendar Button for Venues */}
+              {profile.category === 'venue' && (
+                <Link
+                  to={`/venue/${profile.id}/calendar`}
+                  className="btn btn-primary flex items-center justify-center gap-2"
+                  data-testid="venue-calendar-button"
+                >
+                  <Calendar className="w-4 h-4" />
+                  View Calendar
+                </Link>
+              )}
+              
               {!isOwnProfile && (
                 <Link
                   to={`/messages?to=${profile.id}`}
-                  className="btn btn-primary"
+                  className={`btn ${profile.category === 'venue' ? 'btn-secondary' : 'btn-primary'}`}
                   data-testid="message-seller-button"
                 >
                   <MessageSquare className="w-4 h-4" />
