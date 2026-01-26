@@ -274,6 +274,78 @@ const VenueBookingsPage = () => {
                           </p>
                         </div>
                       )}
+
+                      {/* Document Attachments Section - Only for accepted bookings */}
+                      {booking.status === 'accepted' && (
+                        <div className={`mt-4 p-4 rounded-lg ${isDark ? 'bg-dark-300' : 'bg-gray-50'}`}>
+                          <h4 className={`text-sm font-medium mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                            Documents & Contracts
+                          </h4>
+                          
+                          {/* Venue Documents */}
+                          {booking.venue_documents && booking.venue_documents.length > 0 && (
+                            <div className="mb-3">
+                              <p className={`text-xs font-medium mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                                Your Documents:
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {booking.venue_documents.map((doc, idx) => (
+                                  <a
+                                    key={idx}
+                                    href={doc}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 px-3 py-2 bg-primary/10 text-primary rounded-lg text-sm hover:bg-primary/20"
+                                  >
+                                    <FileText className="w-4 h-4" />
+                                    Document {idx + 1}
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Artist Documents */}
+                          {booking.artist_documents && booking.artist_documents.length > 0 && (
+                            <div className="mb-3">
+                              <p className={`text-xs font-medium mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                                From Artist:
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {booking.artist_documents.map((doc, idx) => (
+                                  <a
+                                    key={idx}
+                                    href={doc}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 px-3 py-2 bg-primary/10 text-primary rounded-lg text-sm hover:bg-primary/20"
+                                  >
+                                    <FileText className="w-4 h-4" />
+                                    Document {idx + 1}
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Upload Button */}
+                          <button
+                            onClick={() => {
+                              setSelectedBooking(booking);
+                              setShowDocumentModal(true);
+                            }}
+                            data-testid={`upload-document-btn-${booking.id}`}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${
+                              isDark 
+                                ? 'bg-dark-200 text-white hover:bg-dark-100' 
+                                : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
+                            }`}
+                          >
+                            <Upload className="w-4 h-4" />
+                            Upload Contract
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     {/* Action Buttons */}
