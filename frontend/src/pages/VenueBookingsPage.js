@@ -41,11 +41,11 @@ const VenueBookingsPage = () => {
       navigate('/login');
       return;
     }
-    // Check if user is a venue (case-insensitive)
-    const isVenue = user.category?.toLowerCase() === 'venue';
-    console.log('VenueBookingsPage - User category:', user.category, 'isVenue:', isVenue);
-    if (!isVenue) {
-      console.log('Redirecting to dashboard - not a venue');
+    // Check if user is a bookable category (venue, audio engineer, or recording studio)
+    const isBookable = ['venue', 'audio_engineer', 'recording_studio'].includes(user.category?.toLowerCase());
+    console.log('VenueBookingsPage - User category:', user.category, 'isBookable:', isBookable);
+    if (!isBookable) {
+      console.log('Redirecting to dashboard - not a bookable provider');
       navigate('/dashboard');
       return;
     }
