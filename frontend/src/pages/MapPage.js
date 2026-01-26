@@ -73,8 +73,17 @@ const MapPage = () => {
 
   // Load Google Maps script
   useEffect(() => {
+    // Already loaded
     if (window.google && window.google.maps) {
       setMapLoaded(true);
+      return;
+    }
+
+    // Check if script is already being loaded
+    const existingScript = document.querySelector('script[src*="maps.googleapis.com/maps/api/js"]');
+    if (existingScript) {
+      // Wait for existing script to load
+      existingScript.addEventListener('load', () => setMapLoaded(true));
       return;
     }
 
