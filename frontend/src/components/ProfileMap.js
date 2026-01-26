@@ -31,14 +31,11 @@ const ProfileMap = ({ address, height = 250 }) => {
   const mapInstanceRef = useRef(null);
   const markerRef = useRef(null);
   const [mapLoaded, setMapLoaded] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState(!GOOGLE_MAPS_API_KEY ? 'Map unavailable' : null);
 
   // Load Google Maps script
   useEffect(() => {
-    if (!GOOGLE_MAPS_API_KEY) {
-      setError('Map unavailable');
-      return;
-    }
+    if (!GOOGLE_MAPS_API_KEY) return;
 
     if (window.google && window.google.maps) {
       setMapLoaded(true);
