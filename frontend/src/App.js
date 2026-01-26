@@ -63,6 +63,7 @@ import LearnPage from './pages/LearnPage';
 import MapPage from './pages/MapPage';
 import VenueCalendarPage from './pages/VenueCalendarPage';
 import VenueBookingsPage from './pages/VenueBookingsPage';
+import ArtistBookingsPage from './pages/ArtistBookingsPage';
 
 // Initialize analytics on app load
 analytics.init();
@@ -132,6 +133,8 @@ function AppContent() {
               <Route path="/learn" element={<LearnPage />} />
               <Route path="/map" element={<MapPage />} />
               <Route path="/venue/:venueId/calendar" element={<VenueCalendarPage />} />
+              <Route path="/venue/bookings" element={<VenueBookingsPage />} />
+              <Route path="/my-bookings" element={<ArtistBookingsPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/dashboard/listings/:id/edit" element={<EditListingPage />} />
               <Route path="/sell" element={<CreateListingPage />} />
