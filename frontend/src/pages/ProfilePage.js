@@ -146,8 +146,6 @@ const ProfilePage = () => {
     return encodeURIComponent(parts.join(', '));
   })() : null;
 
-  const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
-
   return (
     <div className="min-h-screen" data-testid="profile-page">
       <div className="max-w-6xl mx-auto px-4 py-8">
