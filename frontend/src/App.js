@@ -62,6 +62,7 @@ import GigsPage from './pages/GigsPage';
 import LearnPage from './pages/LearnPage';
 import MapPage from './pages/MapPage';
 import VenueCalendarPage from './pages/VenueCalendarPage';
+import VenueBookingsPage from './pages/VenueBookingsPage';
 
 // Initialize analytics on app load
 analytics.init();
