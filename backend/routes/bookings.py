@@ -75,8 +75,8 @@ async def create_booking_request(
     
     # Create booking
     booking = BookingInDB(
-        venue_id=venue["id"],
-        venue_username=venue["username"],
+        venue_id=provider["id"],
+        venue_username=provider["username"],
         artist_id=current_user["id"],
         artist_username=current_user["username"],
         event_date=booking_data.event_date,
@@ -91,14 +91,17 @@ async def create_booking_request(
     
     await db.venue_bookings.insert_one(booking.model_dump())
     
-    logger.info(f"Booking request created: {booking.id} from {current_user['username']} to {venue['username']}")
+    logger.info(f"Booking request created: {booking.id} from {current_user['username']} to {provider['username']}")
     
-    # Create notification for venue owner
+    # Get provider type label for notification
+    provider_type = "studio" if provider_category == "recording_studio" else provider_category.replace("_", " ")
+    
+    # Create notification for provider
     await create_notification(
-        user_id=venue["id"],
+        user_id=provider["id"],
         notification_type=NotificationType.BOOKING_REQUEST,
         title="New Booking Request",
-        message=f"{current_user['username']} wants to book your venue for '{booking_data.event_name}'",
+        message=f"{current_user['username']} wants to book your {provider_type} for '{booking_data.event_name}'",
         link="/venue/bookings",
         metadata={"booking_id": booking.id, "artist_id": current_user["id"]}
     )
