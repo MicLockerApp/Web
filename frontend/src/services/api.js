@@ -164,8 +164,8 @@ export const offersAPI = {
 
 // Messages APIs
 export const messagesAPI = {
-  send: (recipientId, content, listingId = null) => 
-    api.post('/messages', { recipient_id: recipientId, content, listing_id: listingId }),
+  send: (recipientId, content, listingId = null, images = null) => 
+    api.post('/messages', { recipient_id: recipientId, content, listing_id: listingId, images }),
   getThreads: (params) => api.get('/messages/threads', { params }),
   getThread: (threadId, params) => api.get(`/messages/threads/${threadId}`, { params }),
   getUnreadCount: () => api.get('/messages/unread-count'),
