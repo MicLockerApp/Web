@@ -66,11 +66,11 @@ class TestBookingsNotifications:
             TestBookingsNotifications.venue_id = data.get("user", {}).get("id")
             print(f"✓ Created venue user: {TEST_VENUE_USERNAME}, ID: {TestBookingsNotifications.venue_id}")
         elif response.status_code == 400 and "already" in response.text.lower():
-            # User exists, try to login
-            login_resp = self.session.post(f"{BASE_URL}/api/auth/login", json={
-                "username": TEST_VENUE_USERNAME,
-                "password": TEST_PASSWORD
-            })
+            # User exists, try to login using query params
+            login_resp = self.session.post(
+                f"{BASE_URL}/api/auth/login",
+                params={"username": TEST_VENUE_USERNAME, "password": TEST_PASSWORD}
+            )
             if login_resp.status_code == 200:
                 data = login_resp.json()
                 TestBookingsNotifications.venue_token = data.get("access_token")
@@ -101,11 +101,11 @@ class TestBookingsNotifications:
             TestBookingsNotifications.artist_id = data.get("user", {}).get("id")
             print(f"✓ Created artist user: {TEST_ARTIST_USERNAME}, ID: {TestBookingsNotifications.artist_id}")
         elif response.status_code == 400 and "already" in response.text.lower():
-            # User exists, try to login
-            login_resp = self.session.post(f"{BASE_URL}/api/auth/login", json={
-                "username": TEST_ARTIST_USERNAME,
-                "password": TEST_PASSWORD
-            })
+            # User exists, try to login using query params
+            login_resp = self.session.post(
+                f"{BASE_URL}/api/auth/login",
+                params={"username": TEST_ARTIST_USERNAME, "password": TEST_PASSWORD}
+            )
             if login_resp.status_code == 200:
                 data = login_resp.json()
                 TestBookingsNotifications.artist_token = data.get("access_token")
@@ -449,14 +449,16 @@ class TestDeclineBooking:
         self.session.headers.update({"Content-Type": "application/json"})
     
     def test_01_login_admin(self):
-        """Login as admin to get existing venue user"""
-        response = self.session.post(f"{BASE_URL}/api/auth/login", json={
-            "username": ADMIN_USERNAME,
-            "password": ADMIN_PASSWORD
-        })
+        """Login as admin to verify auth works"""
+        # Use query params for login
+        response = self.session.post(
+            f"{BASE_URL}/api/auth/login",
+            params={"username": ADMIN_USERNAME, "password": ADMIN_PASSWORD}
+        )
         
         assert response.status_code == 200, f"Admin login failed: {response.text}"
         data = response.json()
+        assert "access_token" in data
         print(f"✓ Admin logged in")
     
     def test_02_create_decline_test_users(self):
