@@ -57,7 +57,6 @@ const MapPage = () => {
   // State
   const [loading, setLoading] = useState(true);
   const [mapLoaded, setMapLoaded] = useState(false);
-  const [mapError, setMapError] = useState(null);
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [clusteredUsers, setClusteredUsers] = useState([]);
@@ -74,13 +73,6 @@ const MapPage = () => {
 
   // Load Google Maps script
   useEffect(() => {
-    // Check if API key is configured
-    if (!GOOGLE_MAPS_API_KEY) {
-      setMapError('Google Maps API key is not configured. Please contact the administrator.');
-      setLoading(false);
-      return;
-    }
-
     if (window.google && window.google.maps) {
       setMapLoaded(true);
       return;
@@ -91,11 +83,7 @@ const MapPage = () => {
     script.async = true;
     script.defer = true;
     script.onload = () => setMapLoaded(true);
-    script.onerror = () => {
-      console.error('Failed to load Google Maps');
-      setMapError('Failed to load Google Maps. Please check your internet connection and try again.');
-      setLoading(false);
-    };
+    script.onerror = () => console.error('Failed to load Google Maps');
     document.head.appendChild(script);
 
     return () => {
@@ -105,32 +93,27 @@ const MapPage = () => {
 
   // Initialize map
   useEffect(() => {
-    if (!mapLoaded || !mapRef.current || mapInstanceRef.current || mapError) return;
+    if (!mapLoaded || !mapRef.current || mapInstanceRef.current) return;
 
-    try {
-      const mapOptions = {
-        center: { lat: 39.8283, lng: -98.5795 }, // Center of USA
-        zoom: 4,
-        styles: isDark ? darkMapStyle : [],
-        mapTypeControl: false,
-        streetViewControl: false,
-        fullscreenControl: false,
-      };
+    const mapOptions = {
+      center: { lat: 39.8283, lng: -98.5795 }, // Center of USA
+      zoom: 4,
+      styles: isDark ? darkMapStyle : [],
+      mapTypeControl: false,
+      streetViewControl: false,
+      fullscreenControl: false,
+    };
 
-      mapInstanceRef.current = new window.google.maps.Map(mapRef.current, mapOptions);
-      infoWindowRef.current = new window.google.maps.InfoWindow();
+    mapInstanceRef.current = new window.google.maps.Map(mapRef.current, mapOptions);
+    infoWindowRef.current = new window.google.maps.InfoWindow();
 
-      // Close modal when clicking on map (not marker)
-      mapInstanceRef.current.addListener('click', () => {
-        setSelectedUser(null);
-        setClusteredUsers([]);
-      });
-    } catch (error) {
-      console.error('Error initializing Google Maps:', error);
-      setMapError('Failed to initialize the map. Please refresh the page and try again.');
-    }
+    // Close modal when clicking on map (not marker)
+    mapInstanceRef.current.addListener('click', () => {
+      setSelectedUser(null);
+      setClusteredUsers([]);
+    });
 
-  }, [mapLoaded, isDark, mapError]);
+  }, [mapLoaded, isDark]);
 
   // Fetch users
   const fetchUsers = useCallback(async () => {
@@ -161,100 +144,95 @@ const MapPage = () => {
 
   // Update markers when users change
   useEffect(() => {
-    if (!mapInstanceRef.current || !users.length || mapError) return;
-    if (!window.google || !window.google.maps) return;
+    if (!mapInstanceRef.current || !users.length) return;
 
-    try {
-      // Clear existing markers
-      markersRef.current.forEach(marker => marker.setMap(null));
-      markersRef.current = [];
+    // Clear existing markers
+    markersRef.current.forEach(marker => marker.setMap(null));
+    markersRef.current = [];
 
-      // Group users by approximate location (for city-level clustering)
-      const locationGroups = {};
-      users.forEach(user => {
-        if (!user.coordinates) return;
-        
-        // Round coordinates to group nearby approximate locations
-        const key = user.is_approximate 
-          ? `${user.coordinates.lat.toFixed(2)}_${user.coordinates.lng.toFixed(2)}`
-          : `${user.coordinates.lat}_${user.coordinates.lng}`;
-        
-        if (!locationGroups[key]) {
-          locationGroups[key] = [];
-        }
-        locationGroups[key].push(user);
+    // Group users by approximate location (for city-level clustering)
+    const locationGroups = {};
+    users.forEach(user => {
+      if (!user.coordinates) return;
+      
+      // Round coordinates to group nearby approximate locations
+      const key = user.is_approximate 
+        ? `${user.coordinates.lat.toFixed(2)}_${user.coordinates.lng.toFixed(2)}`
+        : `${user.coordinates.lat}_${user.coordinates.lng}`;
+      
+      if (!locationGroups[key]) {
+        locationGroups[key] = [];
+      }
+      locationGroups[key].push(user);
+    });
+
+    // Create markers
+    Object.entries(locationGroups).forEach(([key, groupUsers]) => {
+      const firstUser = groupUsers[0];
+      const isCluster = groupUsers.length > 1 && firstUser.is_approximate;
+
+      const marker = new window.google.maps.Marker({
+        position: { lat: firstUser.coordinates.lat, lng: firstUser.coordinates.lng },
+        map: mapInstanceRef.current,
+        icon: {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale: isCluster ? 12 : 8,
+          fillColor: getCategoryColor(firstUser.category),
+          fillOpacity: 0.9,
+          strokeColor: '#ffffff',
+          strokeWeight: 2,
+        },
+        title: isCluster ? `${groupUsers.length} users` : firstUser.username,
       });
 
-      // Create markers
-      Object.entries(locationGroups).forEach(([key, groupUsers]) => {
-        const firstUser = groupUsers[0];
-        const isCluster = groupUsers.length > 1 && firstUser.is_approximate;
-
-        const marker = new window.google.maps.Marker({
+      // Add cluster count label
+      if (isCluster) {
+        const label = new window.google.maps.Marker({
           position: { lat: firstUser.coordinates.lat, lng: firstUser.coordinates.lng },
           map: mapInstanceRef.current,
           icon: {
             path: window.google.maps.SymbolPath.CIRCLE,
-            scale: isCluster ? 12 : 8,
-            fillColor: getCategoryColor(firstUser.category),
-            fillOpacity: 0.9,
-            strokeColor: '#ffffff',
-            strokeWeight: 2,
+            scale: 0,
           },
-          title: isCluster ? `${groupUsers.length} users` : firstUser.username,
+          label: {
+            text: String(groupUsers.length),
+            color: '#ffffff',
+            fontSize: '10px',
+            fontWeight: 'bold',
+          },
         });
+        markersRef.current.push(label);
+      }
 
-        // Add cluster count label
+      marker.addListener('click', () => {
         if (isCluster) {
-          const label = new window.google.maps.Marker({
-            position: { lat: firstUser.coordinates.lat, lng: firstUser.coordinates.lng },
-            map: mapInstanceRef.current,
-            icon: {
-              path: window.google.maps.SymbolPath.CIRCLE,
-              scale: 0,
-            },
-            label: {
-              text: String(groupUsers.length),
-              color: '#ffffff',
-              fontSize: '10px',
-              fontWeight: 'bold',
-            },
-          });
-          markersRef.current.push(label);
+          setClusteredUsers(groupUsers);
+          setClusterIndex(0);
+          setSelectedUser(groupUsers[0]);
+        } else {
+          setClusteredUsers([]);
+          setSelectedUser(firstUser);
         }
 
-        marker.addListener('click', () => {
-          if (isCluster) {
-            setClusteredUsers(groupUsers);
-            setClusterIndex(0);
-            setSelectedUser(groupUsers[0]);
-          } else {
-            setClusteredUsers([]);
-            setSelectedUser(firstUser);
-          }
-
-          // Center map on marker
-          mapInstanceRef.current.panTo(marker.getPosition());
-        });
-
-        markersRef.current.push(marker);
+        // Center map on marker
+        mapInstanceRef.current.panTo(marker.getPosition());
       });
 
-      // Fit bounds if we have users
-      if (users.length > 0 && !centerLocation) {
-        const bounds = new window.google.maps.LatLngBounds();
-        users.forEach(user => {
-          if (user.coordinates) {
-            bounds.extend({ lat: user.coordinates.lat, lng: user.coordinates.lng });
-          }
-        });
-        mapInstanceRef.current.fitBounds(bounds, { padding: 50 });
-      }
-    } catch (error) {
-      console.error('Error creating map markers:', error);
+      markersRef.current.push(marker);
+    });
+
+    // Fit bounds if we have users
+    if (users.length > 0 && !centerLocation) {
+      const bounds = new window.google.maps.LatLngBounds();
+      users.forEach(user => {
+        if (user.coordinates) {
+          bounds.extend({ lat: user.coordinates.lat, lng: user.coordinates.lng });
+        }
+      });
+      mapInstanceRef.current.fitBounds(bounds, { padding: 50 });
     }
 
-  }, [users, centerLocation, mapError]);
+  }, [users, centerLocation]);
 
   // Get user's current location
   const getMyLocation = () => {
@@ -520,24 +498,7 @@ const MapPage = () => {
 
       {/* Map Container */}
       <div className="flex-1 relative">
-        {/* Error State */}
-        {mapError && (
-          <div className="absolute inset-0 flex items-center justify-center bg-dark-500 z-10">
-            <div className="text-center max-w-md px-4">
-              <MapPin className="w-16 h-16 text-red-500 mx-auto mb-4" />
-              <h2 className="text-xl font-bold text-white mb-2">Map Unavailable</h2>
-              <p className="text-gray-400 mb-4">{mapError}</p>
-              <button
-                onClick={() => window.location.reload()}
-                className="px-6 py-2 bg-primary text-black rounded-lg font-medium hover:bg-primary/90 transition-colors"
-              >
-                Reload Page
-              </button>
-            </div>
-          </div>
-        )}
-
-        {loading && !mapError && (
+        {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
