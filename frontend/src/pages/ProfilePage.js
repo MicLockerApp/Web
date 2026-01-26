@@ -380,7 +380,7 @@ const ProfilePage = () => {
                 <span>{formattedPhysicalAddress}</span>
               </div>
               <div className={`rounded-lg overflow-hidden border ${isDark ? 'border-dark-300' : 'border-gray-200'}`}>
-                <ProfileMap address={googleMapsQuery} height={250} />
+                <ProfileMap address={googleMapsQuery} height={352} />
               </div>
               <a
                 href={`https://www.google.com/maps/search/?api=1&query=${googleMapsQuery}`}
