@@ -512,7 +512,7 @@ const Navbar = () => {
                         Dashboard
                       </Link>
                       {/* Booking Links - Show based on user type */}
-                      {user?.category?.toLowerCase() === 'venue' ? (
+                      {['venue', 'audio_engineer', 'recording_studio'].includes(user?.category?.toLowerCase()) ? (
                         <Link
                           to="/venue/bookings"
                           className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-gray-300 hover:bg-dark-300' : 'text-gray-700 hover:bg-gray-50'}`}
