@@ -41,7 +41,11 @@ const VenueBookingsPage = () => {
       navigate('/login');
       return;
     }
-    if (user.category !== 'venue') {
+    // Check if user is a venue (case-insensitive)
+    const isVenue = user.category?.toLowerCase() === 'venue';
+    console.log('VenueBookingsPage - User category:', user.category, 'isVenue:', isVenue);
+    if (!isVenue) {
+      console.log('Redirecting to dashboard - not a venue');
       navigate('/dashboard');
       return;
     }
