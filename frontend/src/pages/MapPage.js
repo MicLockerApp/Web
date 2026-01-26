@@ -238,7 +238,8 @@ const MapPage = () => {
           setSelectedUser(firstUser);
         }
 
-        // Center map on marker
+        // Zoom to city level and center on marker
+        mapInstanceRef.current.setZoom(11);
         mapInstanceRef.current.panTo(marker.getPosition());
       });
 
