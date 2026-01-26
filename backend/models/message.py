@@ -41,6 +41,7 @@ class MessageResponse(BaseModel):
     content: str
     listing_id: Optional[str] = None
     listing_title: Optional[str] = None
+    images: Optional[List[str]] = None  # Image URLs attached to message
     is_read: bool
     read_at: Optional[datetime] = None
     created_at: datetime
