@@ -213,6 +213,8 @@ const MapPage = () => {
     try {
       const params = {};
       if (category) params.category = category;
+      if (subCategory) params.sub_category = subCategory;
+      if (genre) params.genre = genre;
       if (centerLocation && radius) {
         params.lat = centerLocation.lat;
         params.lng = centerLocation.lng;
@@ -226,7 +228,7 @@ const MapPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [category, centerLocation, radius]);
+  }, [category, subCategory, genre, centerLocation, radius]);
 
   useEffect(() => {
     if (mapLoaded) {
