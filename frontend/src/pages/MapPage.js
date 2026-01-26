@@ -161,92 +161,97 @@ const MapPage = () => {
 
   // Update markers when users change
   useEffect(() => {
-    if (!mapInstanceRef.current || !users.length) return;
+    if (!mapInstanceRef.current || !users.length || mapError) return;
+    if (!window.google || !window.google.maps) return;
 
-    // Clear existing markers
-    markersRef.current.forEach(marker => marker.setMap(null));
-    markersRef.current = [];
+    try {
+      // Clear existing markers
+      markersRef.current.forEach(marker => marker.setMap(null));
+      markersRef.current = [];
 
-    // Group users by approximate location (for city-level clustering)
-    const locationGroups = {};
-    users.forEach(user => {
-      if (!user.coordinates) return;
-      
-      // Round coordinates to group nearby approximate locations
-      const key = user.is_approximate 
-        ? `${user.coordinates.lat.toFixed(2)}_${user.coordinates.lng.toFixed(2)}`
-        : `${user.coordinates.lat}_${user.coordinates.lng}`;
-      
-      if (!locationGroups[key]) {
-        locationGroups[key] = [];
-      }
-      locationGroups[key].push(user);
-    });
-
-    // Create markers
-    Object.entries(locationGroups).forEach(([key, groupUsers]) => {
-      const firstUser = groupUsers[0];
-      const isCluster = groupUsers.length > 1 && firstUser.is_approximate;
-
-      const marker = new window.google.maps.Marker({
-        position: { lat: firstUser.coordinates.lat, lng: firstUser.coordinates.lng },
-        map: mapInstanceRef.current,
-        icon: {
-          path: window.google.maps.SymbolPath.CIRCLE,
-          scale: isCluster ? 12 : 8,
-          fillColor: getCategoryColor(firstUser.category),
-          fillOpacity: 0.9,
-          strokeColor: '#ffffff',
-          strokeWeight: 2,
-        },
-        title: isCluster ? `${groupUsers.length} users` : firstUser.username,
+      // Group users by approximate location (for city-level clustering)
+      const locationGroups = {};
+      users.forEach(user => {
+        if (!user.coordinates) return;
+        
+        // Round coordinates to group nearby approximate locations
+        const key = user.is_approximate 
+          ? `${user.coordinates.lat.toFixed(2)}_${user.coordinates.lng.toFixed(2)}`
+          : `${user.coordinates.lat}_${user.coordinates.lng}`;
+        
+        if (!locationGroups[key]) {
+          locationGroups[key] = [];
+        }
+        locationGroups[key].push(user);
       });
 
-      // Add cluster count label
-      if (isCluster) {
-        const label = new window.google.maps.Marker({
+      // Create markers
+      Object.entries(locationGroups).forEach(([key, groupUsers]) => {
+        const firstUser = groupUsers[0];
+        const isCluster = groupUsers.length > 1 && firstUser.is_approximate;
+
+        const marker = new window.google.maps.Marker({
           position: { lat: firstUser.coordinates.lat, lng: firstUser.coordinates.lng },
           map: mapInstanceRef.current,
           icon: {
             path: window.google.maps.SymbolPath.CIRCLE,
-            scale: 0,
+            scale: isCluster ? 12 : 8,
+            fillColor: getCategoryColor(firstUser.category),
+            fillOpacity: 0.9,
+            strokeColor: '#ffffff',
+            strokeWeight: 2,
           },
-          label: {
-            text: String(groupUsers.length),
-            color: '#ffffff',
-            fontSize: '10px',
-            fontWeight: 'bold',
-          },
+          title: isCluster ? `${groupUsers.length} users` : firstUser.username,
         });
-        markersRef.current.push(label);
-      }
 
-      marker.addListener('click', () => {
+        // Add cluster count label
         if (isCluster) {
-          setClusteredUsers(groupUsers);
-          setClusterIndex(0);
-          setSelectedUser(groupUsers[0]);
-        } else {
-          setClusteredUsers([]);
-          setSelectedUser(firstUser);
+          const label = new window.google.maps.Marker({
+            position: { lat: firstUser.coordinates.lat, lng: firstUser.coordinates.lng },
+            map: mapInstanceRef.current,
+            icon: {
+              path: window.google.maps.SymbolPath.CIRCLE,
+              scale: 0,
+            },
+            label: {
+              text: String(groupUsers.length),
+              color: '#ffffff',
+              fontSize: '10px',
+              fontWeight: 'bold',
+            },
+          });
+          markersRef.current.push(label);
         }
 
-        // Center map on marker
-        mapInstanceRef.current.panTo(marker.getPosition());
+        marker.addListener('click', () => {
+          if (isCluster) {
+            setClusteredUsers(groupUsers);
+            setClusterIndex(0);
+            setSelectedUser(groupUsers[0]);
+          } else {
+            setClusteredUsers([]);
+            setSelectedUser(firstUser);
+          }
+
+          // Center map on marker
+          mapInstanceRef.current.panTo(marker.getPosition());
+        });
+
+        markersRef.current.push(marker);
       });
 
-      markersRef.current.push(marker);
-    });
-
-    // Fit bounds if we have users
-    if (users.length > 0 && !centerLocation) {
-      const bounds = new window.google.maps.LatLngBounds();
-      users.forEach(user => {
-        if (user.coordinates) {
-          bounds.extend({ lat: user.coordinates.lat, lng: user.coordinates.lng });
-        }
-      });
-      mapInstanceRef.current.fitBounds(bounds, { padding: 50 });
+      // Fit bounds if we have users
+      if (users.length > 0 && !centerLocation) {
+        const bounds = new window.google.maps.LatLngBounds();
+        users.forEach(user => {
+          if (user.coordinates) {
+            bounds.extend({ lat: user.coordinates.lat, lng: user.coordinates.lng });
+          }
+        });
+        mapInstanceRef.current.fitBounds(bounds, { padding: 50 });
+      }
+    } catch (error) {
+      console.error('Error creating map markers:', error);
     }
 
   }, [users, centerLocation]);
