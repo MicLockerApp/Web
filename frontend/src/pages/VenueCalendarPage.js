@@ -683,6 +683,75 @@ const VenueCalendarPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Response Modal */}
+      {showResponseModal && selectedEvent && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`w-full max-w-md rounded-2xl ${isDark ? 'bg-dark-400' : 'bg-white'} p-6`}>
+            <h2 className={`text-xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              {responseType === 'accept' ? 'Accept' : 'Decline'} Booking Request
+            </h2>
+            
+            <div className={`p-4 rounded-lg mb-4 ${isDark ? 'bg-dark-300' : 'bg-gray-50'}`}>
+              <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {selectedEvent.event_name}
+              </p>
+              <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                {getFormattedDate()} at {selectedEvent.event_time}
+              </p>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Requested by: {selectedEvent.artist_username}
+              </p>
+            </div>
+
+            <div className="mb-4">
+              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                Message to Artist (optional)
+              </label>
+              <textarea
+                value={responseMessage}
+                onChange={(e) => setResponseMessage(e.target.value)}
+                rows={3}
+                placeholder={responseType === 'accept' 
+                  ? "e.g., Looking forward to your performance! Please arrive by 7 PM for sound check."
+                  : "e.g., Unfortunately we have another event scheduled. Please try another date."
+                }
+                className={`w-full px-4 py-2 rounded-lg border ${isDark ? 'bg-dark-300 border-dark-200 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+              />
+            </div>
+
+            <div className={`p-3 rounded-lg mb-4 ${
+              responseType === 'accept' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
+            }`}>
+              <p className="text-sm">
+                {responseType === 'accept' 
+                  ? '✓ The artist will be notified that their booking has been confirmed.'
+                  : '✗ The artist will be notified that their booking request was declined.'
+                }
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowResponseModal(false)}
+                className={`flex-1 py-3 rounded-lg font-medium ${isDark ? 'bg-dark-300 text-white hover:bg-dark-200' : 'bg-gray-200 text-gray-900 hover:bg-gray-300'}`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitResponse}
+                disabled={submitting}
+                data-testid="confirm-response-btn"
+                className={`flex-1 py-3 rounded-lg font-medium text-white disabled:opacity-50 ${
+                  responseType === 'accept' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'
+                }`}
+              >
+                {submitting ? 'Processing...' : responseType === 'accept' ? 'Confirm Acceptance' : 'Confirm Decline'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
