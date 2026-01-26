@@ -18,6 +18,10 @@ const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const notificationRef = useRef(null);
   
   // Search dropdown state
   const [searchResults, setSearchResults] = useState({ listings: [], users: [] });
@@ -26,18 +30,25 @@ const Navbar = () => {
   const searchRef = useRef(null);
   const searchTimeoutRef = useRef(null);
 
-  // Fetch unread message count when authenticated
+  // Fetch unread message count and notifications when authenticated
   useEffect(() => {
     const fetchUnreadCount = async () => {
       if (!isAuthenticated) {
         setUnreadCount(0);
+        setNotificationCount(0);
         return;
       }
       try {
-        const response = await messagesAPI.getUnreadCount();
-        setUnreadCount(response.data.unread_count || 0);
+        const [msgRes, notifRes] = await Promise.all([
+          messagesAPI.getUnreadCount(),
+          fetch(`${process.env.REACT_APP_BACKEND_URL}/api/notifications/count`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+          }).then(r => r.json()).catch(() => ({ unread_count: 0 }))
+        ]);
+        setUnreadCount(msgRes.data.unread_count || 0);
+        setNotificationCount(notifRes.unread_count || 0);
       } catch (error) {
-        console.error('Error fetching unread count:', error);
+        console.error('Error fetching counts:', error);
       }
     };
 
@@ -46,6 +57,66 @@ const Navbar = () => {
     const interval = setInterval(fetchUnreadCount, 30000);
     return () => clearInterval(interval);
   }, [isAuthenticated]);
+
+  // Close notification dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/notifications?limit=10`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      const data = await res.json();
+      setNotifications(data || []);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
+
+  const handleNotificationClick = async () => {
+    if (!showNotifications) {
+      fetchNotifications();
+    }
+    setShowNotifications(!showNotifications);
+  };
+
+  const markNotificationRead = async (notifId) => {
+    try {
+      await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/notifications/${notifId}/read`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: true } : n));
+      setNotificationCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error('Error marking notification read:', error);
+    }
+  };
+
+  const markAllNotificationsRead = async () => {
+    try {
+      await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/notifications/mark-read`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ mark_all_read: true })
+      });
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      setNotificationCount(0);
+    } catch (error) {
+      console.error('Error marking all read:', error);
+    }
+  };
 
   // Handle search input with debounce
   useEffect(() => {
