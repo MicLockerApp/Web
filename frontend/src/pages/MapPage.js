@@ -515,7 +515,24 @@ const MapPage = () => {
 
       {/* Map Container */}
       <div className="flex-1 relative">
-        {loading && (
+        {/* Error State */}
+        {mapError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-dark-500 z-10">
+            <div className="text-center max-w-md px-4">
+              <MapPin className="w-16 h-16 text-red-500 mx-auto mb-4" />
+              <h2 className="text-xl font-bold text-white mb-2">Map Unavailable</h2>
+              <p className="text-gray-400 mb-4">{mapError}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-6 py-2 bg-primary text-black rounded-lg font-medium hover:bg-primary/90 transition-colors"
+              >
+                Reload Page
+              </button>
+            </div>
+          </div>
+        )}
+
+        {loading && !mapError && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
