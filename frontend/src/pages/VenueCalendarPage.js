@@ -615,7 +615,7 @@ const VenueCalendarPage = () => {
               Back to Profile
             </Link>
             <h1 className={`text-2xl sm:text-3xl font-bold mt-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              {venue?.venue_name || venue?.username}&apos;s Calendar
+              {venue?.venue_name || venue?.username}&apos;s {venue?.category === 'recording_studio' ? 'Studio ' : ''}Calendar
             </h1>
             {venue?.location && (
               <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -625,7 +625,7 @@ const VenueCalendarPage = () => {
           </div>
           
           <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            Click on a date to see bookings or request a time
+            Click on a date to {venue?.category === 'venue' ? 'see bookings or request a time' : 'book a session'}
           </div>
         </div>
 
