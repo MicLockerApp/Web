@@ -211,7 +211,85 @@ MicLocker is a production-ready full-stack marketplace where musicians, audio en
 }
 ```
 
-## Completed This Session (January 21, 2026)
+## Completed This Session (January 26, 2026)
+
+### Venue Booking System Complete (P0, P1, P2)
+
+#### P0: Venue Booking Management UI
+1. **VenueBookingsPage** (`/venue/bookings`) - Complete management interface for venue owners
+   - Filter tabs: Pending, Accepted, Declined, All
+   - Booking request cards showing event details, artist info, dates
+   - Accept/Decline buttons with response modal
+   - Response message field for communicating with artists
+   - Document upload section for accepted bookings
+   - Component: `/app/frontend/src/pages/VenueBookingsPage.js`
+
+2. **ArtistBookingsPage** (`/my-bookings`) - Track booking requests for artists
+   - View all submitted booking requests
+   - Filter by status (All, Pending, Confirmed, Declined)
+   - Cancel pending bookings
+   - View venue responses
+   - Upload documents for accepted bookings
+   - Component: `/app/frontend/src/pages/ArtistBookingsPage.js`
+
+3. **Navbar Integration**
+   - "Manage Bookings" link for venue users (category === 'venue')
+   - "My Bookings" link for non-venue users
+   - Added Calendar icon for booking links
+
+#### P1: Notification System
+1. **Backend Notification System**
+   - Notification model with types: booking_accepted, booking_declined, booking_request, etc.
+   - CRUD API endpoints for notifications
+   - Auto-create notifications when:
+     - Artist submits booking request → Venue gets notified
+     - Venue accepts booking → Artist gets notified
+     - Venue declines booking → Artist gets notified
+   - Files: `/app/backend/models/notification.py`, `/app/backend/routes/notifications.py`
+
+2. **Frontend Notification Bell**
+   - Bell icon in navbar with unread count badge
+   - Dropdown showing recent notifications
+   - Click notification to navigate to relevant page
+   - "Mark all read" functionality
+   - Poll for new notifications every 30 seconds
+
+#### P2: Document Attachments for Approved Bookings
+1. Both venues and artists can upload documents to accepted bookings
+2. Documents stored in S3 via existing upload infrastructure
+3. Separate sections for "Your Documents" and "From Artist/Venue"
+4. Support for PDF, DOC, DOCX, TXT, JPG, PNG formats
+5. Links open documents in new tab
+
+### New API Endpoints
+- `POST /api/notifications` - Create notification (internal use)
+- `GET /api/notifications` - Get user's notifications
+- `GET /api/notifications/count` - Get unread count
+- `PATCH /api/notifications/{id}/read` - Mark single notification read
+- `POST /api/notifications/mark-read` - Mark multiple/all notifications read
+- `DELETE /api/notifications/{id}` - Delete notification
+- `DELETE /api/notifications` - Clear all notifications
+
+### New Routes
+- `/venue/bookings` - Venue booking management page
+- `/my-bookings` - Artist bookings page
+
+### Files Created/Modified
+- `/app/backend/models/notification.py` - Notification data model
+- `/app/backend/routes/notifications.py` - Notification API
+- `/app/backend/routes/bookings.py` - Added notification triggers
+- `/app/backend/server.py` - Registered notification router
+- `/app/frontend/src/pages/ArtistBookingsPage.js` - New page
+- `/app/frontend/src/pages/VenueBookingsPage.js` - Updated with document upload
+- `/app/frontend/src/components/Navbar.js` - Added notification bell and booking links
+- `/app/frontend/src/App.js` - Added routes
+
+### Testing
+- Backend: 18/18 tests passed (100%)
+- Frontend: All UI elements verified
+- Test file: `/app/backend/tests/test_bookings_notifications.py`
+
+## Completed Previous Session (January 21, 2026)
 
 ### Admin Quick Login Feature (NEW - January 21, 2026)
 1. **Admin Login Button** added to LoginPage.js
