@@ -536,7 +536,7 @@ const Navbar = () => {
                       <Link
                         to="/orders"
                         className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-gray-300 hover:bg-dark-300' : 'text-gray-700 hover:bg-gray-50'}`}
-                        onClick={() => setUserMenuOpen(false)}}
+                        onClick={() => setUserMenuOpen(false)}
                       >
                         <ShoppingBag className="w-4 h-4" />
                         Orders
