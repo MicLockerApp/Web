@@ -208,6 +208,7 @@ const EditProfilePage = () => {
           venue_name: profile.venue_name || '',
           venue_city: profile.venue_city || '',
           venue_capacity: profile.venue_capacity || '',
+          venue_website: profile.venue_website || '',
           merchant_products: profile.merchant_products || [],
           business_name: profile.business_name || '',
           comedian_specialties: profile.comedian_specialties || [],
