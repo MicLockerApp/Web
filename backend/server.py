@@ -322,6 +322,10 @@ app.include_router(presence_router)
 from routes.bookings import router as bookings_router
 app.include_router(bookings_router, prefix="/api")
 
+# Notifications routes
+from routes.notifications import router as notifications_router
+app.include_router(notifications_router, prefix="/api")
+
 # Health check endpoints
 @app.get("/api/health")
 async def api_health_check():
