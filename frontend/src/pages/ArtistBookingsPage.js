@@ -255,7 +255,7 @@ const ArtistBookingsPage = () => {
                           <p className={`text-xs font-medium mb-1 ${
                             booking.status === 'accepted' ? 'text-green-400' : 'text-red-400'
                           }`}>
-                            Venue's Response:
+                            Venue&apos;s Response:
                           </p>
                           <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                             {booking.venue_response}
