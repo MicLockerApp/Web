@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Calendar, Clock, Music, User, Check, X, MessageSquare, FileText, ChevronDown, Filter, ArrowLeft } from 'lucide-react';
+import { Calendar, Clock, Music, User, Check, X, MessageSquare, FileText, ChevronDown, Filter, ArrowLeft, Upload } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -19,6 +19,8 @@ const VenueBookingsPage = () => {
   const [responseType, setResponseType] = useState(null); // 'accept' or 'decline'
   const [responseMessage, setResponseMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [showDocumentModal, setShowDocumentModal] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const fetchBookings = useCallback(async () => {
     if (!user) return;
@@ -74,6 +76,40 @@ const VenueBookingsPage = () => {
       alert(error.response?.data?.detail || 'Failed to respond to booking');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleUploadDocument = async (e) => {
+    if (!selectedBooking) return;
+    
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('purpose', 'booking_document');
+      
+      const uploadRes = await api.post('/uploads/file', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      const fileUrl = uploadRes.data.url;
+      
+      await api.patch(`/bookings/${selectedBooking.id}`, {
+        venue_documents: [fileUrl]
+      });
+      
+      setShowDocumentModal(false);
+      setSelectedBooking(null);
+      fetchBookings();
+      alert('Document uploaded successfully!');
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      alert(error.response?.data?.detail || 'Failed to upload document');
+    } finally {
+      setUploading(false);
     }
   };
 
