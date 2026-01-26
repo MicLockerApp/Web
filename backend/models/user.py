@@ -105,6 +105,7 @@ class UserCategoryUpdate(BaseModel):
     venue_name: Optional[str] = None
     venue_city: Optional[str] = None
     venue_capacity: Optional[str] = None
+    venue_website: Optional[str] = None  # Venue's website URL
     # Merchant fields
     merchant_products: Optional[List[str]] = None
     business_name: Optional[str] = None
