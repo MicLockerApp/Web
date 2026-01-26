@@ -476,6 +476,63 @@ const VenueBookingsPage = () => {
           </div>
         </div>
       )}
+
+      {/* Document Upload Modal */}
+      {showDocumentModal && selectedBooking && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`w-full max-w-md rounded-2xl ${isDark ? 'bg-dark-400' : 'bg-white'} p-6`}>
+            <h2 className={`text-xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              Upload Document
+            </h2>
+            
+            <p className={`mb-4 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              Upload contracts, venue requirements, or other booking documents.
+            </p>
+
+            <div className={`p-4 rounded-lg mb-4 ${isDark ? 'bg-dark-300' : 'bg-gray-50'}`}>
+              <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {selectedBooking.event_name}
+              </p>
+              <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                by {selectedBooking.artist_username}
+              </p>
+            </div>
+
+            <div className="mb-4">
+              <label className={`block w-full p-6 border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors ${
+                isDark 
+                  ? 'border-dark-200 hover:border-primary' 
+                  : 'border-gray-300 hover:border-primary'
+              }`}>
+                <Upload className={`w-8 h-8 mx-auto mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+                <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  {uploading ? 'Uploading...' : 'Click to select a file'}
+                </span>
+                <input
+                  type="file"
+                  className="hidden"
+                  onChange={handleUploadDocument}
+                  disabled={uploading}
+                  accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
+                />
+              </label>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDocumentModal(false);
+                  setSelectedBooking(null);
+                }}
+                disabled={uploading}
+                className={`flex-1 py-3 rounded-lg font-medium ${isDark ? 'bg-dark-300 text-white hover:bg-dark-200' : 'bg-gray-200 text-gray-900 hover:bg-gray-300'}`}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
