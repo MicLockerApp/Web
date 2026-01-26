@@ -153,10 +153,16 @@ const MapPage = () => {
 
   // Update markers when users change
   useEffect(() => {
+    // Ensure map and Google Maps API are fully ready
     if (!mapInstanceRef.current || !users.length) return;
+    if (!window.google || !window.google.maps) return;
 
     // Clear existing markers
-    markersRef.current.forEach(marker => marker.setMap(null));
+    markersRef.current.forEach(marker => {
+      if (marker && typeof marker.setMap === 'function') {
+        marker.setMap(null);
+      }
+    });
     markersRef.current = [];
 
     // Group users by approximate location (for city-level clustering)
