@@ -107,7 +107,7 @@ const MapPage = () => {
     const mapOptions = {
       center: { lat: 39.8283, lng: -98.5795 }, // Center of USA
       zoom: 4,
-      styles: isDark ? darkMapStyle : [],
+      // Using standard Google Maps styling
       mapTypeControl: false,
       streetViewControl: false,
       fullscreenControl: false,
