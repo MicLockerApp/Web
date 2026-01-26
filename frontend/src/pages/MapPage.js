@@ -57,6 +57,7 @@ const MapPage = () => {
   // State
   const [loading, setLoading] = useState(true);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [mapError, setMapError] = useState(null);
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [clusteredUsers, setClusteredUsers] = useState([]);
@@ -73,6 +74,13 @@ const MapPage = () => {
 
   // Load Google Maps script
   useEffect(() => {
+    // Check if API key is configured
+    if (!GOOGLE_MAPS_API_KEY) {
+      setMapError('Google Maps API key is not configured. Please contact the administrator.');
+      setLoading(false);
+      return;
+    }
+
     if (window.google && window.google.maps) {
       setMapLoaded(true);
       return;
@@ -83,7 +91,11 @@ const MapPage = () => {
     script.async = true;
     script.defer = true;
     script.onload = () => setMapLoaded(true);
-    script.onerror = () => console.error('Failed to load Google Maps');
+    script.onerror = () => {
+      console.error('Failed to load Google Maps');
+      setMapError('Failed to load Google Maps. Please check your internet connection and try again.');
+      setLoading(false);
+    };
     document.head.appendChild(script);
 
     return () => {
