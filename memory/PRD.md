@@ -261,6 +261,18 @@ MicLocker is a production-ready full-stack marketplace where musicians, audio en
 4. Support for PDF, DOC, DOCX, TXT, JPG, PNG formats
 5. Links open documents in new tab
 
+### Extended Booking System for Audio Engineers & Recording Studios
+1. **Backend Updates** (`/app/backend/routes/bookings.py`)
+   - Added `BOOKABLE_CATEGORIES = ["venue", "audio_engineer", "recording_studio"]`
+   - All booking endpoints now support these three categories
+   - Validation rejects booking requests to non-bookable categories
+
+2. **Frontend Updates**
+   - ProfilePage shows "View Calendar" for venues, "Book Session" for engineers/studios
+   - Navbar shows "Manage Bookings" for all three bookable categories
+   - VenueBookingsPage accessible to all three categories
+   - VenueCalendarPage works for all three categories
+
 ### New API Endpoints
 - `POST /api/notifications` - Create notification (internal use)
 - `GET /api/notifications` - Get user's notifications
@@ -277,17 +289,21 @@ MicLocker is a production-ready full-stack marketplace where musicians, audio en
 ### Files Created/Modified
 - `/app/backend/models/notification.py` - Notification data model
 - `/app/backend/routes/notifications.py` - Notification API
-- `/app/backend/routes/bookings.py` - Added notification triggers
+- `/app/backend/routes/bookings.py` - Added notification triggers + extended categories
 - `/app/backend/server.py` - Registered notification router
 - `/app/frontend/src/pages/ArtistBookingsPage.js` - New page
 - `/app/frontend/src/pages/VenueBookingsPage.js` - Updated with document upload
+- `/app/frontend/src/pages/VenueCalendarPage.js` - Accept/Decline buttons added
+- `/app/frontend/src/pages/ProfilePage.js` - Calendar button for all bookable categories
 - `/app/frontend/src/components/Navbar.js` - Added notification bell and booking links
 - `/app/frontend/src/App.js` - Added routes
 
 ### Testing
-- Backend: 18/18 tests passed (100%)
+- Backend: 14/14 tests passed (100%)
 - Frontend: All UI elements verified
-- Test file: `/app/backend/tests/test_bookings_notifications.py`
+- Test files: 
+  - `/app/backend/tests/test_bookings_notifications.py`
+  - `/app/backend/tests/test_extended_bookings.py`
 
 ## Completed Previous Session (January 21, 2026)
 
