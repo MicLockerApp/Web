@@ -27,13 +27,79 @@ const CATEGORIES = [
   { value: '', label: 'All Professions', icon: '👥' },
   { value: 'musician', label: 'Musician', icon: '🎵' },
   { value: 'audio_engineer', label: 'Audio Engineer', icon: '🎛️' },
-  { value: 'producer', label: 'Producer', icon: '🎹' },
+  { value: 'recording_studio', label: 'Recording Studio', icon: '🎙️' },
   { value: 'venue', label: 'Venue', icon: '🏟️' },
-  { value: 'studio', label: 'Studio', icon: '🎙️' },
   { value: 'merchant', label: 'Merchant', icon: '🛍️' },
   { value: 'comedian', label: 'Comedian', icon: '🎭' },
   { value: 'actor', label: 'Actor', icon: '🎬' },
 ];
+
+// Subcategories by profession
+const SUBCATEGORIES = {
+  musician: [
+    "Accordion", "Acoustic Guitar", "Bagpipe", "Banjo", "Bass Electric", "Bass Fretless",
+    "Bass Upright", "Bassoon", "Beat Makers", "Cello", "Clarinet", "Classical Guitar",
+    "Composer Orchestral", "Dobro", "Electric Guitar", "Fiddle", "Flutes", "French Horn",
+    "Harmonica", "Harp", "Horns", "Keyboards Synths", "Mandolin", "Oboe", "Pedal Steel",
+    "Percussion", "Piano", "Rapper", "Saxophone", "Singer Female", "Singer Male",
+    "Timpani", "Trombone", "Trumpet", "Tuba", "Ukulele", "Viola", "Violin"
+  ],
+  audio_engineer: [
+    "Boom Operator", "Dialogue Editing", "Dolby Atmos & Immersive Audio",
+    "Editing", "Film Composers", "Full Instrumental Productions", "Game Audio",
+    "Ghost Producers", "Live Drum Tracks", "Live Sound", "Mastering Engineers",
+    "Mixing Engineers", "Podcast Editing & Mastering", "Pop Rock Arranger",
+    "Post Editing", "Post Mixing", "Producers", "Production Sound Mixer",
+    "Programmed Drums", "Remixing", "Restoration", "Session Conversion",
+    "Songwriter Lyrics", "Songwriter Music", "Sound Design", "String Arranger",
+    "Surround 5.1 Mixing", "Time Alignment Quantizing", "Top Line Writer (Vocal Melody)",
+    "Track Minus Top Line", "Vocal Comping", "Vocal Tuning", "You Tube Cover Recording"
+  ],
+  recording_studio: [
+    "Beat Makers", "Boom Operator", "Composer Orchestral", "Dialogue Editing",
+    "Dolby Atmos & Immersive Audio", "Editing", "Film Composers",
+    "Full Instrumental Productions", "Game Audio", "Ghost Producers",
+    "Live Drum Tracks", "Mastering Engineers", "Mixing Engineers",
+    "Podcast Editing & Mastering", "Pop Rock Arranger", "Post Editing",
+    "Post Mixing", "Producers", "Production Sound Mixer", "Programmed Drums",
+    "Recording Studios", "Rehearsal Rooms", "Remixing", "Restoration",
+    "Session Conversion", "Session Dj", "Singer Female", "Singer Male",
+    "Songwriter Lyrics", "Songwriter Music", "Sound Design", "String Arranger",
+    "String Section", "Surround 5.1 Mixing", "Time Alignment Quantizing",
+    "Top Line Writer (Vocal Melody)", "Track Minus Top Line", "Vocal Comping",
+    "Vocal Tuning", "You Tube Cover Recording"
+  ],
+  merchant: [
+    "Shirts", "Pants", "Shorts", "Jackets", "Hoodies", "Hats", "Caps",
+    "Shoes", "Boots", "Socks", "Accessories", "Bags", "Backpacks",
+    "Vinyl Records", "CDs", "Posters", "Stickers", "Patches", "Pins",
+    "Guitar Picks", "Drumsticks", "Straps", "Cases", "Stands",
+    "Cables", "Strings", "Picks", "Capos", "Tuners", "Other Merchandise"
+  ],
+  comedian: [
+    "Stand-up", "Improv", "Sketch Comedy", "Musical Comedy", "Physical Comedy",
+    "Observational", "Political", "Roast", "Clean/Family-Friendly",
+    "Corporate Comedy", "Comedy Podcaster", "Comedy Actor", "Comedy Duo/Group"
+  ],
+  actor: [
+    "Film Actor", "TV Actor", "Theater Actor", "Voice Actor", "Commercial Actor",
+    "Background Actor", "Stunt Performer", "Motion Capture", "Child Actor",
+    "Method Actor", "Improv Actor", "Musical Theater", "Dramatic Actor",
+    "Comedy Actor", "Action Actor", "Voice Over Artist", "Narrator",
+    "Audiobook Narrator", "Character Actor", "Leading Actor", "Supporting Actor",
+    "Indie Film Actor", "Stage Actor"
+  ]
+};
+
+// Music genres (for music industry professions)
+const MUSIC_GENRES = [
+  "Rock", "Pop", "Hip Hop", "R&B", "Jazz", "Blues", "Country", "Electronic",
+  "Classical", "Folk", "Reggae", "Metal", "Punk", "Soul", "Funk", "Latin",
+  "World Music", "Gospel", "Indie", "Alternative", "Other"
+];
+
+// Music industry categories that should show genre filter
+const MUSIC_CATEGORIES = ['musician', 'audio_engineer', 'recording_studio'];
 
 // Distance radius options
 const RADIUS_OPTIONS = [
