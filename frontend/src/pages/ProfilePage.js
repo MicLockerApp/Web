@@ -11,6 +11,7 @@ import GoldMemberBadge from '../components/GoldMemberBadge';
 import VinylLogo from '../components/VinylLogo';
 import SpotifyPlayer from '../components/SpotifyPlayer';
 import Top8Fans from '../components/Top8Fans';
+import ProfileMap from '../components/ProfileMap';
 import useProfileVisitTracker from '../hooks/useProfileVisitTracker';
 
 // Music platform icons component
