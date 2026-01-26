@@ -353,6 +353,7 @@ const VenueBookingsPage = () => {
                       <div className="flex sm:flex-col gap-2">
                         <button
                           onClick={() => handleRespond(booking, 'accept')}
+                          data-testid={`accept-btn-${booking.id}`}
                           className="flex-1 sm:flex-none px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 flex items-center justify-center gap-2"
                         >
                           <Check className="w-4 h-4" />
@@ -360,6 +361,7 @@ const VenueBookingsPage = () => {
                         </button>
                         <button
                           onClick={() => handleRespond(booking, 'decline')}
+                          data-testid={`decline-btn-${booking.id}`}
                           className="flex-1 sm:flex-none px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 flex items-center justify-center gap-2"
                         >
                           <X className="w-4 h-4" />
