@@ -327,14 +327,27 @@ const MapPage = () => {
       markersRef.current.push(marker);
     });
 
-    // Fit bounds if we have users
+    // Fit bounds if we have users, but ensure we show at least the continental US
     if (users.length > 0 && !centerLocation) {
       const bounds = new window.google.maps.LatLngBounds();
+      
+      // Always include continental US bounds to ensure minimum zoom
+      const usBounds = {
+        north: 49.0, // Northern border
+        south: 25.0, // Southern border (Florida)
+        west: -125.0, // West coast
+        east: -67.0  // East coast
+      };
+      bounds.extend({ lat: usBounds.north, lng: usBounds.west });
+      bounds.extend({ lat: usBounds.south, lng: usBounds.east });
+      
+      // Also include user locations
       users.forEach(user => {
         if (user.coordinates) {
           bounds.extend({ lat: user.coordinates.lat, lng: user.coordinates.lng });
         }
       });
+      
       mapInstanceRef.current.fitBounds(bounds, { padding: 50 });
     }
 
