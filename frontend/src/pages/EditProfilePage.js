@@ -121,6 +121,7 @@ const EditProfilePage = () => {
     venue_name: '',
     venue_city: '',
     venue_capacity: '',
+    venue_website: '',
     merchant_products: [],
     business_name: '',
     comedian_specialties: [],
