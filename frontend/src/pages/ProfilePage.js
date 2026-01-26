@@ -382,16 +382,7 @@ const ProfilePage = () => {
                 <span>{formattedPhysicalAddress}</span>
               </div>
               <div className={`rounded-lg overflow-hidden border ${isDark ? 'border-dark-300' : 'border-gray-200'}`}>
-                <iframe
-                  title="Physical Location Map"
-                  width="100%"
-                  height="250"
-                  style={{ border: 0 }}
-                  loading="lazy"
-                  allowFullScreen
-                  referrerPolicy="no-referrer-when-downgrade"
-                  src={`https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${googleMapsQuery}`}
-                />
+                <ProfileMap address={googleMapsQuery} height={250} />
               </div>
               <a
                 href={`https://www.google.com/maps/search/?api=1&query=${googleMapsQuery}`}
