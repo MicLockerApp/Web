@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Send, ArrowLeft, User, Plus, X, Search, Trash2, MoreVertical } from 'lucide-react';
+import { Send, ArrowLeft, User, Plus, X, Search, Trash2, MoreVertical, Image, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { messagesAPI, usersAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
+import S3MediaUploader from '../components/S3MediaUploader';
 import analytics from '../services/analytics';
 
 const MessagesPage = () => {
