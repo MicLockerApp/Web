@@ -533,27 +533,6 @@ const MapPage = () => {
         )}
 
         <div ref={mapRef} className="w-full h-full" />
-
-        {/* Legend */}
-        <div className={`
-          absolute top-4 right-4 p-3 rounded-lg shadow-lg z-10
-          ${isDark ? 'bg-dark-400' : 'bg-white'}
-        `}>
-          <p className={`text-xs font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Legend</p>
-          <div className="space-y-1">
-            {CATEGORIES.slice(1).map((cat) => (
-              <div key={cat.value} className="flex items-center gap-2">
-                <div 
-                  className="w-3 h-3 rounded-full" 
-                  style={{ backgroundColor: getCategoryColor(cat.value) }}
-                />
-                <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {cat.label}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* User Info Modal (Bottom Sheet) */}
