@@ -10,6 +10,7 @@ import ChatWidget from './components/ChatWidget';
 import WelcomeBanner from './components/WelcomeBanner';
 import ReviewGatingWrapper from './components/ReviewGatingWrapper';
 import analytics from './services/analytics';
+import usePresenceTracker from './hooks/usePresenceTracker';
 
 // Pages
 import HomePage from './pages/HomePage';
