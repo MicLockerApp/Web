@@ -197,6 +197,36 @@ const VenueCalendarPage = () => {
     }
   };
 
+  const handleRespond = (event, type) => {
+    setSelectedEvent(event);
+    setResponseType(type);
+    setResponseMessage('');
+    setShowResponseModal(true);
+  };
+
+  const submitResponse = async () => {
+    if (!selectedEvent) return;
+    
+    setSubmitting(true);
+    try {
+      await api.patch(`/bookings/${selectedEvent.id}`, {
+        status: responseType === 'accept' ? 'accepted' : 'declined',
+        venue_response: responseMessage || null
+      });
+      
+      setShowResponseModal(false);
+      setSelectedEvent(null);
+      fetchCalendar();
+      
+      alert(`Booking request ${responseType === 'accept' ? 'accepted' : 'declined'} successfully! The artist has been notified.`);
+    } catch (error) {
+      console.error('Error responding to booking:', error);
+      alert(error.response?.data?.detail || 'Failed to respond to booking');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const renderCalendar = () => {
     const daysInMonth = getDaysInMonth(currentMonth, currentYear);
     const firstDay = getFirstDayOfMonth(currentMonth, currentYear);
