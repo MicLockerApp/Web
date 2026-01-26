@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 
 class EmployeeManagementTestSuite:
-    def __init__(self, base_url: str = "https://industry-pros.preview.emergentagent.com"):
+    def __init__(self, base_url: str = "https://eventsphere-21.preview.emergentagent.com"):
         self.base_url = base_url
         self.token = None
         self.admin_token = None
