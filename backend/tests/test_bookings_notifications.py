@@ -61,12 +61,15 @@ def venue_user(session):
     
     token = login_resp.json().get("access_token")
     
-    # Update user to be a venue
-    update_resp = session.patch(
-        f"{BASE_URL}/api/users/me",
+    # Update user to be a venue using complete-profile endpoint
+    update_resp = session.post(
+        f"{BASE_URL}/api/auth/complete-profile",
         headers={"Authorization": f"Bearer {token}"},
         json={"category": "venue"}
     )
+    
+    if update_resp.status_code != 200:
+        print(f"Warning: Could not set venue category: {update_resp.text}")
     
     print(f"✓ Created venue user: {username}, ID: {user_id}")
     return {"id": user_id, "token": token, "username": username}
@@ -105,12 +108,15 @@ def artist_user(session):
     
     token = login_resp.json().get("access_token")
     
-    # Update user to be a musician
-    update_resp = session.patch(
-        f"{BASE_URL}/api/users/me",
+    # Update user to be a musician using complete-profile endpoint
+    update_resp = session.post(
+        f"{BASE_URL}/api/auth/complete-profile",
         headers={"Authorization": f"Bearer {token}"},
         json={"category": "musician"}
     )
+    
+    if update_resp.status_code != 200:
+        print(f"Warning: Could not set musician category: {update_resp.text}")
     
     print(f"✓ Created artist user: {username}, ID: {user_id}")
     return {"id": user_id, "token": token, "username": username}
@@ -457,9 +463,9 @@ class TestDeclineBooking:
         
         token = login_resp.json().get("access_token")
         
-        # Update to venue
-        session.patch(
-            f"{BASE_URL}/api/users/me",
+        # Update to venue using complete-profile endpoint
+        session.post(
+            f"{BASE_URL}/api/auth/complete-profile",
             headers={"Authorization": f"Bearer {token}"},
             json={"category": "venue"}
         )
@@ -499,9 +505,9 @@ class TestDeclineBooking:
         
         token = login_resp.json().get("access_token")
         
-        # Update to musician
-        session.patch(
-            f"{BASE_URL}/api/users/me",
+        # Update to musician using complete-profile endpoint
+        session.post(
+            f"{BASE_URL}/api/auth/complete-profile",
             headers={"Authorization": f"Bearer {token}"},
             json={"category": "musician"}
         )
