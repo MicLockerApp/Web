@@ -8,9 +8,82 @@ from config import settings
 from utils.helpers import serialize_docs, serialize_doc
 from datetime import datetime, timedelta
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional, List
 import uuid
 import secrets
+
+router = APIRouter(prefix="/admin", tags=["Admin"])
+
+# Role hierarchy: owner > admin > manager > employee > user
+ROLE_HIERARCHY = {
+    "owner": 5,
+    "admin": 4,
+    "manager": 3,
+    "employee": 2,
+    "user": 1
+}
+
+# Owner emails that cannot be demoted
+PROTECTED_OWNER_EMAILS = [
+    "james.mcdougall@miclockerapp.com",
+    "info@miclockerapp.com"
+]
+
+# Super admin account - can delete ANY account including owners
+SUPER_ADMIN_EMAIL = "info@miclockerapp.com"
+
+def get_role_level(role: str) -> int:
+    """Get numeric level for a role (higher = more permissions)"""
+    return ROLE_HIERARCHY.get(role, 1)
+
+def can_modify_role(actor_role: str, target_current_role: str, target_new_role: str = None) -> bool:
+    """Check if actor can modify target's role"""
+    actor_level = get_role_level(actor_role)
+    target_level = get_role_level(target_current_role)
+    
+    # Only owners can modify other owners
+    if target_current_role == "owner" and actor_role != "owner":
+        return False
+    
+    # Actor must have higher or equal level than target
+    if actor_level < target_level:
+        return False
+    
+    # If changing role, actor must have higher or equal level than new role too
+    if target_new_role:
+        new_role_level = get_role_level(target_new_role)
+        if actor_level < new_role_level:
+            return False
+    
+    return True
+
+def can_delete_user(actor_role: str, target_role: str, target_email: str, actor_email: str = None) -> bool:
+    """Check if actor can delete target user"""
+    # Super admin (miclocker.support / info@miclockerapp.com) can delete ANYONE except themselves
+    if actor_email == SUPER_ADMIN_EMAIL:
+        # Cannot delete yourself
+        if target_email == SUPER_ADMIN_EMAIL:
+            return False
+        # Can delete anyone else, including other owners
+        return True
+    
+    # Cannot delete protected owner accounts (for non-super-admins)
+    if target_email in PROTECTED_OWNER_EMAILS:
+        return False
+    
+    # Owners can delete anyone except protected owners
+    if actor_role == "owner":
+        return True
+    
+    # Admins can delete admin and below (but not owners)
+    if actor_role == "admin":
+        return target_role in ["admin", "manager", "employee", "user"]
+    
+    # Managers can delete employees and users
+    if actor_role == "manager":
+        return target_role in ["employee", "user"]
+    
+    return False
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -26,6 +99,83 @@ class UpdateEmployeeDetailsRequest(BaseModel):
     username: Optional[str] = None
     email: Optional[EmailStr] = None
 
+class ChangeUserRoleRequest(BaseModel):
+    role: str  # 'owner', 'admin', 'manager', 'employee', 'user'
+
+class ResetAnalyticsRequest(BaseModel):
+    """Request to reset specific analytics data"""
+    reset_orders: bool = False
+    reset_analytics_events: bool = False
+    reset_analytics_rollups: bool = False
+    reset_support_tickets: bool = False
+    reset_all: bool = False
+    confirmation: str  # Must be "CONFIRM_RESET" to proceed
+
+# Helper to check if user is admin or owner
+def is_admin_or_owner(user: dict) -> bool:
+    """Check if user has admin or owner role"""
+    role = user.get("role", "")
+    is_admin = user.get("is_admin", False)
+    return role in ["owner", "admin"] or is_admin
+
+@router.post("/reset-analytics")
+async def reset_analytics_data(
+    request: ResetAnalyticsRequest,
+    admin_user: dict = Depends(get_admin_user)
+):
+    """
+    Reset analytics and seed data from the database.
+    Only available to admin or owner roles.
+    Requires confirmation string "CONFIRM_RESET" to proceed.
+    """
+    # Verify admin/owner role
+    if not is_admin_or_owner(admin_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Admin or Owner can reset analytics data"
+        )
+    
+    # Verify confirmation
+    if request.confirmation != "CONFIRM_RESET":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid confirmation. Must provide 'CONFIRM_RESET' to proceed."
+        )
+    
+    db = get_database()
+    results = {}
+    
+    # Reset orders (but keep structure)
+    if request.reset_orders or request.reset_all:
+        result = await db.orders.delete_many({})
+        results["orders_deleted"] = result.deleted_count
+    
+    # Reset analytics events
+    if request.reset_analytics_events or request.reset_all:
+        result = await db.analytics_events.delete_many({})
+        results["analytics_events_deleted"] = result.deleted_count
+    
+    # Reset analytics rollups
+    if request.reset_analytics_rollups or request.reset_all:
+        result = await db.analytics_rollups.delete_many({})
+        results["analytics_rollups_deleted"] = result.deleted_count
+    
+    # Reset support tickets
+    if request.reset_support_tickets or request.reset_all:
+        result = await db.support_tickets.delete_many({})
+        results["support_tickets_deleted"] = result.deleted_count
+    
+    # Log the action
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(f"Analytics reset by {admin_user.get('username')}: {results}")
+    
+    return {
+        "message": "Analytics data reset successfully",
+        "reset_by": admin_user.get("username"),
+        "results": results
+    }
+
 @router.get("/analytics")
 async def get_analytics(staff_user: dict = Depends(get_staff_user)):
     """Get platform analytics (staff only - filtered by role)"""
@@ -40,7 +190,7 @@ async def get_analytics(staff_user: dict = Depends(get_staff_user)):
     # Employee can only see limited data
     is_owner = is_admin and employee_role in [None, "admin"]
     is_manager = employee_role == "manager"
-    is_employee_role = employee_role == "employee"
+    is_employee_role = employee_role == "employee"  # noqa: F841
     
     # Financial data - only for admin/owner
     total_gmv = 0
@@ -298,7 +448,7 @@ async def delete_user(
     user_id: str,
     admin_user: dict = Depends(get_admin_user)
 ):
-    """Permanently delete a user and all their data (admin only)"""
+    """Permanently delete a user and all their data (role-based permissions)"""
     db = get_database()
     
     user = await db.users.find_one({"id": user_id})
@@ -308,10 +458,29 @@ async def delete_user(
             detail="User not found"
         )
     
-    if user.get("is_admin") or user.get("is_employee") or user.get("is_first_user"):
+    # Get roles - handle missing role field
+    actor_role = admin_user.get("role")
+    actor_email = admin_user.get("email", "")
+    if not actor_role:
+        # Fallback: check is_admin flag
+        if admin_user.get("is_admin"):
+            actor_role = "owner"  # Treat admins as owners for backwards compatibility
+        else:
+            actor_role = "user"
+    
+    target_role = user.get("role", "user")
+    target_email = user.get("email", "")
+    
+    # Debug logging
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"Delete attempt: actor_email={actor_email}, actor_role={actor_role}, target_role={target_role}, target_email={target_email}")
+    
+    # Check if actor can delete target (pass actor_email for super admin check)
+    if not can_delete_user(actor_role, target_role, target_email, actor_email):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot delete admin, employee, or owner users"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot delete this user. Protected accounts or insufficient permissions."
         )
     
     # Delete user's listings
@@ -346,6 +515,83 @@ async def delete_user(
     await db.users.delete_one({"id": user_id})
     
     return {"message": "User and all associated data deleted permanently"}
+
+@router.put("/users/{user_id}/role")
+async def change_user_role(
+    user_id: str,
+    request: ChangeUserRoleRequest,
+    admin_user: dict = Depends(get_admin_user)
+):
+    """Change a user's role (permission-based)"""
+    db = get_database()
+    
+    # Validate role
+    if request.role not in ROLE_HIERARCHY:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid role. Must be one of: {', '.join(ROLE_HIERARCHY.keys())}"
+        )
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Get roles
+    actor_role = admin_user.get("role", "admin" if admin_user.get("is_admin") else "user")
+    target_current_role = user.get("role", "user")
+    target_email = user.get("email", "")
+    
+    # Protected owner emails cannot be demoted from owner
+    if target_email in PROTECTED_OWNER_EMAILS and request.role != "owner":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This account is a protected owner and cannot be demoted"
+        )
+    
+    # Check if actor can make this change
+    if not can_modify_role(actor_role, target_current_role, request.role):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions to change this user's role"
+        )
+    
+    # Update role and related flags
+    update_data = {
+        "role": request.role,
+        "updated_at": datetime.utcnow()
+    }
+    
+    # Set is_admin and is_employee based on role
+    if request.role == "owner":
+        update_data["is_admin"] = True
+        update_data["is_employee"] = False
+        update_data["employee_role"] = None
+    elif request.role == "admin":
+        update_data["is_admin"] = True
+        update_data["is_employee"] = False
+        update_data["employee_role"] = None
+    elif request.role in ["manager", "employee"]:
+        update_data["is_admin"] = False
+        update_data["is_employee"] = True
+        update_data["employee_role"] = request.role
+    else:  # user
+        update_data["is_admin"] = False
+        update_data["is_employee"] = False
+        update_data["employee_role"] = None
+    
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": update_data}
+    )
+    
+    return {
+        "message": f"User role changed to {request.role}",
+        "user_id": user_id,
+        "new_role": request.role
+    }
 
 @router.get("/listings")
 async def get_all_listings(
@@ -705,3 +951,49 @@ async def delete_employee(
     await db.users.delete_one({"id": employee_id})
     
     return {"message": "Employee deleted"}
+
+
+
+@router.post("/migrations/gold-members")
+async def migrate_gold_members(admin_user: dict = Depends(get_admin_user)):
+    """
+    One-time migration to set is_gold_member for existing users.
+    Sets is_gold_member=True for the first 300 non-employee users based on signup order.
+    """
+    db = get_database()
+    
+    # Get all non-employee users sorted by creation date
+    cursor = db.users.find(
+        {"is_employee": {"$ne": True}},
+        {"id": 1, "username": 1, "created_at": 1}
+    ).sort("created_at", 1).limit(300)
+    
+    users = await cursor.to_list(length=300)
+    
+    updated_count = 0
+    for index, user in enumerate(users):
+        signup_number = index + 1
+        result = await db.users.update_one(
+            {"id": user["id"]},
+            {"$set": {
+                "is_gold_member": True,
+                "signup_number": signup_number,
+                "has_lifetime_free_fees": True
+            }}
+        )
+        if result.modified_count > 0:
+            updated_count += 1
+    
+    # Set is_gold_member=False for users after the first 300
+    await db.users.update_many(
+        {
+            "is_employee": {"$ne": True},
+            "signup_number": {"$exists": False}
+        },
+        {"$set": {"is_gold_member": False}}
+    )
+    
+    return {
+        "message": f"Migration complete. Updated {updated_count} users as Gold Members.",
+        "gold_member_count": len(users)
+    }

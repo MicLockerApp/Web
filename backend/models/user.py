@@ -3,8 +3,8 @@ from typing import Optional, List
 from datetime import datetime
 import uuid
 
-# User Categories
-USER_CATEGORIES = ["musician", "audio_engineer", "recording_studio", "venue", "merchant"]
+# User Categories (expanded with Comedians and Actors to match Gig Board)
+USER_CATEGORIES = ["musician", "audio_engineer", "recording_studio", "venue", "merchant", "comedian", "actor"]
 
 # Musician Instruments
 MUSICIAN_INSTRUMENTS = [
@@ -61,12 +61,33 @@ MERCHANT_PRODUCT_TYPES = [
     "Cables", "Strings", "Picks", "Capos", "Tuners", "Other Merchandise"
 ]
 
+# Comedian Specialties
+COMEDIAN_SPECIALTIES = [
+    "Stand-up", "Improv", "Sketch Comedy", "Musical Comedy", "Physical Comedy",
+    "Observational", "Political", "Roast", "Clean/Family-Friendly",
+    "Corporate Comedy", "Comedy Podcaster", "Comedy Actor", "Comedy Duo/Group"
+]
+
+# Actor Specialties
+ACTOR_SPECIALTIES = [
+    "Film Actor", "TV Actor", "Theater Actor", "Voice Actor", "Commercial Actor",
+    "Background Actor", "Stunt Performer", "Motion Capture", "Child Actor",
+    "Method Actor", "Improv Actor", "Musical Theater", "Dramatic Actor",
+    "Comedy Actor", "Action Actor", "Voice Over Artist", "Narrator",
+    "Audiobook Narrator", "Character Actor", "Leading Actor", "Supporting Actor",
+    "Indie Film Actor", "Stage Actor"
+]
+
 class UserBase(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
+    first_name: Optional[str] = Field(None, max_length=50)
+    last_name: Optional[str] = Field(None, max_length=50)
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8, description="Password must be at least 8 characters")
+    first_name: str = Field(..., min_length=1, max_length=50, description="First name is required")
+    last_name: str = Field(..., min_length=1, max_length=50, description="Last name is required")
 
 class UserCategoryUpdate(BaseModel):
     category: str
@@ -84,9 +105,14 @@ class UserCategoryUpdate(BaseModel):
     venue_name: Optional[str] = None
     venue_city: Optional[str] = None
     venue_capacity: Optional[str] = None
+    venue_website: Optional[str] = None  # Venue's website URL
     # Merchant fields
     merchant_products: Optional[List[str]] = None
     business_name: Optional[str] = None
+    # Comedian fields
+    comedian_specialties: Optional[List[str]] = None
+    # Actor fields
+    actor_specialties: Optional[List[str]] = None
     # Contact info (optional during registration)
     phone: Optional[str] = None
     shipping_address: Optional[dict] = None
@@ -94,6 +120,9 @@ class UserCategoryUpdate(BaseModel):
     same_as_mailing: Optional[bool] = None  # Whether physical = mailing
 
 class UserProfileUpdate(BaseModel):
+    username: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     bio: Optional[str] = None
     location: Optional[str] = None
     profile_image: Optional[str] = None
@@ -107,17 +136,19 @@ class UserProfileUpdate(BaseModel):
     venue_name: Optional[str] = None
     venue_city: Optional[str] = None
     venue_capacity: Optional[str] = None
+    venue_website: Optional[str] = None  # Venue's website URL
     merchant_products: Optional[List[str]] = None
     business_name: Optional[str] = None
+    comedian_specialties: Optional[List[str]] = None
+    actor_specialties: Optional[List[str]] = None
     # Contact information
     phone: Optional[str] = None
     website: Optional[str] = None
-    instagram: Optional[str] = None
-    twitter: Optional[str] = None
-    facebook: Optional[str] = None
-    youtube: Optional[str] = None
-    soundcloud: Optional[str] = None
+    # Music platforms only
+    apple_music: Optional[str] = None
     spotify: Optional[str] = None
+    soundcloud: Optional[str] = None
+    spotify_embed_url: Optional[str] = None
     # Shipping address (mailing)
     shipping_address: Optional[dict] = None
     # Physical address
@@ -129,12 +160,17 @@ class UserProfileUpdate(BaseModel):
     show_address: Optional[bool] = None
     show_social: Optional[bool] = None
     show_physical_address: Optional[bool] = None
+    # Top 8 Fans settings
+    top_fans_visibility: Optional[str] = None  # "public", "private", "hidden"
+    opt_out_of_top_fans: Optional[bool] = None
 
 class UserInDB(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     username: str
     email: str
     hashed_password: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     category: Optional[str] = None
     sub_categories: Optional[List[str]] = None
     is_admin: bool = False
@@ -144,6 +180,9 @@ class UserInDB(BaseModel):
     email_verified: bool = False  # Email verification status
     # Lifetime 0% platform fee for first 300 users
     has_lifetime_free_fees: bool = False
+    # Gold Member badge for first 300 users
+    is_gold_member: bool = False
+    signup_number: Optional[int] = None  # Track signup order
     # Employee system - employees don't count toward user count
     is_employee: bool = False
     # Employee role: 'admin', 'manager', 'employee' (only applies if is_admin or is_employee)
@@ -157,12 +196,11 @@ class UserInDB(BaseModel):
     # Contact information
     phone: Optional[str] = None
     website: Optional[str] = None
-    instagram: Optional[str] = None
-    twitter: Optional[str] = None
-    facebook: Optional[str] = None
-    youtube: Optional[str] = None
-    soundcloud: Optional[str] = None
+    # Music platforms only
+    apple_music: Optional[str] = None
     spotify: Optional[str] = None
+    soundcloud: Optional[str] = None
+    spotify_embed_url: Optional[str] = None
     
     # Category-specific fields
     genre: Optional[str] = None  # Keep for backward compatibility
@@ -173,6 +211,7 @@ class UserInDB(BaseModel):
     venue_name: Optional[str] = None
     venue_city: Optional[str] = None
     venue_capacity: Optional[str] = None
+    venue_website: Optional[str] = None  # Venue's website URL
     merchant_products: Optional[List[str]] = None
     business_name: Optional[str] = None
     
@@ -193,22 +232,35 @@ class UserInDB(BaseModel):
     show_social: bool = True  # Default to showing social media
     show_physical_address: bool = False  # Default to NOT showing physical address
     
+    # Top 8 Fans settings
+    top_fans_visibility: str = "public"  # "public", "private", "hidden"
+    opt_out_of_top_fans: bool = False  # Don't show me as a fan on other profiles
+    
+    # Role hierarchy: owner > admin > manager > employee > user
+    role: str = "user"  # owner, admin, manager, employee, user
+    
     # Stats
     rating: float = 0.0
     review_count: int = 0
     total_sales: int = 0
     total_purchases: int = 0  # Track completed purchases
     
-    # Review Gating - After first transaction, users must review before next action
-    pending_review_order_id: Optional[str] = None  # Order that needs to be reviewed
-    pending_review_type: Optional[str] = None  # "buyer" or "seller" - which role needs review
-    first_purchase_completed: bool = False  # Has made at least one purchase
-    first_sale_completed: bool = False  # Has made at least one sale
+    # Special badges
+    is_founder: bool = False
+    is_gold_member: bool = False
+    
+    # Review Gating - Enhanced system
+    pending_review_order_id: Optional[str] = None  # Order that needs review
+    pending_review_type: Optional[str] = None  # "buyer" or "seller"
+    pending_review_locked: bool = False  # Site functionality locked until review
+    must_submit_ticket_order_id: Optional[str] = None  # Order requiring support ticket (14-day non-receipt)
+    first_purchase_completed: bool = False
+    first_sale_completed: bool = False
     
     # Trading System - 1 free trade per month
-    last_trade_date: Optional[datetime] = None  # Last trade completed
-    trades_this_month: int = 0  # Counter reset monthly
-    has_seen_trade_rules: bool = False  # Shown the rules modal
+    last_trade_date: Optional[datetime] = None
+    trades_this_month: int = 0
+    has_seen_trade_rules: bool = False
     
     # Stripe Connect for seller payouts
     stripe_connect_account_id: Optional[str] = None
@@ -221,26 +273,31 @@ class UserResponse(BaseModel):
     id: str
     username: str
     email: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     category: Optional[str] = None
     sub_categories: Optional[List[str]] = None
+    role: str = "user"  # owner, admin, manager, employee, user
     is_admin: bool = False
     is_employee: bool = False
     employee_role: Optional[str] = None
     profile_completed: bool = False
     email_verified: bool = False
     has_lifetime_free_fees: bool = False
+    is_gold_member: bool = False
+    is_founder: bool = False
+    signup_number: Optional[int] = None
     bio: Optional[str] = None
     location: Optional[str] = None
     profile_image: Optional[str] = None
     # Contact info
     phone: Optional[str] = None
     website: Optional[str] = None
-    instagram: Optional[str] = None
-    twitter: Optional[str] = None
-    facebook: Optional[str] = None
-    youtube: Optional[str] = None
-    soundcloud: Optional[str] = None
+    # Music platforms only
+    apple_music: Optional[str] = None
     spotify: Optional[str] = None
+    soundcloud: Optional[str] = None
+    spotify_embed_url: Optional[str] = None
     # Category fields
     genre: Optional[str] = None  # Backward compatibility
     genres: Optional[List[str]] = None  # New multi-select genres
@@ -250,6 +307,7 @@ class UserResponse(BaseModel):
     venue_name: Optional[str] = None
     venue_city: Optional[str] = None
     venue_capacity: Optional[str] = None
+    venue_website: Optional[str] = None  # Venue's website URL
     merchant_products: Optional[List[str]] = None
     business_name: Optional[str] = None
     # Favorites
@@ -265,6 +323,9 @@ class UserResponse(BaseModel):
     show_address: bool = False
     show_social: bool = True
     show_physical_address: bool = False
+    # Top 8 Fans settings
+    top_fans_visibility: str = "public"
+    opt_out_of_top_fans: bool = False
     # Stats
     rating: float = 0.0
     review_count: int = 0
@@ -296,12 +357,11 @@ class UserPublicProfile(BaseModel):
     # Contact info (public)
     phone: Optional[str] = None
     website: Optional[str] = None
-    instagram: Optional[str] = None
-    twitter: Optional[str] = None
-    facebook: Optional[str] = None
-    youtube: Optional[str] = None
-    soundcloud: Optional[str] = None
+    # Music platforms only
+    apple_music: Optional[str] = None
     spotify: Optional[str] = None
+    soundcloud: Optional[str] = None
+    spotify_embed_url: Optional[str] = None
     # Shipping address
     shipping_address: Optional[dict] = None
     # Physical address
@@ -315,6 +375,8 @@ class UserPublicProfile(BaseModel):
     studio_offerings: Optional[List[str]] = None
     venue_name: Optional[str] = None
     venue_city: Optional[str] = None
+    venue_capacity: Optional[str] = None
+    venue_website: Optional[str] = None  # Venue's website URL
     merchant_products: Optional[List[str]] = None
     business_name: Optional[str] = None
     # Privacy settings
@@ -323,11 +385,16 @@ class UserPublicProfile(BaseModel):
     show_address: bool = False
     show_social: bool = True
     show_physical_address: bool = False
+    # Top 8 Fans settings (for public profiles)
+    top_fans_visibility: str = "public"
     # Stats
     rating: float = 0.0
     review_count: int = 0
     total_sales: int = 0
     total_purchases: int = 0
+    # Special badges
+    is_founder: bool = False
+    is_gold_member: bool = False
     # Review gating
     pending_review_order_id: Optional[str] = None
     pending_review_type: Optional[str] = None

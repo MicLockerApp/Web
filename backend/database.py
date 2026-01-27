@@ -2,6 +2,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from config import settings
 import logging
 import os
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -11,31 +12,81 @@ class Database:
 
 db = Database()
 
+def extract_db_name_from_url(mongo_url: str) -> str:
+    """
+    Extract database name from MongoDB connection string.
+    
+    Examples:
+    - mongodb+srv://user:pass@cluster.mongodb.net/mydb?... -> mydb
+    - mongodb://localhost:27017/testdb -> testdb
+    - mongodb://localhost:27017 -> None (use default)
+    
+    Also extracts appName parameter as fallback (common in Emergent deployments)
+    """
+    try:
+        # Parse the URL
+        parsed = urlparse(mongo_url.replace("mongodb+srv://", "mongodb://"))
+        
+        # Get the path (database name is after the /)
+        path = parsed.path
+        if path and path.startswith("/"):
+            db_name = path[1:].split("?")[0]  # Remove leading / and query params
+            if db_name:
+                return db_name
+        
+        # Fallback: Try to extract appName from query string (Emergent convention)
+        # The appName often matches the database name in Emergent's setup
+        if "appName=" in mongo_url:
+            import re
+            match = re.search(r'appName=([^&]+)', mongo_url)
+            if match:
+                app_name = match.group(1)
+                logger.info(f"Extracted appName from URL: {app_name}")
+                return app_name
+                
+    except Exception as e:
+        logger.warning(f"Could not parse database name from URL: {e}")
+    
+    return None
+
 def get_database_name() -> str:
     """
-    Get database name.
+    Get database name with the following priority:
+    1. DB_NAME environment variable (set by Emergent platform)
+    2. Database name extracted from MONGO_URL connection string
+    3. Default to 'test' for Atlas (MongoDB default) or environment-based for local
     
-    CRITICAL: If we detect MongoDB Atlas (mongodb+srv://), we're in PRODUCTION
-    regardless of what ENVIRONMENT variable says.
-    
-    Production = DB_PROD
-    Development = DB_DEVELOP
+    This ensures compatibility with Emergent's managed MongoDB Atlas.
     """
     mongo_url = os.getenv("MONGO_URL", "mongodb://localhost:27017")
     
-    # If using Atlas (mongodb+srv://), this is PRODUCTION - ignore ENVIRONMENT variable
-    if "mongodb+srv://" in mongo_url or "mongodb.net" in mongo_url:
-        logger.info("ATLAS DETECTED: Forcing PRODUCTION mode with DB_PROD")
-        return "DB_PROD"
+    # Priority 1: Check for explicit DB_NAME env var (set by Emergent platform)
+    db_name_env = os.getenv("DB_NAME")
+    if db_name_env:
+        logger.info(f"Using database from DB_NAME env var: {db_name_env}")
+        return db_name_env
     
-    # For local MongoDB, check ENVIRONMENT
-    env = os.getenv("ENVIRONMENT", "development").lower()
-    if env in ["production", "prod"]:
-        db_name = "DB_PROD"
+    # Priority 2: Extract from MONGO_URL connection string
+    db_from_url = extract_db_name_from_url(mongo_url)
+    if db_from_url:
+        logger.info(f"Using database from MONGO_URL: {db_from_url}")
+        return db_from_url
+    
+    # Priority 3: For Atlas/production, use 'test' (MongoDB default database)
+    # For local development, use environment-based name
+    is_atlas = "mongodb+srv://" in mongo_url or "mongodb.net" in mongo_url
+    
+    if is_atlas:
+        # Use MongoDB's default database 'test' for Atlas
+        # This is the database Emergent's MongoDB user has access to
+        db_name = "test"
+        logger.info(f"Using default Atlas database: {db_name}")
     else:
-        db_name = "DB_DEVELOP"
+        # Local development
+        env = os.getenv("ENVIRONMENT", "development").lower()
+        db_name = "miclocker_dev"
+        logger.info(f"Using local database: {db_name} (environment: {env})")
     
-    logger.info(f"Using database: {db_name} (environment: {env})")
     return db_name
 
 async def connect_to_mongo():

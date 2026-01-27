@@ -7,7 +7,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import {
   Ticket, ChevronLeft, RefreshCw, Filter, Search, Clock, User,
   MessageSquare, CheckCircle, AlertCircle, Send, XCircle,
-  ChevronDown, Mail, Calendar, ArrowLeft
+  ChevronDown, Mail, Calendar, ArrowLeft, Paperclip, Image, FileText, ExternalLink
 } from 'lucide-react';
 
 const TICKET_STATUSES = ['open', 'in_progress', 'waiting_on_customer', 'resolved', 'closed'];
@@ -268,6 +268,12 @@ const TicketListView = () => {
                           <MessageSquare className="w-3 h-3" />
                           {ticket.replies?.length || 0} replies
                         </span>
+                        {ticket.attachments && ticket.attachments.length > 0 && (
+                          <span className="flex items-center gap-1 text-primary">
+                            <Paperclip className="w-3 h-3" />
+                            {ticket.attachments.length} {ticket.attachments.length === 1 ? 'file' : 'files'}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className={`text-right text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
@@ -512,6 +518,74 @@ const TicketDetailView = () => {
             </div>
           </div>
         </div>
+
+        {/* Attachments Section */}
+        {ticket.attachments && ticket.attachments.length > 0 && (
+          <div className={`rounded-xl p-6 mb-6 ${isDark ? 'bg-dark-400' : 'bg-white shadow'}`} data-testid="ticket-attachments">
+            <div className="flex items-center gap-2 mb-4">
+              <Paperclip className="w-5 h-5 text-primary" />
+              <h3 className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                Attachments ({ticket.attachments.length})
+              </h3>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {ticket.attachments.map((attachment, index) => {
+                const isImage = attachment.type?.startsWith('image/');
+                return (
+                  <div
+                    key={index}
+                    className={`rounded-lg overflow-hidden border ${isDark ? 'border-dark-300 bg-dark-500' : 'border-gray-200 bg-gray-50'}`}
+                  >
+                    {isImage ? (
+                      <a href={attachment.url} target="_blank" rel="noopener noreferrer" className="block">
+                        <img
+                          src={attachment.url}
+                          alt={attachment.filename || `Attachment ${index + 1}`}
+                          className="w-full h-40 object-cover hover:opacity-90 transition-opacity"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                        <div className="hidden w-full h-40 items-center justify-center bg-dark-300">
+                          <AlertCircle className="w-8 h-8 text-gray-500" />
+                        </div>
+                      </a>
+                    ) : (
+                      <a
+                        href={attachment.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`flex items-center justify-center h-40 ${isDark ? 'bg-dark-300' : 'bg-gray-100'} hover:opacity-90 transition-opacity`}
+                      >
+                        <FileText className="w-12 h-12 text-gray-400" />
+                      </a>
+                    )}
+                    <div className={`p-3 border-t ${isDark ? 'border-dark-300' : 'border-gray-200'}`}>
+                      <p className={`text-sm truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                        {attachment.filename || 'Unnamed file'}
+                      </p>
+                      <div className="flex items-center justify-between mt-1">
+                        <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                          {attachment.type?.split('/')[1]?.toUpperCase() || 'FILE'}
+                        </span>
+                        <a
+                          href={attachment.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:text-yellow-400 text-xs flex items-center gap-1"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          Open
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Replies */}
         {ticket.replies && ticket.replies.length > 0 && (

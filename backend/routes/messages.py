@@ -99,12 +99,21 @@ async def send_message(
         sender_username=current_user["username"],
         content=message_data.content,
         listing_id=message_data.listing_id,
-        listing_title=listing_title
+        listing_title=listing_title,
+        images=message_data.images  # Include attached images
     )
     
     await db.messages.insert_one(message.model_dump())
     
-    # Update thread
+    # Update thread - show image indicator in last message preview
+    last_message_preview = message_data.content[:100]
+    if message_data.images and len(message_data.images) > 0:
+        image_count = len(message_data.images)
+        if not message_data.content.strip():
+            last_message_preview = f"📷 {image_count} image{'s' if image_count > 1 else ''}"
+        else:
+            last_message_preview = f"📷 {last_message_preview}"
+    
     unread_count = thread.get("unread_count", {})
     unread_count[recipient["id"]] = unread_count.get(recipient["id"], 0) + 1
     
@@ -112,7 +121,7 @@ async def send_message(
         {"id": thread["id"]},
         {
             "$set": {
-                "last_message": message_data.content[:100],
+                "last_message": last_message_preview,
                 "last_message_at": datetime.utcnow(),
                 "last_sender_id": current_user["id"],
                 "unread_count": unread_count,
@@ -382,3 +391,100 @@ async def mark_thread_read(
     )
     
     return {"message": "Thread marked as read"}
+
+
+@router.delete("/messages/{message_id}")
+async def delete_message(
+    message_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete a specific message (only sender can delete)"""
+    db = get_database()
+    
+    message = await db.messages.find_one({"id": message_id})
+    if not message:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Message not found"
+        )
+    
+    # Only the sender can delete their own message
+    if message["sender_id"] != current_user["id"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only delete your own messages"
+        )
+    
+    # Delete the message
+    await db.messages.delete_one({"id": message_id})
+    
+    # Update the thread's last message if this was the last one
+    thread = await db.message_threads.find_one({"id": message["thread_id"]})
+    if thread:
+        # Get the new last message
+        last_msg = await db.messages.find_one(
+            {"thread_id": message["thread_id"]},
+            sort=[("created_at", -1)]
+        )
+        
+        if last_msg:
+            await db.message_threads.update_one(
+                {"id": message["thread_id"]},
+                {
+                    "$set": {
+                        "last_message": last_msg["content"][:100],
+                        "last_message_at": last_msg["created_at"],
+                        "last_sender_id": last_msg["sender_id"],
+                        "updated_at": datetime.utcnow()
+                    }
+                }
+            )
+        else:
+            # No messages left, clear last message
+            await db.message_threads.update_one(
+                {"id": message["thread_id"]},
+                {
+                    "$set": {
+                        "last_message": None,
+                        "last_message_at": None,
+                        "last_sender_id": None,
+                        "updated_at": datetime.utcnow()
+                    }
+                }
+            )
+    
+    logger.info(f"User {current_user['id']} deleted message {message_id}")
+    
+    return {"message": "Message deleted successfully"}
+
+
+@router.delete("/threads/{thread_id}")
+async def delete_thread(
+    thread_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete an entire conversation thread (for current user only - hides from their view)"""
+    db = get_database()
+    
+    thread = await db.message_threads.find_one({"id": thread_id})
+    if not thread:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Thread not found"
+        )
+    
+    if current_user["id"] not in thread["participants"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this thread"
+        )
+    
+    # Option 1: Hard delete - remove the thread and all messages entirely
+    # This removes it for both users
+    await db.messages.delete_many({"thread_id": thread_id})
+    await db.message_threads.delete_one({"id": thread_id})
+    
+    logger.info(f"User {current_user['id']} deleted thread {thread_id}")
+    
+    return {"message": "Conversation deleted successfully"}
+

@@ -56,10 +56,25 @@ async def create_listing(
             detail=f"Invalid condition. Must be one of: {LISTING_CONDITIONS}"
         )
     
+    # Convert S3 media to ListingMedia format
+    media_items = []
+    if listing_data.media:
+        for i, item in enumerate(listing_data.media):
+            media_items.append(ListingMedia(
+                url=item.url,
+                media_type=item.type,
+                is_primary=(i == 0 or item.is_primary),
+                order=i
+            ))
+    
+    # Create listing data without the S3 media field and None values
+    listing_dict = {k: v for k, v in listing_data.model_dump(exclude={'media'}).items() if v is not None}
+    
     listing = ListingInDB(
         seller_id=current_user["id"],
         seller_username=current_user["username"],
-        **listing_data.model_dump()
+        media=media_items,  # Add converted media
+        **listing_dict
     )
     
     await db.listings.insert_one(listing.model_dump())
@@ -83,6 +98,8 @@ async def create_listing(
     
     result = listing.model_dump()
     result["seller_rating"] = current_user.get("rating", 0)
+    result["seller_review_count"] = current_user.get("review_count", 0)
+    result["seller_profile_image"] = current_user.get("profile_image")
     return serialize_doc(result)
 
 @router.get("", response_model=dict)
@@ -144,7 +161,7 @@ async def search_listings(
         }
     })
     
-    # Extract seller rating from the lookup result
+    # Extract seller rating, review count, and profile image from the lookup result
     pipeline.append({
         "$addFields": {
             "seller_rating": {
@@ -152,11 +169,20 @@ async def search_listings(
                     {"$arrayElemAt": ["$seller_info.rating", 0]},
                     0
                 ]
+            },
+            "seller_review_count": {
+                "$ifNull": [
+                    {"$arrayElemAt": ["$seller_info.review_count", 0]},
+                    0
+                ]
+            },
+            "seller_profile_image": {
+                "$arrayElemAt": ["$seller_info.profile_image", 0]
             }
         }
     })
     
-    # Remove the seller_info array (we only needed the rating)
+    # Remove the seller_info array (we only needed the rating, review_count, and profile_image)
     pipeline.append({"$project": {"seller_info": 0}})
     
     listings = await db.listings.aggregate(pipeline).to_list(length=limit)
@@ -174,13 +200,38 @@ async def get_featured_listings(limit: int = Query(8, ge=1, le=20)):
     """Get featured/trending listings"""
     db = get_database()
     
-    # Get listings with most views/favorites
-    cursor = db.listings.find({"status": "active"}).sort([
-        ("view_count", -1),
-        ("created_at", -1)
-    ]).limit(limit)
+    # Aggregation pipeline to get featured listings with seller info
+    pipeline = [
+        {"$match": {"status": "active"}},
+        {"$sort": {"view_count": -1, "created_at": -1}},
+        {"$limit": limit},
+        # Join with users to get seller profile info
+        {
+            "$lookup": {
+                "from": "users",
+                "localField": "seller_id",
+                "foreignField": "id",
+                "as": "seller_info"
+            }
+        },
+        # Extract seller rating, review count, and profile image
+        {
+            "$addFields": {
+                "seller_rating": {
+                    "$ifNull": [{"$arrayElemAt": ["$seller_info.rating", 0]}, 0]
+                },
+                "seller_review_count": {
+                    "$ifNull": [{"$arrayElemAt": ["$seller_info.review_count", 0]}, 0]
+                },
+                "seller_profile_image": {
+                    "$arrayElemAt": ["$seller_info.profile_image", 0]
+                }
+            }
+        },
+        {"$project": {"seller_info": 0}}
+    ]
     
-    listings = await cursor.to_list(length=limit)
+    listings = await db.listings.aggregate(pipeline).to_list(length=limit)
     return {"listings": serialize_docs(listings)}
 
 @router.get("/recent")
@@ -188,8 +239,38 @@ async def get_recent_listings(limit: int = Query(12, ge=1, le=50)):
     """Get most recent listings"""
     db = get_database()
     
-    cursor = db.listings.find({"status": "active"}).sort("created_at", -1).limit(limit)
-    listings = await cursor.to_list(length=limit)
+    # Aggregation pipeline to get recent listings with seller info
+    pipeline = [
+        {"$match": {"status": "active"}},
+        {"$sort": {"created_at": -1}},
+        {"$limit": limit},
+        # Join with users to get seller profile info
+        {
+            "$lookup": {
+                "from": "users",
+                "localField": "seller_id",
+                "foreignField": "id",
+                "as": "seller_info"
+            }
+        },
+        # Extract seller rating, review count, and profile image
+        {
+            "$addFields": {
+                "seller_rating": {
+                    "$ifNull": [{"$arrayElemAt": ["$seller_info.rating", 0]}, 0]
+                },
+                "seller_review_count": {
+                    "$ifNull": [{"$arrayElemAt": ["$seller_info.review_count", 0]}, 0]
+                },
+                "seller_profile_image": {
+                    "$arrayElemAt": ["$seller_info.profile_image", 0]
+                }
+            }
+        },
+        {"$project": {"seller_info": 0}}
+    ]
+    
+    listings = await db.listings.aggregate(pipeline).to_list(length=limit)
     return {"listings": serialize_docs(listings)}
 
 @router.get("/stats/count")
@@ -256,9 +337,11 @@ async def get_listing(
             }
         )
     
-    # Get seller rating
+    # Get seller rating, review count, and profile image
     seller = await db.users.find_one({"id": listing["seller_id"]})
     listing["seller_rating"] = seller.get("rating", 0) if seller else 0
+    listing["seller_review_count"] = seller.get("review_count", 0) if seller else 0
+    listing["seller_profile_image"] = seller.get("profile_image") if seller else None
     
     return serialize_doc(listing)
 
@@ -284,6 +367,13 @@ async def update_listing(
             detail="Not authorized to update this listing"
         )
     
+    # Enforce minimum price of $5
+    if listing_data.price is not None and listing_data.price < 5.0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Minimum listing price is $5.00"
+        )
+    
     update_data = {"updated_at": datetime.utcnow()}
     for field, value in listing_data.model_dump(exclude_unset=True).items():
         if value is not None:
@@ -296,6 +386,8 @@ async def update_listing(
     
     updated_listing = await db.listings.find_one({"id": listing_id})
     updated_listing["seller_rating"] = current_user.get("rating", 0)
+    updated_listing["seller_review_count"] = current_user.get("review_count", 0)
+    updated_listing["seller_profile_image"] = current_user.get("profile_image")
     return serialize_doc(updated_listing)
 
 @router.delete("/{listing_id}")

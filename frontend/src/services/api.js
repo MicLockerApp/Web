@@ -89,6 +89,8 @@ export const usersAPI = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
+  changeEmail: (data) => api.put('/users/profile/email', data),
+  changePassword: (data) => api.put('/users/profile/password', data),
   searchUsers: (params) => api.get('/users/search', { params }),
   getUserListings: (userId, params) => api.get(`/users/${userId}/listings`, { params }),
   getUserReviews: (userId, params) => api.get(`/reviews/user/${userId}`, { params }),
@@ -162,12 +164,14 @@ export const offersAPI = {
 
 // Messages APIs
 export const messagesAPI = {
-  send: (recipientId, content, listingId = null) => 
-    api.post('/messages', { recipient_id: recipientId, content, listing_id: listingId }),
+  send: (recipientId, content, listingId = null, images = null) => 
+    api.post('/messages', { recipient_id: recipientId, content, listing_id: listingId, images }),
   getThreads: (params) => api.get('/messages/threads', { params }),
   getThread: (threadId, params) => api.get(`/messages/threads/${threadId}`, { params }),
   getUnreadCount: () => api.get('/messages/unread-count'),
   markThreadRead: (threadId) => api.post(`/messages/threads/${threadId}/read`),
+  deleteMessage: (messageId) => api.delete(`/messages/messages/${messageId}`),
+  deleteThread: (threadId) => api.delete(`/messages/threads/${threadId}`),
 };
 
 // Reviews APIs
@@ -220,6 +224,8 @@ export const adminAPI = {
   banUser: (userId, reason) => api.post(`/admin/users/${userId}/ban`, { reason }),
   unbanUser: (userId) => api.post(`/admin/users/${userId}/unban`),
   deleteUser: (userId) => api.delete(`/admin/users/${userId}`),
+  changeUserRole: (userId, role) => api.put(`/admin/users/${userId}/role`, { role }),
+  resetAnalytics: (options) => api.post('/admin/reset-analytics', options),
   getListings: (params) => api.get('/admin/listings', { params }),
   removeListing: (listingId) => api.post(`/admin/listings/${listingId}/remove`),
   getOrders: (params) => api.get('/admin/orders', { params }),
@@ -260,6 +266,50 @@ export const paymentsAPI = {
   getConnectStatus: () => api.get('/payments/connect/status'),
   refreshOnboardingLink: () => api.post('/payments/connect/refresh-link'),
   getSellerBalance: () => api.get('/payments/connect/balance'),
+};
+
+// Gig Board API
+export const gigsAPI = {
+  // Get categories and subcategories
+  getCategories: () => api.get('/gig-board/categories'),
+  
+  // Create a new gig
+  create: (data) => api.post('/gig-board', data),
+  
+  // Get all gigs with filters
+  getAll: (params) => api.get('/gig-board', { params }),
+  
+  // Get current user's gigs
+  getMyGigs: (gigType) => api.get('/gig-board/my-gigs', { params: { gig_type: gigType } }),
+  
+  // Get single gig
+  getById: (gigId) => api.get(`/gig-board/${gigId}`),
+  
+  // Update gig
+  update: (gigId, data) => api.put(`/gig-board/${gigId}`, data),
+  
+  // Delete gig
+  delete: (gigId) => api.delete(`/gig-board/${gigId}`),
+};
+
+// Profile Visits API (Top 8 Fans feature)
+export const profileVisitsAPI = {
+  // Track a profile visit
+  trackVisit: (profileId) => api.post('/profile-visits/track', { profile_id: profileId }),
+  
+  // Update time spent on a profile (call periodically)
+  updateTimeSpent: (profileId, secondsSpent) => 
+    api.put('/profile-visits/time', { profile_id: profileId, seconds_spent: secondsSpent }),
+  
+  // Track an interaction (message, purchase, review, favorite)
+  trackInteraction: (profileId, interactionType) => 
+    api.post('/profile-visits/interaction', { profile_id: profileId, interaction_type: interactionType }),
+  
+  // Get top 8 fans for a profile
+  getTopFans: (profileId) => api.get(`/profile-visits/top-fans/${profileId}`),
+  
+  // Get current user's fan stats for a profile
+  getMyFanStats: (profileId) => api.get(`/profile-visits/my-stats/${profileId}`),
 };
 
 export default api;

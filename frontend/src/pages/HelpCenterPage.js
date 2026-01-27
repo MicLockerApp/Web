@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HelpCircle, Send, CheckCircle, AlertCircle, ChevronDown, Ticket, MessageSquare, Book, Shield } from 'lucide-react';
+import { HelpCircle, Send, CheckCircle, AlertCircle, ChevronDown, Ticket, MessageSquare, Book, Shield, Upload, X, Image, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import useS3Upload from '../hooks/useS3Upload';
 
 const TICKET_CATEGORIES = [
   { value: 'Order Issue', label: 'Order Issue', description: 'Problems with your order, delivery, or tracking' },
@@ -18,16 +19,24 @@ const TICKET_CATEGORIES = [
   { value: 'Other', label: 'Other', description: 'Something else not listed above' }
 ];
 
+const MAX_FILES = 5;
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+
 const HelpCenterPage = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
   const { isDark } = useTheme();
+  const fileInputRef = useRef(null);
+  const { uploadFile, progress, error: uploadError, setError: setUploadError } = useS3Upload();
   const [formData, setFormData] = useState({
     category: '',
     subject: '',
     message: '',
     order_id: ''
   });
+  const [attachments, setAttachments] = useState([]);
+  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -37,6 +46,67 @@ const HelpCenterPage = () => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     setError('');
+  };
+
+  const handleFileSelect = async (e) => {
+    const files = Array.from(e.target.files);
+    
+    if (attachments.length + files.length > MAX_FILES) {
+      setError(`You can only attach up to ${MAX_FILES} files`);
+      return;
+    }
+
+    const validFiles = [];
+    for (const file of files) {
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        setError(`File type not allowed: ${file.name}. Please use JPG, PNG, GIF, WebP, or PDF.`);
+        continue;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        setError(`File too large: ${file.name}. Maximum size is 10MB.`);
+        continue;
+      }
+      validFiles.push(file);
+    }
+
+    if (validFiles.length === 0) return;
+
+    setUploading(true);
+    setError('');
+    setUploadError(null);
+
+    try {
+      const uploadedFiles = [];
+
+      for (const file of validFiles) {
+        // Upload to S3 using the hook
+        const result = await uploadFile(file, `support-tickets/${Date.now()}`);
+        
+        if (result.success) {
+          uploadedFiles.push({
+            url: result.url,
+            filename: file.name,
+            size: file.size,
+            type: file.type
+          });
+        } else {
+          throw new Error(result.error || `Failed to upload ${file.name}`);
+        }
+      }
+
+      setAttachments(prev => [...prev, ...uploadedFiles]);
+    } catch (err) {
+      setError(err.message || 'Failed to upload files');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const removeAttachment = (index) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e) => {
@@ -67,7 +137,8 @@ const HelpCenterPage = () => {
           category: formData.category,
           subject: formData.subject,
           message: formData.message,
-          order_id: formData.order_id || null
+          order_id: formData.order_id || null,
+          attachments: attachments.map(a => ({ url: a.url, filename: a.filename, type: a.type }))
         })
       });
 
@@ -112,6 +183,7 @@ const HelpCenterPage = () => {
                 onClick={() => {
                   setSuccess(false);
                   setFormData({ category: '', subject: '', message: '', order_id: '' });
+                  setAttachments([]);
                 }}
                 className="px-6 py-3 bg-dark-300 hover:bg-dark-200 text-white rounded-xl transition-colors"
               >
@@ -306,6 +378,97 @@ const HelpCenterPage = () => {
                 } border focus:ring-2 focus:ring-primary/50 focus:border-primary`}
                 required
               />
+            </div>
+
+            {/* File Attachments */}
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                Attachments (optional)
+              </label>
+              <p className={`text-xs mb-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                Upload screenshots or photos to help us understand your issue. Max 5 files, 10MB each. (JPG, PNG, GIF, WebP, PDF)
+              </p>
+              
+              {/* Attachment List */}
+              {attachments.length > 0 && (
+                <div className="mb-3 space-y-2">
+                  {attachments.map((file, index) => (
+                    <div 
+                      key={index}
+                      className={`flex items-center gap-3 p-3 rounded-lg ${isDark ? 'bg-dark-500' : 'bg-gray-100'}`}
+                    >
+                      {file.type.startsWith('image/') ? (
+                        <img src={file.url} alt="" className="w-12 h-12 object-cover rounded" />
+                      ) : (
+                        <div className={`w-12 h-12 rounded flex items-center justify-center ${isDark ? 'bg-dark-400' : 'bg-gray-200'}`}>
+                          <Image className="w-6 h-6 text-gray-400" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-medium truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                          {file.filename}
+                        </p>
+                        <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                          {(file.size / 1024).toFixed(1)} KB
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeAttachment(index)}
+                        className="p-1 hover:bg-red-500/20 rounded transition-colors"
+                      >
+                        <X className="w-5 h-5 text-red-500" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Upload Button */}
+              {attachments.length < MAX_FILES && (
+                <div>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileSelect}
+                    accept="image/jpeg,image/png,image/gif,image/webp,application/pdf"
+                    multiple
+                    className="hidden"
+                    data-testid="attachment-input"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className={`w-full py-3 px-4 rounded-xl border-2 border-dashed flex items-center justify-center gap-2 transition-colors ${
+                      isDark 
+                        ? 'border-dark-300 hover:border-primary text-gray-400 hover:text-primary' 
+                        : 'border-gray-300 hover:border-primary text-gray-500 hover:text-primary'
+                    } ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    data-testid="add-attachment-btn"
+                  >
+                    {uploading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Uploading to S3...
+                        {Object.keys(progress).length > 0 && (
+                          <span className="text-xs">
+                            ({Object.values(progress)[Object.values(progress).length - 1]}%)
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-5 h-5" />
+                        Add Photos or Files
+                      </>
+                    )}
+                  </button>
+                  {uploadError && (
+                    <p className="text-red-400 text-sm mt-2">{uploadError}</p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Submit */}

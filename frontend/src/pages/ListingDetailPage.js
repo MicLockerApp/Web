@@ -1,18 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ShoppingCart, MessageSquare, Heart, Share2, Star, ChevronLeft, ChevronRight, Check, X, Copy, Facebook, Twitter, Mail, Link as LinkIcon, ArrowLeftRight } from 'lucide-react';
+import { ShoppingCart, MessageSquare, Heart, Share2, Star, ChevronLeft, ChevronRight, Check, X, Copy, Facebook, Twitter, Mail, Link as LinkIcon, ArrowLeftRight, Flag, Play, Volume2, ArrowLeft } from 'lucide-react';
 import { listingsAPI, offersAPI, cartAPI, usersAPI, tradesAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import StarRating from '../components/StarRating';
 import analytics from '../services/analytics';
+import ReportListingModal from '../components/ReportListingModal';
 
 const ListingDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
   const { addItem } = useCart();
+  const videoRef = useRef(null);
   
   const [listing, setListing] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -20,6 +22,7 @@ const ListingDetailPage = () => {
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showTradeModal, setShowTradeModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const [offerPrice, setOfferPrice] = useState('');
   const [offerMessage, setOfferMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -229,7 +232,11 @@ const ListingDetailPage = () => {
 
   const isOwnListing = user?.id === listing?.seller_id;
   const images = listing?.media?.filter(m => m.media_type === 'image') || [];
-  const currentImage = images[currentImageIndex]?.url || 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=800';
+  const videos = listing?.media?.filter(m => m.media_type === 'video') || [];
+  const allMedia = [...images, ...videos];
+  const currentMedia = allMedia[currentImageIndex];
+  const isCurrentVideo = currentMedia?.media_type === 'video';
+  const currentImage = currentMedia?.url || 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=800';
 
   if (loading) return <LoadingSpinner />;
   if (!listing) return <div className="text-center py-16 text-gray-400">Listing not found</div>;
@@ -237,6 +244,16 @@ const ListingDetailPage = () => {
   return (
     <div className="min-h-screen" data-testid="listing-detail-page">
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Back Button */}
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-gray-400 hover:text-white mb-4 transition-colors"
+          data-testid="back-button"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          <span>Back</span>
+        </button>
+
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-gray-400 mb-6">
           <Link to="/" className="hover:text-white">Home</Link>
@@ -258,24 +275,62 @@ const ListingDetailPage = () => {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Images */}
+          {/* Images & Videos */}
           <div>
             <div className="relative aspect-square bg-dark-400 rounded-xl overflow-hidden mb-4">
-              <img
-                src={currentImage}
-                alt={listing.title}
-                className="w-full h-full object-contain"
-              />
-              {images.length > 1 && (
+              {isCurrentVideo ? (
+                <>
+                  <video
+                    ref={videoRef}
+                    key={`video-${currentImageIndex}-${currentMedia?.url}`}
+                    src={currentImage}
+                    controls
+                    autoPlay
+                    playsInline
+                    className="w-full h-full object-contain bg-black"
+                    poster={images[0]?.url}
+                    data-testid="video-player"
+                    onLoadedData={(e) => {
+                      // Attempt to unmute and play when video loads
+                      const video = e.target;
+                      video.muted = false;
+                      video.play().catch(() => {
+                        // If autoplay with sound fails, try muted
+                        video.muted = true;
+                        video.play();
+                      });
+                    }}
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                  {/* Video indicator */}
+                  <div className="absolute top-4 left-4 flex items-center gap-2 bg-black/70 px-3 py-1.5 rounded-full">
+                    <Volume2 className="w-4 h-4 text-primary" />
+                    <span className="text-sm text-white font-medium">Video</span>
+                  </div>
+                </>
+              ) : (
+                <img
+                  src={currentImage}
+                  alt={listing.title}
+                  className="w-full h-full object-contain"
+                  data-testid="image-display"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=800';
+                  }}
+                />
+              )}
+              {allMedia.length > 1 && (
                 <>
                   <button
-                    onClick={() => setCurrentImageIndex((currentImageIndex - 1 + images.length) % images.length)}
+                    onClick={() => setCurrentImageIndex((currentImageIndex - 1 + allMedia.length) % allMedia.length)}
                     className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 p-2 rounded-full"
                   >
                     <ChevronLeft className="w-5 h-5 text-white" />
                   </button>
                   <button
-                    onClick={() => setCurrentImageIndex((currentImageIndex + 1) % images.length)}
+                    onClick={() => setCurrentImageIndex((currentImageIndex + 1) % allMedia.length)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 p-2 rounded-full"
                   >
                     <ChevronRight className="w-5 h-5 text-white" />
@@ -284,17 +339,34 @@ const ListingDetailPage = () => {
               )}
             </div>
             {/* Thumbnails */}
-            {images.length > 1 && (
+            {allMedia.length > 1 && (
               <div className="flex gap-2 overflow-x-auto">
-                {images.map((img, idx) => (
+                {allMedia.map((media, idx) => (
                   <button
-                    key={img.id}
+                    key={media.id || idx}
                     onClick={() => setCurrentImageIndex(idx)}
-                    className={`w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 border-2 ${
+                    className={`relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 border-2 ${
                       idx === currentImageIndex ? 'border-primary' : 'border-transparent'
                     }`}
                   >
-                    <img src={img.url} alt="" className="w-full h-full object-cover" />
+                    {media.media_type === 'video' ? (
+                      <>
+                        <video src={media.url} className="w-full h-full object-cover" muted />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                          <Play className="w-6 h-6 text-white" />
+                        </div>
+                      </>
+                    ) : (
+                      <img 
+                        src={media.url} 
+                        alt="" 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=100';
+                        }}
+                      />
+                    )}
                   </button>
                 ))}
               </div>
@@ -325,6 +397,17 @@ const ListingDetailPage = () => {
                 >
                   <Share2 className="w-5 h-5 text-gray-400" />
                 </button>
+                {/* Report/Flag Button - only show if not own listing */}
+                {user?.id !== listing.seller_id && (
+                  <button 
+                    onClick={() => isAuthenticated ? setShowReportModal(true) : navigate('/login')}
+                    className="p-2 bg-dark-400 rounded-lg hover:bg-dark-300 hover:text-red-400 transition-colors"
+                    data-testid="report-button"
+                    title="Report this listing"
+                  >
+                    <Flag className="w-5 h-5 text-gray-400" />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -351,17 +434,27 @@ const ListingDetailPage = () => {
               className="flex items-center gap-3 p-4 bg-dark-400 rounded-lg mb-6 hover:bg-dark-300 transition-colors"
               data-testid="seller-link"
             >
-              <div className="w-12 h-12 bg-dark-300 rounded-full flex items-center justify-center">
-                <span className="text-xl font-bold text-primary">
-                  {listing.seller_username?.[0]?.toUpperCase()}
-                </span>
-              </div>
+              {listing.seller_profile_image && listing.seller_profile_image !== 'None' ? (
+                <img 
+                  src={listing.seller_profile_image} 
+                  alt={listing.seller_username}
+                  className="w-12 h-12 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-12 h-12 bg-dark-300 rounded-full flex items-center justify-center">
+                  <span className="text-xl font-bold text-primary">
+                    {listing.seller_username?.[0]?.toUpperCase()}
+                  </span>
+                </div>
+              )}
               <div className="flex-1">
                 <p className="text-white font-medium">{listing.seller_username}</p>
                 <div className="flex items-center gap-2">
                   <StarRating rating={listing.seller_rating || 0} size={14} />
                   {listing.seller_rating > 0 && (
-                    <span className="text-sm text-gray-400">{listing.seller_rating?.toFixed(1)}</span>
+                    <span className="text-sm text-gray-400">
+                      {listing.seller_rating?.toFixed(1)} ({listing.seller_review_count || 0})
+                    </span>
                   )}
                 </div>
               </div>
@@ -671,6 +764,13 @@ const ListingDetailPage = () => {
           </div>
         </div>
       )}
+
+      {/* Report Listing Modal */}
+      <ReportListingModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        listing={listing}
+      />
     </div>
   );
 };

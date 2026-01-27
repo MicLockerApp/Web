@@ -171,6 +171,14 @@ async def initiate_trade(
             detail=f"The other user cannot accept trades: {recipient_eligibility['reason']}"
         )
     
+    # Check 30-day cooldown between these two users
+    cooldown_check = await check_trade_cooldown_between_users(db, current_user["id"], their_listing["seller_id"])
+    if not cooldown_check["can_trade"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=cooldown_check["reason"]
+        )
+    
     # Create trade items
     my_item = TradeItem(
         listing_id=my_listing["id"],
@@ -334,6 +342,17 @@ async def respond_to_trade(
             detail=eligibility["reason"]
         )
     
+    # Check if these two users have a 30-day trade cooldown
+    initiator_id = trade["initiator_id"]
+    recipient_id = current_user["id"]
+    
+    cooldown_check = await check_trade_cooldown_between_users(db, initiator_id, recipient_id)
+    if not cooldown_check["can_trade"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=cooldown_check["reason"]
+        )
+    
     # Mark both listings as in-trade
     await db.listings.update_many(
         {"id": {"$in": [trade["initiator_item"]["listing_id"], trade["recipient_item"]["listing_id"]]}},
@@ -348,6 +367,10 @@ async def respond_to_trade(
             "updated_at": datetime.utcnow()
         }}
     )
+    
+    # Set 30-day trade cooldown between these two users
+    cooldown_expiry = datetime.utcnow() + timedelta(days=30)
+    await set_trade_cooldown_between_users(db, initiator_id, recipient_id, cooldown_expiry)
     
     # Notify initiator
     await send_trade_notification(
@@ -711,6 +734,53 @@ async def open_trade_dispute(
         "message": "Dispute opened. Our support team will review and contact you.",
         "ticket_number": ticket_number
     }
+
+
+async def check_trade_cooldown_between_users(db, user1_id: str, user2_id: str) -> dict:
+    """
+    Check if two users have a trade cooldown between them.
+    Returns whether they can trade and reason if not.
+    """
+    # Check if there's an active cooldown between these users
+    cooldown = await db.trade_cooldowns.find_one({
+        "$or": [
+            {"user1_id": user1_id, "user2_id": user2_id},
+            {"user1_id": user2_id, "user2_id": user1_id}
+        ],
+        "expires_at": {"$gt": datetime.utcnow()}
+    })
+    
+    if cooldown:
+        days_remaining = (cooldown["expires_at"] - datetime.utcnow()).days + 1
+        return {
+            "can_trade": False,
+            "reason": f"You must wait {days_remaining} more days before trading with this user again."
+        }
+    
+    return {"can_trade": True}
+
+
+async def set_trade_cooldown_between_users(db, user1_id: str, user2_id: str, expires_at: datetime):
+    """
+    Set a trade cooldown between two users.
+    """
+    cooldown = {
+        "id": str(uuid.uuid4()),
+        "user1_id": user1_id,
+        "user2_id": user2_id,
+        "created_at": datetime.utcnow(),
+        "expires_at": expires_at
+    }
+    
+    # Remove any existing cooldown between these users first
+    await db.trade_cooldowns.delete_many({
+        "$or": [
+            {"user1_id": user1_id, "user2_id": user2_id},
+            {"user1_id": user2_id, "user2_id": user1_id}
+        ]
+    })
+    
+    await db.trade_cooldowns.insert_one(cooldown)
 
 
 async def send_trade_notification(db, user_id: str, message_content: str):

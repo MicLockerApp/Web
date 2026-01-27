@@ -60,11 +60,18 @@ const AboutPage = () => {
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
+              <h2 className="text-3xl font-bold text-white mb-2">MicLocker</h2>
+              <p className="text-gray-400 text-lg mb-1">/ˈmaɪk ˌlɑːkər/</p>
+              <p className="text-gray-500 text-sm mb-6">Pronounced plainly as: Mike-Locker</p>
+              
               <p className="text-gray-300 text-lg leading-relaxed mb-6">
-                MicLocker is the premier online marketplace dedicated to buying, selling, and trading new, used, and vintage musical instruments and equipment. Since launching in 2026, MicLocker has grown into a vibrant community of buyers and sellers all over the world.
+                This is the last place that you will ever need to look for anything related to the music industry. We are just beginning. There is so much in store here. We are only in Phase 1. So just hold tight.
+              </p>
+              <p className="text-gray-300 text-lg leading-relaxed mb-6">
+                MicLocker was born on January 16th, 2026, but it was conceptualized December 24th, 2016 by our Owner and Founder James McDougall. He was tired of there not being a way for music industry professionals to connect on a fair and honest platform.
               </p>
               <p className="text-gray-300 text-lg leading-relaxed">
-                By focusing on inspiring content, price transparency, musician-focused eCommerce tools, a music-savvy customer service team, and more, MicLocker has created an online destination where the global music community can connect over the perfect piece of music gear.
+                Because of this, our goal is to set the bar at such an exceptionally high level for buying, selling and trading equipment, that we become the first choice of users all across the globe. Rest assured, you're in good hands here. That is our promise.
               </p>
             </div>
             <div className="relative">
@@ -99,10 +106,6 @@ const AboutPage = () => {
                 <li className="flex items-center gap-2">
                   <span className="text-primary">•</span>
                   Buyer protection on every purchase
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-primary">•</span>
-                  Flexible payment options including payment plans
                 </li>
               </ul>
             </div>

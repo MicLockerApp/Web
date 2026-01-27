@@ -4,8 +4,152 @@ from services.auth import get_current_user
 from database import get_database
 from datetime import datetime
 from typing import Optional
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/reviews", tags=["Reviews"])
+
+class ConfirmReceiptRequest(BaseModel):
+    received: bool  # True if received, False if not yet received
+
+class FlagReviewRequest(BaseModel):
+    reason: str
+    details: Optional[str] = None
+
+@router.get("/pending")
+async def get_pending_review(current_user: dict = Depends(get_current_user)):
+    """
+    Check if user has any pending review obligations.
+    Returns the order details if they need to submit a review or support ticket.
+    """
+    db = get_database()
+    
+    # Check if user has a pending review
+    pending_order_id = current_user.get("pending_review_order_id")
+    pending_type = current_user.get("pending_review_type")
+    pending_locked = current_user.get("pending_review_locked", False)
+    must_submit_ticket = current_user.get("must_submit_ticket_order_id")
+    
+    if must_submit_ticket:
+        # User must submit support ticket for non-receipt (14-day)
+        order = await db.orders.find_one({"id": must_submit_ticket})
+        if order:
+            return {
+                "has_pending": True,
+                "type": "support_ticket",
+                "locked": True,
+                "order_id": must_submit_ticket,
+                "order": {
+                    "id": order["id"],
+                    "order_number": order.get("order_number"),
+                    "items": order.get("items", []),
+                    "seller_username": order["items"][0]["seller_username"] if order.get("items") else "Unknown",
+                    "shipped_at": order.get("shipped_at"),
+                    "total": order.get("total")
+                },
+                "message": "Please submit a support ticket about your item not being received."
+            }
+    
+    if pending_order_id and pending_locked:
+        order = await db.orders.find_one({"id": pending_order_id})
+        if order:
+            # Get the other party's info
+            if pending_type == "buyer":
+                # Buyer needs to review seller
+                other_user_id = order["items"][0]["seller_id"]
+                other_username = order["items"][0]["seller_username"]
+            else:
+                # Seller needs to review buyer
+                other_user_id = order["buyer_id"]
+                other_username = order.get("buyer_username", "Unknown")
+            
+            # Get other user's profile
+            other_user = await db.users.find_one({"id": other_user_id})
+            
+            return {
+                "has_pending": True,
+                "type": "review",
+                "review_type": pending_type,
+                "locked": True,
+                "order_id": pending_order_id,
+                "order": {
+                    "id": order["id"],
+                    "order_number": order.get("order_number"),
+                    "items": order.get("items", []),
+                    "total": order.get("total"),
+                    "shipped_at": order.get("shipped_at"),
+                    "delivered_at": order.get("delivered_at")
+                },
+                "other_user": {
+                    "id": other_user_id,
+                    "username": other_username,
+                    "profile_image": other_user.get("profile_image") if other_user else None,
+                    "rating": other_user.get("rating", 0) if other_user else 0,
+                    "review_count": other_user.get("review_count", 0) if other_user else 0
+                },
+                "message": f"Please review your {'seller' if pending_type == 'buyer' else 'buyer'} to continue using MicLocker."
+            }
+    
+    return {"has_pending": False, "locked": False}
+
+@router.post("/confirm-receipt/{order_id}")
+async def confirm_receipt(
+    order_id: str,
+    request: ConfirmReceiptRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Buyer confirms whether they received the item.
+    If received: Locks their account until they submit a review.
+    If not received: Continues check-in process.
+    """
+    db = get_database()
+    
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    if order["buyer_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Only the buyer can confirm receipt")
+    
+    if order["status"] not in ["shipped", "delivered"]:
+        raise HTTPException(status_code=400, detail="Order must be shipped first")
+    
+    if request.received:
+        # Buyer received the item - lock their account for review
+        await db.orders.update_one(
+            {"id": order_id},
+            {"$set": {
+                "buyer_confirmed_receipt": True,
+                "buyer_confirmed_receipt_at": datetime.utcnow(),
+                "status": "delivered",
+                "delivered_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            }}
+        )
+        
+        # Lock buyer's account until they review
+        await db.users.update_one(
+            {"id": current_user["id"]},
+            {"$set": {
+                "pending_review_order_id": order_id,
+                "pending_review_type": "buyer",
+                "pending_review_locked": True,
+                "updated_at": datetime.utcnow()
+            }}
+        )
+        
+        return {
+            "message": "Receipt confirmed. Please submit your review of the seller.",
+            "review_required": True,
+            "locked": True
+        }
+    else:
+        # Not received yet - continue check-ins
+        return {
+            "message": "Thank you for letting us know. We'll check in again soon.",
+            "review_required": False,
+            "locked": False
+        }
 
 @router.post("", response_model=ReviewResponse)
 async def create_review(
@@ -127,20 +271,55 @@ async def create_review(
     
     await db.reviews.insert_one(review.model_dump())
     
-    # Update order to mark review submitted
-    review_field = "buyer_review_submitted" if is_buyer else "seller_review_submitted"
-    await db.orders.update_one(
-        {"id": order["id"]},
-        {"$set": {review_field: True, "updated_at": datetime.utcnow()}}
+    # Update order to mark review submitted and store review ID
+    if is_buyer:
+        order_update = {
+            "buyer_review_submitted": True,
+            "buyer_review_id": review.id,
+            "updated_at": datetime.utcnow()
+        }
+    else:
+        order_update = {
+            "seller_review_submitted": True,
+            "seller_review_id": review.id,
+            "updated_at": datetime.utcnow()
+        }
+    
+    await db.orders.update_one({"id": order["id"]}, {"$set": order_update})
+    
+    # Clear the user's pending review lock
+    await db.users.update_one(
+        {"id": current_user["id"]},
+        {"$set": {
+            "pending_review_order_id": None,
+            "pending_review_type": None,
+            "pending_review_locked": False,
+            "updated_at": datetime.utcnow()
+        }}
     )
     
-    # Clear the user's pending review if this was the order they needed to review
-    if current_user.get("pending_review_order_id") == order["id"]:
+    # If buyer just submitted review, lock seller for their review
+    if is_buyer:
+        seller_id = first_item["seller_id"]
         await db.users.update_one(
-            {"id": current_user["id"]},
+            {"id": seller_id},
             {"$set": {
-                "pending_review_order_id": None,
-                "pending_review_type": None,
+                "pending_review_order_id": order["id"],
+                "pending_review_type": "seller",
+                "pending_review_locked": True,
+                "updated_at": datetime.utcnow()
+            }}
+        )
+    
+    # Check if both reviews are now complete
+    updated_order = await db.orders.find_one({"id": order["id"]})
+    if updated_order.get("buyer_review_submitted") and updated_order.get("seller_review_submitted"):
+        # Both reviews done - mark order as completed
+        await db.orders.update_one(
+            {"id": order["id"]},
+            {"$set": {
+                "status": "completed",
+                "completed_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow()
             }}
         )
@@ -334,3 +513,121 @@ async def get_review(review_id: str):
         )
     
     return ReviewResponse(**review)
+
+
+@router.post("/{review_id}/flag")
+async def flag_review(
+    review_id: str,
+    request: FlagReviewRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Flag a review for moderation.
+    Creates a support ticket automatically.
+    """
+    db = get_database()
+    
+    review = await db.reviews.find_one({"id": review_id})
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+    
+    if review.get("is_flagged"):
+        raise HTTPException(status_code=400, detail="Review already flagged")
+    
+    # Can only flag if you're the reviewee (the one being reviewed)
+    if review["reviewee_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="You can only flag reviews about yourself")
+    
+    # Create support ticket for the flag
+    import uuid
+    ticket_id = str(uuid.uuid4())
+    ticket = {
+        "id": ticket_id,
+        "ticket_number": f"TKT-{ticket_id[:8].upper()}",
+        "user_id": current_user["id"],
+        "user_username": current_user["username"],
+        "user_email": current_user.get("email"),
+        "category": "review_dispute",
+        "subject": f"Review Dispute - {review.get('listing_title', 'Unknown Item')}",
+        "description": f"Reason: {request.reason}\n\nDetails: {request.details or 'No additional details provided'}\n\nReview ID: {review_id}",
+        "status": "open",
+        "priority": "medium",
+        "review_id": review_id,
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow()
+    }
+    
+    await db.support_tickets.insert_one(ticket)
+    
+    # Update review with flag info
+    await db.reviews.update_one(
+        {"id": review_id},
+        {"$set": {
+            "is_flagged": True,
+            "flagged_by_id": current_user["id"],
+            "flagged_reason": request.reason,
+            "flagged_at": datetime.utcnow(),
+            "flag_ticket_id": ticket_id
+        }}
+    )
+    
+    return {
+        "message": "Review flagged for moderation",
+        "ticket_id": ticket_id,
+        "ticket_number": ticket["ticket_number"]
+    }
+
+
+@router.delete("/{review_id}/admin-remove")
+async def admin_remove_review(
+    review_id: str,
+    reason: str = Query(..., min_length=10),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Admin/moderator removes an inappropriate review.
+    Only accessible to admin/owner/manager roles.
+    """
+    db = get_database()
+    
+    # Check if user is admin/moderator
+    role = current_user.get("role", "user")
+    is_admin = current_user.get("is_admin", False)
+    if role not in ["owner", "admin", "manager"] and not is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    review = await db.reviews.find_one({"id": review_id})
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+    
+    # Mark review as removed (don't delete for audit trail)
+    await db.reviews.update_one(
+        {"id": review_id},
+        {"$set": {
+            "is_removed": True,
+            "removed_by_id": current_user["id"],
+            "removed_at": datetime.utcnow(),
+            "removal_reason": reason,
+            "is_public": False
+        }}
+    )
+    
+    # Recalculate reviewee's rating
+    reviewee_id = review["reviewee_id"]
+    reviewee_role = review.get("reviewee_role", "seller")
+    await update_user_rating(db, reviewee_id, reviewee_role)
+    
+    # Close any associated ticket
+    if review.get("flag_ticket_id"):
+        await db.support_tickets.update_one(
+            {"id": review["flag_ticket_id"]},
+            {"$set": {
+                "status": "resolved",
+                "resolution": f"Review removed by moderator. Reason: {reason}",
+                "resolved_at": datetime.utcnow(),
+                "resolved_by": current_user["id"]
+            }}
+        )
+    
+    return {"message": "Review removed", "review_id": review_id}
+

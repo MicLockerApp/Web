@@ -35,6 +35,8 @@ class EmailVerificationRequest(BaseModel):
     username: str
     email: EmailStr
     password: str
+    first_name: str
+    last_name: str
 
 class EmailVerificationVerify(BaseModel):
     """Request to verify email code and complete registration"""
@@ -115,6 +117,8 @@ async def send_registration_verification(data: EmailVerificationRequest):
         "id": str(uuid.uuid4()),
         "username": data.username,
         "email": data.email,
+        "first_name": data.first_name,
+        "last_name": data.last_name,
         "hashed_password": get_password_hash(data.password),
         "verification_code": code,
         "expires_at": expires_at,
@@ -198,16 +202,23 @@ async def verify_registration_email(data: EmailVerificationVerify):
     user_count = await db.users.count_documents({"is_employee": {"$ne": True}})
     is_first_user = user_count == 0
     has_lifetime_free_fees = user_count < 300
+    is_gold_member = user_count < 300  # First 300 users get Gold Member badge
+    signup_number = user_count + 1
     
-    # Create the actual user account
+    # Create the actual user account - all new users are normal "user" role
     user = UserInDB(
         username=pending["username"],
         email=pending["email"],
+        first_name=pending.get("first_name"),
+        last_name=pending.get("last_name"),
         hashed_password=pending["hashed_password"],
         email_verified=True,
-        is_admin=is_first_user,
+        role="user",  # All new signups are normal users
+        is_admin=False,  # Only owners set this manually
         is_first_user=is_first_user,
         has_lifetime_free_fees=has_lifetime_free_fees,
+        is_gold_member=is_gold_member,
+        signup_number=signup_number,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow()
     )
@@ -232,6 +243,8 @@ async def verify_registration_email(data: EmailVerificationVerify):
         metadata={
             "category": None,  # Will be set in complete-profile
             "has_lifetime_free_fees": has_lifetime_free_fees,
+            "is_gold_member": is_gold_member,
+            "signup_number": signup_number,
             "user_number": user_count + 1,
             "is_first_user": is_first_user,
             "email_verified": True
@@ -341,8 +354,10 @@ async def register(user_data: UserCreate):
     user_count = await db.users.count_documents({"is_employee": {"$ne": True}})
     is_first_user = user_count == 0
     
-    # First 300 users get lifetime 0% platform fees
+    # First 300 users get lifetime 0% platform fees and Gold Member badge
     has_lifetime_free_fees = user_count < 300
+    is_gold_member = user_count < 300
+    signup_number = user_count + 1
     
     # Create user
     user = UserInDB(
@@ -352,6 +367,8 @@ async def register(user_data: UserCreate):
         is_admin=is_first_user,
         is_first_user=is_first_user,
         has_lifetime_free_fees=has_lifetime_free_fees,
+        is_gold_member=is_gold_member,
+        signup_number=signup_number,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow()
     )
@@ -367,6 +384,8 @@ async def register(user_data: UserCreate):
         metadata={
             "category": None,  # Will be set in complete-profile
             "has_lifetime_free_fees": has_lifetime_free_fees,
+            "is_gold_member": is_gold_member,
+            "signup_number": signup_number,
             "user_number": user_count + 1,
             "is_first_user": is_first_user
         }
@@ -417,7 +436,8 @@ async def login(username: str, password: str):
         actor_username=user.get("username"),
         metadata={
             "category": user.get("category"),
-            "has_lifetime_free_fees": user.get("has_lifetime_free_fees", False)
+            "has_lifetime_free_fees": user.get("has_lifetime_free_fees", False),
+            "is_gold_member": user.get("is_gold_member", False)
         }
     )
     
@@ -516,7 +536,8 @@ async def get_categories():
     """Get available user categories and their options"""
     from models.user import (
         MUSICIAN_INSTRUMENTS, AUDIO_ENGINEER_SPECS,
-        RECORDING_STUDIO_OFFERINGS, MUSIC_GENRES, MERCHANT_PRODUCT_TYPES
+        RECORDING_STUDIO_OFFERINGS, MUSIC_GENRES, MERCHANT_PRODUCT_TYPES,
+        COMEDIAN_SPECIALTIES, ACTOR_SPECIALTIES
     )
     
     return {
@@ -533,6 +554,12 @@ async def get_categories():
         },
         "merchant_options": {
             "product_types": MERCHANT_PRODUCT_TYPES
+        },
+        "comedian_options": {
+            "specialties": COMEDIAN_SPECIALTIES
+        },
+        "actor_options": {
+            "specialties": ACTOR_SPECIALTIES
         }
     }
 

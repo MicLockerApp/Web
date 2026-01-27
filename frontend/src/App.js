@@ -3,11 +3,14 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { DateRangeProvider } from './context/DateRangeContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ChatWidget from './components/ChatWidget';
 import WelcomeBanner from './components/WelcomeBanner';
+import ReviewGatingWrapper from './components/ReviewGatingWrapper';
 import analytics from './services/analytics';
+import usePresenceTracker from './hooks/usePresenceTracker';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -23,7 +26,6 @@ import CheckoutSuccessPage from './pages/CheckoutSuccessPage';
 import CheckoutCancelPage from './pages/CheckoutCancelPage';
 import ProfilePage from './pages/ProfilePage';
 import EditProfilePage from './pages/EditProfilePage';
-import AccountSettingsPage from './pages/AccountSettingsPage';
 import FavoritesPage from './pages/FavoritesPage';
 import DashboardPage from './pages/DashboardPage';
 import CreateListingPage from './pages/CreateListingPage';
@@ -55,6 +57,13 @@ import PayoutsAndCreditsPage from './pages/PayoutsAndCreditsPage';
 import IntellectualPropertyPage from './pages/IntellectualPropertyPage';
 import SearchAndAdRankingPage from './pages/SearchAndAdRankingPage';
 import EUDataPolicyPage from './pages/EUDataPolicyPage';
+import AdminReportsPage from './pages/AdminReportsPage';
+import GigsPage from './pages/GigsPage';
+import LearnPage from './pages/LearnPage';
+import MapPage from './pages/MapPage';
+import VenueCalendarPage from './pages/VenueCalendarPage';
+import VenueBookingsPage from './pages/VenueBookingsPage';
+import ArtistBookingsPage from './pages/ArtistBookingsPage';
 
 // Initialize analytics on app load
 analytics.init();
@@ -87,13 +96,21 @@ const Layout = ({ children }) => {
   );
 };
 
+// Presence Tracker Component - must be inside AuthProvider
+const PresenceTrackerComponent = () => {
+  usePresenceTracker();
+  return null;
+};
+
 function AppContent() {
   return (
     <Router>
       <AuthProvider>
+        <PresenceTrackerComponent />
         <CartProvider>
-          <Layout>
-            <Routes>
+          <ReviewGatingWrapper>
+            <Layout>
+              <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
@@ -109,9 +126,15 @@ function AppContent() {
               <Route path="/profile/edit" element={<EditProfilePage />} />
               <Route path="/profile/:id/edit" element={<EditProfilePage />} />
               <Route path="/settings" element={<EditProfilePage />} />
-              <Route path="/account" element={<AccountSettingsPage />} />
-              <Route path="/account/settings" element={<AccountSettingsPage />} />
+              <Route path="/account" element={<EditProfilePage />} />
+              <Route path="/account/settings" element={<EditProfilePage />} />
               <Route path="/favorites" element={<FavoritesPage />} />
+              <Route path="/gigs" element={<GigsPage />} />
+              <Route path="/learn" element={<LearnPage />} />
+              <Route path="/map" element={<MapPage />} />
+              <Route path="/venue/:venueId/calendar" element={<VenueCalendarPage />} />
+              <Route path="/venue/bookings" element={<VenueBookingsPage />} />
+              <Route path="/my-bookings" element={<ArtistBookingsPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/dashboard/listings/:id/edit" element={<EditListingPage />} />
               <Route path="/sell" element={<CreateListingPage />} />
@@ -131,6 +154,7 @@ function AppContent() {
               <Route path="/help" element={<HelpCenterPage />} />
               <Route path="/admin/tickets" element={<AdminTicketsPage />} />
               <Route path="/admin/tickets/:id" element={<AdminTicketsPage />} />
+              <Route path="/admin/reports" element={<AdminReportsPage />} />
               <Route path="/legal" element={<LegalPage />} />
               <Route path="/legal/terms-of-use" element={<TermsOfUsePage />} />
               <Route path="/legal/privacy-policy" element={<PrivacyPolicyPage />} />
@@ -156,6 +180,7 @@ function AppContent() {
           </Layout>
           {/* AI Chat Widget - Stateless UI, can be replaced with Crisp */}
           <ChatWidget />
+          </ReviewGatingWrapper>
         </CartProvider>
       </AuthProvider>
     </Router>
@@ -165,7 +190,9 @@ function AppContent() {
 function App() {
   return (
     <ThemeProvider>
-      <AppContent />
+      <DateRangeProvider>
+        <AppContent />
+      </DateRangeProvider>
     </ThemeProvider>
   );
 }

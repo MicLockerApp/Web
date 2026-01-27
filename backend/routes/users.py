@@ -1,14 +1,17 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Query, UploadFile, File
 from models.user import UserResponse, UserPublicProfile, UserProfileUpdate
-from services.auth import get_current_user, get_current_user_optional
+from services.auth import get_current_user, get_current_user_optional, pwd_context
 from services.storage import storage_service
 from database import get_database
 from utils.helpers import serialize_docs, serialize_doc
 from analytics.services.event_emitter import emit_event, EventTypes, ActorType
 from datetime import datetime
 from typing import Optional
+from pydantic import BaseModel, EmailStr
+import logging
 
 router = APIRouter(prefix="/users", tags=["Users"])
+logger = logging.getLogger(__name__)
 
 @router.get("/profile/{user_id}", response_model=UserPublicProfile)
 async def get_user_profile(
@@ -31,6 +34,9 @@ async def get_user_profile(
     # Create profile response
     profile_data = dict(user)
     
+    # Set is_founder flag for James McDougall
+    profile_data["is_founder"] = user.get("email") == "james.mcdougall@miclockerapp.com"
+    
     # If not own profile, apply privacy settings
     if not is_own_profile:
         # Hide email unless show_email is true
@@ -49,14 +55,12 @@ async def get_user_profile(
         if not user.get("show_physical_address", False):
             profile_data["physical_address"] = None
         
-        # Hide social media unless show_social is true
+        # Hide music platforms unless show_social is true
         if not user.get("show_social", True):
-            profile_data["instagram"] = None
-            profile_data["twitter"] = None
-            profile_data["facebook"] = None
-            profile_data["youtube"] = None
-            profile_data["soundcloud"] = None
+            profile_data["apple_music"] = None
             profile_data["spotify"] = None
+            profile_data["soundcloud"] = None
+            profile_data["spotify_embed_url"] = None
     
     return UserPublicProfile(**profile_data)
 
@@ -83,15 +87,103 @@ async def update_profile(
     db = get_database()
     
     update_data = {"updated_at": datetime.utcnow()}
+    old_username = current_user["username"]
+    new_username = None
+    
+    # Handle username change with validation
+    if profile_data.username is not None:
+        new_username = profile_data.username.lower().strip()
+        
+        # Validate username format
+        import re
+        if not re.match(r'^[a-z0-9_.-]{3,30}$', new_username):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username must be 3-30 characters and contain only lowercase letters, numbers, underscores, dots, and hyphens"
+            )
+        
+        # Check if username is already taken by another user
+        if new_username != old_username:
+            existing_user = await db.users.find_one({"username": new_username})
+            if existing_user:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Username is already taken"
+                )
+            update_data["username"] = new_username
+        else:
+            new_username = None  # No change needed
     
     for field, value in profile_data.model_dump(exclude_unset=True).items():
-        if value is not None:
+        if value is not None and field != "username":  # username handled above
             update_data[field] = value
     
+    # Update the user
     await db.users.update_one(
         {"id": current_user["id"]},
         {"$set": update_data}
     )
+    
+    # If username changed, propagate to all related content
+    if new_username and new_username != old_username:
+        user_id = current_user["id"]
+        
+        # Update listings
+        await db.listings.update_many(
+            {"seller_id": user_id},
+            {"$set": {"seller_username": new_username}}
+        )
+        
+        # Update orders (as buyer)
+        await db.orders.update_many(
+            {"buyer_id": user_id},
+            {"$set": {"buyer_username": new_username}}
+        )
+        
+        # Update order items (as seller)
+        await db.orders.update_many(
+            {"items.seller_id": user_id},
+            {"$set": {"items.$[elem].seller_username": new_username}},
+            array_filters=[{"elem.seller_id": user_id}]
+        )
+        
+        # Update trades (as initiator)
+        await db.trades.update_many(
+            {"initiator_id": user_id},
+            {"$set": {"initiator_username": new_username}}
+        )
+        
+        # Update trades (as recipient)
+        await db.trades.update_many(
+            {"recipient_id": user_id},
+            {"$set": {"recipient_username": new_username}}
+        )
+        
+        # Update offers (as buyer)
+        await db.offers.update_many(
+            {"buyer_id": user_id},
+            {"$set": {"buyer_username": new_username}}
+        )
+        
+        # Update offers (as seller)
+        await db.offers.update_many(
+            {"seller_id": user_id},
+            {"$set": {"seller_username": new_username}}
+        )
+        
+        # Update reviews (as reviewer)
+        await db.reviews.update_many(
+            {"reviewer_id": user_id},
+            {"$set": {"reviewer_username": new_username}}
+        )
+        
+        # Update reviews (as reviewee)
+        await db.reviews.update_many(
+            {"reviewee_id": user_id},
+            {"$set": {"reviewee_username": new_username}}
+        )
+        
+        logger.info(f"Username changed from '{old_username}' to '{new_username}' - propagated to all content")
     
     updated_user = await db.users.find_one({"id": current_user["id"]})
     return UserResponse(**updated_user)
@@ -148,6 +240,92 @@ async def upload_profile_image(
     
     updated_user = await db.users.find_one({"id": current_user["id"]})
     return UserResponse(**updated_user)
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+class EmailChangeRequest(BaseModel):
+    new_email: EmailStr
+    password: str  # Require password to change email
+
+
+@router.put("/profile/password")
+async def change_password(
+    data: PasswordChangeRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Change user's password"""
+    db = get_database()
+    
+    # Verify current password
+    user = await db.users.find_one({"id": current_user["id"]})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if not pwd_context.verify(data.current_password, user["password"]):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect"
+        )
+    
+    # Validate new password
+    if len(data.new_password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 8 characters"
+        )
+    
+    # Hash and update new password
+    hashed_password = pwd_context.hash(data.new_password)
+    await db.users.update_one(
+        {"id": current_user["id"]},
+        {"$set": {"password": hashed_password, "updated_at": datetime.utcnow()}}
+    )
+    
+    logger.info(f"Password changed for user {current_user['username']}")
+    return {"message": "Password changed successfully"}
+
+
+@router.put("/profile/email")
+async def change_email(
+    data: EmailChangeRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Change user's email address"""
+    db = get_database()
+    
+    # Verify password
+    user = await db.users.find_one({"id": current_user["id"]})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if not pwd_context.verify(data.password, user["password"]):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password is incorrect"
+        )
+    
+    # Check if email already exists
+    new_email = data.new_email.lower().strip()
+    existing = await db.users.find_one({"email": new_email})
+    if existing and existing["id"] != current_user["id"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email address is already in use"
+        )
+    
+    # Update email
+    await db.users.update_one(
+        {"id": current_user["id"]},
+        {"$set": {"email": new_email, "updated_at": datetime.utcnow()}}
+    )
+    
+    logger.info(f"Email changed for user {current_user['username']} to {new_email}")
+    return {"message": "Email changed successfully", "new_email": new_email}
+
 
 @router.get("/search")
 async def search_users(

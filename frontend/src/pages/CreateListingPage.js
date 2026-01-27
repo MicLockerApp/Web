@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Upload, X, Plus, Image, Video } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { listingsAPI, filesAPI } from '../services/api';
+import { listingsAPI } from '../services/api';
+import S3MediaUploader from '../components/S3MediaUploader';
 
 const CATEGORIES = [
   'Guitars', 'Bass', 'Keyboards & Synths', 'Drums & Percussion',
@@ -19,7 +20,6 @@ const CreateListingPage = () => {
   const { isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [uploadingMedia, setUploadingMedia] = useState(false);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -38,8 +38,8 @@ const CreateListingPage = () => {
     tags: '',
   });
 
-  const [mediaFiles, setMediaFiles] = useState([]);
-  const [mediaPreview, setMediaPreview] = useState([]);
+  // S3 uploaded media
+  const [uploadedMedia, setUploadedMedia] = useState([]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -47,42 +47,34 @@ const CreateListingPage = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  const handleMediaUpload = async (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length === 0) return;
-
-    setUploadingMedia(true);
-    
-    for (const file of files) {
-      const isImage = file.type.startsWith('image/');
-      const isVideo = file.type.startsWith('video/');
-      
-      if (!isImage && !isVideo) {
-        setError('Only images and videos are allowed');
-        continue;
-      }
-
-      // Create preview
-      const preview = URL.createObjectURL(file);
-      setMediaPreview(prev => [...prev, { file, preview, type: isImage ? 'image' : 'video' }]);
-      setMediaFiles(prev => [...prev, file]);
-    }
-    
-    setUploadingMedia(false);
-  };
-
-  const removeMedia = (index) => {
-    setMediaPreview(prev => prev.filter((_, i) => i !== index));
-    setMediaFiles(prev => prev.filter((_, i) => i !== index));
-  };
+  // Handle S3 media uploads
+  const handleMediaChange = useCallback((media) => {
+    setUploadedMedia(media);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
+    // Validate minimum price
+    const price = parseFloat(formData.price);
+    if (isNaN(price) || price < 5) {
+      setError('Minimum listing price is $5.00');
+      setLoading(false);
+      return;
+    }
+
     try {
-      // Create listing first
+      // Prepare media data from S3 uploads
+      const mediaData = uploadedMedia.map((item, index) => ({
+        url: item.url,
+        key: item.key,
+        type: item.type,
+        is_primary: index === 0
+      }));
+
+      // Create listing with S3 media URLs
       const listingData = {
         title: formData.title,
         description: formData.description,
@@ -104,21 +96,11 @@ const CreateListingPage = () => {
           down_payment_percent: 25,
         },
         tags: formData.tags.split(',').map(t => t.trim()).filter(t => t),
+        media: mediaData,  // S3 media URLs
       };
 
       const response = await listingsAPI.create(listingData);
-      const listingId = response.data.id;
-
-      // Upload media
-      for (let i = 0; i < mediaFiles.length; i++) {
-        const file = mediaFiles[i];
-        const formDataMedia = new FormData();
-        formDataMedia.append('file', file);
-        
-        await listingsAPI.addMedia(listingId, formDataMedia, i === 0);
-      }
-
-      navigate(`/listing/${listingId}`);
+      navigate(`/listing/${response.data.id}`);
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to create listing');
     } finally {
@@ -138,45 +120,12 @@ const CreateListingPage = () => {
         )}
 
         <form onSubmit={handleSubmit}>
-          {/* Media Upload */}
-          <div className="bg-dark-400 rounded-xl p-6 mb-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Photos & Videos</h2>
-            <div className="grid grid-cols-3 md:grid-cols-4 gap-4 mb-4">
-              {mediaPreview.map((media, index) => (
-                <div key={index} className="relative aspect-square bg-dark-300 rounded-lg overflow-hidden">
-                  {media.type === 'image' ? (
-                    <img src={media.preview} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <video src={media.preview} className="w-full h-full object-cover" />
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => removeMedia(index)}
-                    className="absolute top-1 right-1 bg-black/50 rounded-full p-1 hover:bg-red-500"
-                  >
-                    <X className="w-4 h-4 text-white" />
-                  </button>
-                  {index === 0 && (
-                    <span className="absolute bottom-1 left-1 bg-primary text-black text-xs px-2 py-0.5 rounded">
-                      Primary
-                    </span>
-                  )}
-                </div>
-              ))}
-              <label className="aspect-square bg-dark-300 rounded-lg border-2 border-dashed border-dark-200 hover:border-primary flex flex-col items-center justify-center cursor-pointer transition-colors">
-                <input
-                  type="file"
-                  accept="image/*,video/*"
-                  multiple
-                  onChange={handleMediaUpload}
-                  className="hidden"
-                  disabled={uploadingMedia}
-                />
-                <Plus className="w-8 h-8 text-gray-400 mb-2" />
-                <span className="text-gray-400 text-sm">Add Media</span>
-              </label>
-            </div>
-            <p className="text-gray-500 text-sm">Upload up to 10 images and 1 video. First image will be the cover.</p>
+          {/* Media Upload - S3 */}
+          <div className="mb-6">
+            <S3MediaUploader 
+              onChange={handleMediaChange}
+              maxFiles={10}
+            />
           </div>
 
           {/* Basic Info */}
@@ -275,7 +224,7 @@ const CreateListingPage = () => {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-gray-400 mb-2">Price *</label>
+                  <label className="block text-gray-400 mb-2">Price * <span className="text-xs text-gray-500">(min $5.00)</span></label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
                     <input
@@ -284,9 +233,9 @@ const CreateListingPage = () => {
                       onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                       className="pl-8"
                       required
-                      min="1"
+                      min="5"
                       step="0.01"
-                      placeholder="0.00"
+                      placeholder="5.00"
                       data-testid="listing-price"
                     />
                   </div>

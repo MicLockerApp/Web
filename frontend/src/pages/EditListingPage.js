@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Upload, X, Image, Video, DollarSign, Tag, Box, Truck, Save, Trash2 } from 'lucide-react';
+import { ArrowLeft, DollarSign, Tag, Box, Truck, Save, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { listingsAPI, filesAPI } from '../services/api';
+import { listingsAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
+import S3MediaUploader from '../components/S3MediaUploader';
 
 const CATEGORIES = [
   'Guitars', 'Bass', 'Drums & Percussion', 'Keyboards & Synths', 'Pro Audio',
@@ -25,12 +26,10 @@ const EditListingPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-  const fileInputRef = useRef(null);
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   
   const [formData, setFormData] = useState({
@@ -101,31 +100,18 @@ const EditListingPage = () => {
     }));
   };
 
-  const handleFileUpload = async (e) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-
-    setUploading(true);
-    try {
-      for (const file of files) {
-        const isVideo = file.type.startsWith('video/');
-        const fileType = isVideo ? 'video' : 'image';
-        
-        const res = await filesAPI.upload(file, fileType);
-        setMedia(prev => [...prev, {
-          id: Date.now().toString(),
-          url: res.data.url,
-          media_type: fileType,
-          is_primary: prev.length === 0,
-        }]);
-      }
-      setMessage({ type: 'success', text: 'Files uploaded successfully!' });
-    } catch (error) {
-      setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to upload files' });
-    } finally {
-      setUploading(false);
-    }
-  };
+  // Handle S3 media changes
+  const handleMediaChange = useCallback((newMedia) => {
+    // Convert S3MediaUploader format to listing media format
+    const converted = newMedia.map((item, index) => ({
+      id: item.key || `media-${index}`,
+      url: item.url,
+      media_type: item.type,
+      is_primary: index === 0,
+      order: index
+    }));
+    setMedia(converted);
+  }, []);
 
   const handleRemoveMedia = (mediaId) => {
     setMedia(prev => {
@@ -217,76 +203,18 @@ const EditListingPage = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Media Upload */}
-          <div className="bg-dark-400 rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <Image className="w-5 h-5" />
-              Photos & Videos
-            </h2>
-
-            <div className="grid grid-cols-3 md:grid-cols-4 gap-4 mb-4">
-              {media.map((item) => (
-                <div key={item.id} className="relative aspect-square bg-dark-300 rounded-lg overflow-hidden group">
-                  {item.media_type === 'video' ? (
-                    <video src={item.url} className="w-full h-full object-cover" />
-                  ) : (
-                    <img src={item.url} alt="" className="w-full h-full object-cover" />
-                  )}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleSetPrimary(item.id)}
-                      className={`p-2 rounded-lg ${item.is_primary ? 'bg-primary text-black' : 'bg-white/20 text-white'}`}
-                      title="Set as primary"
-                    >
-                      <Tag className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveMedia(item.id)}
-                      className="p-2 bg-red-500/20 text-red-400 rounded-lg"
-                      title="Remove"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                  {item.is_primary && (
-                    <span className="absolute top-2 left-2 bg-primary text-black text-xs px-2 py-1 rounded">Primary</span>
-                  )}
-                  {item.media_type === 'video' && (
-                    <Video className="absolute bottom-2 right-2 w-4 h-4 text-white" />
-                  )}
-                </div>
-              ))}
-
-              {/* Upload Button */}
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="aspect-square bg-dark-300 rounded-lg border-2 border-dashed border-dark-200 flex flex-col items-center justify-center gap-2 hover:border-primary transition-colors"
-              >
-                {uploading ? (
-                  <LoadingSpinner />
-                ) : (
-                  <>
-                    <Upload className="w-6 h-6 text-gray-400" />
-                    <span className="text-gray-400 text-sm">Add</span>
-                  </>
-                )}
-              </button>
-            </div>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*,video/*"
-              multiple
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-            <p className="text-gray-500 text-sm">Upload up to 10 photos and 1 video. First image is the cover.</p>
-          </div>
+          {/* Media Upload - S3 */}
+          <S3MediaUploader
+            listingId={id}
+            onChange={handleMediaChange}
+            initialMedia={media.map(m => ({
+              key: m.id,
+              url: m.url,
+              type: m.media_type,
+              filename: m.id
+            }))}
+            maxFiles={10}
+          />
 
           {/* Basic Info */}
           <div className="bg-dark-400 rounded-xl p-6">

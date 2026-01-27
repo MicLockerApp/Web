@@ -30,21 +30,26 @@ class Settings(BaseSettings):
         return ["*"]
     
     # MongoDB Configuration
-    # DEVELOPMENT: Uses DB_DEVELOP
-    # PRODUCTION: Uses DB_PROD
     mongo_url: str = os.getenv("MONGO_URL", "mongodb://localhost:27017")
     
     @property
     def database_name(self) -> str:
         """
-        Get database name based on environment:
-        - Production: DB_PROD
-        - Development: DB_DEVELOP
+        Get database name with the following priority:
+        1. DB_NAME environment variable (set by Emergent platform)
+        2. Database name from MONGO_URL (extracted by database.py)
+        3. Default fallback
         """
+        # Check for explicit DB_NAME env var first
+        db_name_env = os.getenv("DB_NAME")
+        if db_name_env:
+            return db_name_env
+        
+        # Default fallback based on environment
         env = os.getenv("ENVIRONMENT", "development").lower()
         if env in ["production", "prod"]:
-            return "DB_PROD"
-        return "DB_DEVELOP"
+            return "miclocker_prod"
+        return "miclocker_dev"
     
     # AWS S3
     aws_access_key_id: Optional[str] = os.getenv("AWS_ACCESS_KEY_ID") or None
@@ -74,6 +79,7 @@ class Settings(BaseSettings):
     stripe_api_key: Optional[str] = os.getenv("STRIPE_API_KEY") or None
     stripe_publishable_key: Optional[str] = os.getenv("STRIPE_PUBLISHABLE_KEY") or None
     stripe_webhook_secret: Optional[str] = os.getenv("STRIPE_WEBHOOK_SECRET") or None
+    stripe_connect_webhook_secret: Optional[str] = os.getenv("STRIPE_CONNECT_WEBHOOK_SECRET") or None
     
     # Stripe Connect (for seller payouts)
     stripe_connect_enabled: bool = os.getenv("STRIPE_CONNECT_ENABLED", "true").lower() == "true"
@@ -100,5 +106,6 @@ class Settings(BaseSettings):
     
     class Config:
         env_file = ".env"
+        extra = "ignore"  # Allow extra env vars without validation errors
 
 settings = Settings()

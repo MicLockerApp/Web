@@ -199,7 +199,7 @@ const ChatWidget = () => {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-50 bg-primary hover:bg-yellow-400 text-black p-4 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
+        className="fixed bottom-6 left-6 z-50 bg-primary hover:bg-yellow-400 text-black p-4 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
         aria-label="Open chat"
       >
         <MessageSquare className="w-6 h-6" />
@@ -209,7 +209,7 @@ const ChatWidget = () => {
 
   return (
     <div 
-      className={`fixed bottom-6 right-6 z-50 bg-dark-500 rounded-2xl shadow-2xl border border-dark-300 transition-all duration-300 ${
+      className={`fixed bottom-6 left-6 z-50 bg-dark-500 rounded-2xl shadow-2xl border border-dark-300 transition-all duration-300 ${
         isMinimized ? 'w-72 h-14' : 'w-96 h-[32rem]'
       }`}
     >

@@ -60,6 +60,17 @@ class ReviewInDB(BaseModel):
     # Reviews are always public and cannot be hidden
     is_public: bool = True
     
+    # Flagging system
+    is_flagged: bool = False
+    flagged_by_id: Optional[str] = None
+    flagged_reason: Optional[str] = None
+    flagged_at: Optional[datetime] = None
+    flag_ticket_id: Optional[str] = None  # Support ticket for dispute
+    is_removed: bool = False  # Admin can remove inappropriate reviews
+    removed_by_id: Optional[str] = None
+    removed_at: Optional[datetime] = None
+    removal_reason: Optional[str] = None
+    
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class ReviewResponse(BaseModel):
@@ -83,6 +94,8 @@ class ReviewResponse(BaseModel):
     item_condition: Optional[str] = None
     condition_notes: Optional[str] = None
     is_public: bool = True
+    is_flagged: bool = False
+    is_removed: bool = False
     created_at: datetime
 
 # Admin Analytics Models
