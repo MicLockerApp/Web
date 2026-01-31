@@ -94,11 +94,40 @@ export const usersAPI = {
   searchUsers: (params) => api.get('/users/search', { params }),
   getUserListings: (userId, params) => api.get(`/users/${userId}/listings`, { params }),
   getUserReviews: (userId, params) => api.get(`/reviews/user/${userId}`, { params }),
-  // Favorites
+  // Listing Favorites
   getFavorites: (params) => api.get('/users/favorites/list', { params }),
   addFavorite: (listingId) => api.post(`/users/favorites/${listingId}`),
   removeFavorite: (listingId) => api.delete(`/users/favorites/${listingId}`),
   checkFavorite: (listingId) => api.get(`/users/favorites/check/${listingId}`),
+  // Video Favorites
+  getVideoFavorites: () => api.get('/auditions/favorites'),
+  addVideoFavorite: (auditionId) => api.post(`/auditions/${auditionId}/favorite`),
+  removeVideoFavorite: (auditionId) => api.delete(`/auditions/${auditionId}/favorite`),
+  checkVideoFavorite: (auditionId) => api.get(`/auditions/${auditionId}/favorite/check`),
+  // Profile Media (photos & videos)
+  getProfileMedia: (userId) => api.get(`/profile/media/${userId}`),
+  uploadPhoto: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/profile/media/photo', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  uploadVideo: (file, { category, subcategory, genre, description, songName }) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('category', category);
+    if (subcategory) formData.append('subcategory', subcategory);
+    if (genre) formData.append('genre', genre);
+    if (description) formData.append('description', description);
+    if (songName) formData.append('song_name', songName);
+    return api.post('/profile/media/video', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  updateVideo: (mediaId, data) => api.patch(`/profile/media/video/${mediaId}`, data),
+  selectAuditionVideos: (videoIds) => api.post('/profile/media/auditions/select', { video_ids: videoIds }),
+  deleteMedia: (mediaId) => api.delete(`/profile/media/${mediaId}`),
 };
 
 // Global Search API (searches both listings and users)

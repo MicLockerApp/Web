@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Search, ShoppingCart, User, Menu, X, MessageSquare, LogOut, Package, Edit, Heart, Sun, Moon, Tag, ShoppingBag, LayoutDashboard, Shield, Settings, ArrowLeftRight, List, GraduationCap, Guitar, MapPin, Bell, Calendar, Play } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -14,10 +14,14 @@ const Navbar = () => {
   const { cart } = useCart();
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  
+  // Check if we're on the feed page
+  const isAuditionsPage = location.pathname === '/auditions';
   const [notificationCount, setNotificationCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -372,10 +376,10 @@ const Navbar = () => {
               <>
                 {/* New Feature Buttons */}
                 <Link 
-                  to="/feed" 
+                  to="/auditions" 
                   className={`p-2 ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`} 
-                  data-testid="feed-link"
-                  title="Feed"
+                  data-testid="auditions-link"
+                  title="Auditions"
                 >
                   <Play className="w-5 h-5" />
                 </Link>
@@ -642,30 +646,32 @@ const Navbar = () => {
           </button>
         </div>
 
-        {/* Mobile Search */}
-        <div className="md:hidden pb-3">
-          <form onSubmit={handleSearch}>
-            <div className="relative">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className={`w-full pl-10 pr-4 py-2 rounded-lg ${
-                  isDark 
-                    ? 'bg-dark-400 border border-dark-300 text-white' 
-                    : 'bg-gray-100 border border-gray-200 text-gray-900'
-                }`}
-                data-testid="mobile-search-input"
-              />
-              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
-              {!searchQuery && (
-                <div className="absolute left-10 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <AnimatedSearchPlaceholder isDark={isDark} />
-                </div>
-              )}
-            </div>
-          </form>
-        </div>
+        {/* Mobile Search - Hidden on auditions page */}
+        {!isAuditionsPage && (
+          <div className="md:hidden pb-3">
+            <form onSubmit={handleSearch}>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className={`w-full pl-10 pr-4 py-2 rounded-lg ${
+                    isDark 
+                      ? 'bg-dark-400 border border-dark-300 text-white' 
+                      : 'bg-gray-100 border border-gray-200 text-gray-900'
+                  }`}
+                  data-testid="mobile-search-input"
+                />
+                <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+                {!searchQuery && (
+                  <div className="absolute left-10 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <AnimatedSearchPlaceholder isDark={isDark} />
+                  </div>
+                )}
+              </div>
+            </form>
+          </div>
+        )}
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
@@ -689,12 +695,12 @@ const Navbar = () => {
               {isAuthenticated ? (
                 <>
                   <Link
-                    to="/feed"
+                    to="/auditions"
                     className={`flex items-center gap-2 py-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <Play className="w-5 h-5" />
-                    Feed
+                    Auditions
                   </Link>
                   <Link
                     to="/gigs"

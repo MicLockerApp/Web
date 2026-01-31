@@ -427,3 +427,51 @@ html:not(.light) {
 html.light {
   background-color: #FFFFFF;
 }
+
+/* TikTok-style Feed Animations */
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 10s linear infinite;
+}
+
+/* Feed swipe container - hide scrollbar */
+.feed-container {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.feed-container::-webkit-scrollbar {
+  display: none;
+}
+
+
+/* Hide scrollbar for feed but keep scroll functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

@@ -334,6 +334,14 @@ app.include_router(bookings_router, prefix="/api")
 from routes.notifications import router as notifications_router
 app.include_router(notifications_router, prefix="/api")
 
+# Auditions routes (video content)
+from routes.auditions import router as auditions_router
+app.include_router(auditions_router, prefix="/api")
+
+# Profile Media routes (photos and videos on profiles)
+from routes.profile_media import router as profile_media_router
+app.include_router(profile_media_router, prefix="/api")
+
 # Health check endpoints
 @app.get("/api/health")
 async def api_health_check():

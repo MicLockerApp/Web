@@ -65,6 +65,7 @@ import MapPage from './pages/MapPage';
 import VenueCalendarPage from './pages/VenueCalendarPage';
 import VenueBookingsPage from './pages/VenueBookingsPage';
 import ArtistBookingsPage from './pages/ArtistBookingsPage';
+import AuditionsPage from './pages/AuditionsPage';
 
 // Initialize analytics on app load
 analytics.init();
@@ -74,14 +75,15 @@ const Layout = ({ children }) => {
   const location = useLocation();
   const { isDark } = useTheme();
   const isJobsPage = location.pathname === '/careers/jobs';
+  const isAuditionsPage = location.pathname === '/auditions';
 
   // Track page views
   useEffect(() => {
     analytics.pageView(location.pathname, { search: location.search });
   }, [location.pathname, location.search]);
 
-  if (isJobsPage) {
-    // Jobs page has its own layout
+  if (isJobsPage || isAuditionsPage) {
+    // Jobs page and Feed page have their own layout
     return <>{children}</>;
   }
 
@@ -101,6 +103,16 @@ const Layout = ({ children }) => {
 const PresenceTrackerComponent = () => {
   usePresenceTracker();
   return null;
+};
+
+// Component to conditionally render ChatWidget
+const ConditionalChatWidget = () => {
+  const location = useLocation();
+  // Hide ChatWidget on auditions page
+  if (location.pathname === '/auditions') {
+    return null;
+  }
+  return <ChatWidget />;
 };
 
 function AppContent() {
@@ -131,6 +143,7 @@ function AppContent() {
               <Route path="/account" element={<EditProfilePage />} />
               <Route path="/account/settings" element={<EditProfilePage />} />
               <Route path="/favorites" element={<FavoritesPage />} />
+              <Route path="/auditions" element={<AuditionsPage />} />
               <Route path="/gigs" element={<GigsPage />} />
               <Route path="/learn" element={<LearnPage />} />
               <Route path="/map" element={<MapPage />} />
@@ -180,8 +193,8 @@ function AppContent() {
               } />
             </Routes>
           </Layout>
-          {/* AI Chat Widget - Stateless UI, can be replaced with Crisp */}
-          <ChatWidget />
+          {/* AI Chat Widget - Hidden on auditions page */}
+          <ConditionalChatWidget />
           </ReviewGatingWrapper>
         </CartProvider>
       </AuthProvider>

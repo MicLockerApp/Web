@@ -154,7 +154,80 @@ MicLocker is a production-ready full-stack marketplace where musicians, audio en
   - Time tracked every 30 seconds while viewing
   - Only tracks users who haven't opted out
 
+#### 11. Profile Media (Photos & Videos) - January 2026
+- **User Profile Portfolio**: Users can showcase their work with photos and videos
+- **Tab-based UI**: Profile pages now have 4 tabs: Photos, Videos, Listings, Reviews
+- **Photo Uploads**:
+  - Max 20 photos per user
+  - Supports: JPEG, PNG, WebP, GIF
+  - Max file size: 10MB
+  - Stored in S3 at `profiles/{user_id}/photos/`
+- **Video Uploads with Category Filters**:
+  - Max 10 videos per user
+  - Supports: MP4, MOV, WebM, MPEG
+  - Max file size: 100MB
+  - Stored in S3 at `profiles/{user_id}/videos/`
+  - **Required**: Category (musician, audio_engineer, recording_studio, venue, comedian, actor)
+  - **Optional**: Subcategory, Genre, Description, Song Name
+- **UI Features**:
+  - Grid layout for photos (square aspect ratio)
+  - Grid layout for videos (4:3 aspect ratio matching listing cards)
+  - Upload placeholder as first grid item (only on own profile)
+  - Lightbox modal for viewing media full-screen
+  - Delete functionality in lightbox
+  - **Video upload modal** with category/subcategory/genre selectors
+  - **"Auditions" badge** on videos shown in the Auditions feed
+- **Auditions Integration**:
+  - Videos automatically sync to the Auditions feed
+  - Videos auto-added to Auditions if user has <5 videos
+  - Users with 6+ videos can select which 5 to feature
+  - Selection UI appears with "Select Videos for Auditions" button
+  - Max 5 videos per user in Auditions feed
+- **Upload Media Button**:
+  - Yellow button with black text below Edit Profile
+  - Only visible on own profile
+  - Scrolls to media section when clicked
+- **Privacy**: Media is publicly visible on user profiles
+- **Backend**: `/app/backend/routes/profile_media.py`
+- **Frontend**: Updated `/app/frontend/src/pages/ProfilePage.js`
+
+#### 12. Video Favorites System - January 2026
+- **Favorites Tab**:
+  - New tab on profile page after Reviews
+  - Only visible to profile owner (private)
+  - Shows starred videos from Auditions feed
+  - Organized by category with collapsible sections
+- **Star Favorites in Auditions**:
+  - Replaced heart icon with star in Auditions feed
+  - Click star to add/remove from favorites
+  - Yellow star indicates favorited
+  - Count shows total favorites
+- **Share Modal**:
+  - Share to Facebook, X (Twitter), Reddit
+  - Copy link to clipboard
+  - Opens when clicking share button in Auditions
+- **Auto-play with Sound**:
+  - Videos auto-play with sound when active
+  - Mute button available for silent viewing
+- **Comment Button Removed**:
+  - Comment button removed from Auditions feed (planned for later)
+- **Backend**: `/app/backend/routes/auditions.py` (favorites endpoints)
+
 ## API Endpoints
+
+### Profile Media Endpoints (January 2026)
+- `GET /api/profile/media/{user_id}` - Get photos and videos for a user
+- `POST /api/profile/media/photo` - Upload a photo (authenticated)
+- `POST /api/profile/media/video` - Upload a video with category metadata (authenticated)
+- `PATCH /api/profile/media/video/{media_id}` - Update video metadata
+- `POST /api/profile/media/auditions/select` - Select which videos appear in Auditions (max 5)
+- `DELETE /api/profile/media/{media_id}` - Delete media (owner only)
+
+### Video Favorites Endpoints (January 2026)
+- `GET /api/auditions/favorites` - Get user's favorited videos
+- `POST /api/auditions/{id}/favorite` - Add video to favorites
+- `DELETE /api/auditions/{id}/favorite` - Remove video from favorites
+- `GET /api/auditions/{id}/favorite/check` - Check if video is in favorites
 
 ### Profile Visits Endpoints (Top 8 Fans)
 - `POST /api/profile-visits/track` - Track a profile visit

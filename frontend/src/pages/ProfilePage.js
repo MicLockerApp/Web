@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MapPin, Star, MessageSquare, Calendar, Music, Mic2, Building2, Package, Mail, Phone, Globe, ShoppingBag } from 'lucide-react';
+import { MapPin, Star, MessageSquare, Calendar, Music, Mic2, Building2, Package, Mail, Phone, Globe, ShoppingBag, Image, Video, Plus, X, Play, Trash2, Check, Eye, Upload, ChevronDown } from 'lucide-react';
 import { usersAPI, listingsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -13,6 +13,71 @@ import SpotifyPlayer from '../components/SpotifyPlayer';
 import Top8Fans from '../components/Top8Fans';
 import ProfileMap from '../components/ProfileMap';
 import useProfileVisitTracker from '../hooks/useProfileVisitTracker';
+
+// Categories and subcategories for video uploads
+const VIDEO_CATEGORIES = [
+  { 
+    value: 'musician', 
+    label: 'Musicians',
+    subcategories: [
+      "Accordion", "Acoustic Guitar", "Bagpipe", "Banjo", "Bass Electric", "Bass Fretless",
+      "Bass Upright", "Bassoon", "Beat Makers", "Cello", "Clarinet", "Classical Guitar",
+      "Composer Orchestral", "Dobro", "Electric Guitar", "Fiddle", "Flutes", "French Horn",
+      "Harmonica", "Harp", "Horns", "Keyboards Synths", "Mandolin", "Oboe", "Pedal Steel",
+      "Percussion", "Piano", "Rapper", "Saxophone", "Singer Female", "Singer Male",
+      "Timpani", "Trombone", "Trumpet", "Tuba", "Ukulele", "Viola", "Violin"
+    ]
+  },
+  { 
+    value: 'audio_engineer', 
+    label: 'Audio Engineers',
+    subcategories: [
+      "Boom Operator", "Dialogue Editing", "Dolby Atmos & Immersive Audio",
+      "Editing", "Film Composers", "Full Instrumental Productions", "Game Audio",
+      "Ghost Producers", "Live Drum Tracks", "Live Sound", "Mastering Engineers",
+      "Mixing Engineers", "Podcast Editing & Mastering", "Producers", "Remixing",
+      "Sound Design", "Vocal Tuning"
+    ]
+  },
+  { 
+    value: 'recording_studio', 
+    label: 'Studios',
+    subcategories: [
+      "Recording Studios", "Rehearsal Rooms", "Podcast Studios", "Mixing Studios",
+      "Mastering Studios", "Production Facilities"
+    ]
+  },
+  { 
+    value: 'venue', 
+    label: 'Venues',
+    subcategories: [
+      "Concert Hall", "Club", "Bar", "Restaurant", "Theater", "Arena",
+      "Outdoor Venue", "Private Event Space", "Lounge", "Festival Grounds"
+    ]
+  },
+  { 
+    value: 'comedian', 
+    label: 'Comedians',
+    subcategories: [
+      "Stand-up", "Improv", "Sketch Comedy", "Musical Comedy", "Physical Comedy",
+      "Observational", "Political", "Roast", "Clean/Family-Friendly"
+    ]
+  },
+  { 
+    value: 'actor', 
+    label: 'Actors',
+    subcategories: [
+      "Film Actor", "TV Actor", "Theater Actor", "Voice Actor", "Commercial Actor",
+      "Stunt Performer", "Motion Capture", "Musical Theater"
+    ]
+  },
+];
+
+const MUSIC_GENRES = [
+  "Rock", "Pop", "Hip Hop", "R&B", "Jazz", "Blues", "Country", "Electronic",
+  "Classical", "Folk", "Reggae", "Metal", "Punk", "Soul", "Funk", "Latin",
+  "World Music", "Gospel", "Indie", "Alternative", "Other"
+];
 
 // Music platform icons component
 const SocialIcon = ({ platform }) => {
@@ -43,10 +108,41 @@ const ProfilePage = () => {
   const [profile, setProfile] = useState(null);
   const [listings, setListings] = useState([]);
   const [reviews, setReviews] = useState([]);
+  const [photos, setPhotos] = useState([]);
+  const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('listings');
+  const [activeTab, setActiveTab] = useState('photos');
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [lightboxMedia, setLightboxMedia] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  
+  // Video upload modal state
+  const [showVideoUploadModal, setShowVideoUploadModal] = useState(false);
+  const [videoFile, setVideoFile] = useState(null);
+  const [videoCategory, setVideoCategory] = useState('');
+  const [videoSubcategory, setVideoSubcategory] = useState('');
+  const [videoGenre, setVideoGenre] = useState('');
+  const [videoDescription, setVideoDescription] = useState('');
+  const [videoSongName, setVideoSongName] = useState('');
+  
+  // Auditions selection state
+  const [showAuditionsSelector, setShowAuditionsSelector] = useState(false);
+  const [selectedAuditionVideos, setSelectedAuditionVideos] = useState([]);
+  const [savingAuditions, setSavingAuditions] = useState(false);
+  
+  // Video favorites state
+  const [videoFavorites, setVideoFavorites] = useState([]);
+  const [expandedFavoriteCategories, setExpandedFavoriteCategories] = useState({});
+  
+  const photoInputRef = useRef(null);
+  const videoInputRef = useRef(null);
 
   const isOwnProfile = currentUser?.id === id;
+  const auditionVideosCount = videos.filter(v => v.show_in_auditions).length;
+  
+  // Refs
+  const mediaSectionRef = useRef(null);
 
   // Track profile visits for Top 8 Fans feature
   useProfileVisitTracker(id);
@@ -54,14 +150,29 @@ const ProfilePage = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const [profileRes, listingsRes, reviewsRes] = await Promise.all([
+        const promises = [
           usersAPI.getProfile(id),
           usersAPI.getUserListings(id, { limit: 12 }),
           usersAPI.getUserReviews(id, { limit: 10 }),
-        ]);
+          usersAPI.getProfileMedia(id),
+        ];
+        
+        const [profileRes, listingsRes, reviewsRes, mediaRes] = await Promise.all(promises);
         setProfile(profileRes.data);
         setListings(listingsRes.data.listings || []);
         setReviews(reviewsRes.data.reviews || []);
+        setPhotos(mediaRes.data.photos || []);
+        setVideos(mediaRes.data.videos || []);
+        
+        // Fetch video favorites if viewing own profile
+        if (currentUser?.id === id) {
+          try {
+            const favoritesRes = await usersAPI.getVideoFavorites();
+            setVideoFavorites(favoritesRes.data || []);
+          } catch (err) {
+            // Favorites may not be available, ignore
+          }
+        }
       } catch (error) {
         console.error('Error fetching profile:', error);
       } finally {
@@ -69,7 +180,128 @@ const ProfilePage = () => {
       }
     };
     fetchProfile();
-  }, [id]);
+  }, [id, currentUser?.id]);
+
+  // Initialize auditions selection when videos change
+  useEffect(() => {
+    setSelectedAuditionVideos(videos.filter(v => v.show_in_auditions).map(v => v.id));
+  }, [videos]);
+
+  const scrollToMedia = () => {
+    mediaSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setUploadingPhoto(true);
+    try {
+      const response = await usersAPI.uploadPhoto(file);
+      if (response.data.success) {
+        setPhotos(prev => [response.data.item, ...prev]);
+      }
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      alert(error.response?.data?.detail || 'Failed to upload photo');
+    } finally {
+      setUploadingPhoto(false);
+      if (photoInputRef.current) photoInputRef.current.value = '';
+    }
+  };
+
+  const handleVideoFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setVideoFile(file);
+    setShowVideoUploadModal(true);
+    if (videoInputRef.current) videoInputRef.current.value = '';
+  };
+
+  const handleVideoUploadSubmit = async () => {
+    if (!videoFile || !videoCategory) {
+      alert('Please select a category for your video');
+      return;
+    }
+    
+    setUploadingVideo(true);
+    try {
+      const response = await usersAPI.uploadVideo(videoFile, {
+        category: videoCategory,
+        subcategory: videoSubcategory || null,
+        genre: videoGenre || null,
+        description: videoDescription || null,
+        songName: videoSongName || null,
+      });
+      if (response.data.success) {
+        setVideos(prev => [response.data.item, ...prev]);
+        // Reset form
+        setShowVideoUploadModal(false);
+        setVideoFile(null);
+        setVideoCategory('');
+        setVideoSubcategory('');
+        setVideoGenre('');
+        setVideoDescription('');
+        setVideoSongName('');
+      }
+    } catch (error) {
+      console.error('Error uploading video:', error);
+      alert(error.response?.data?.detail || 'Failed to upload video');
+    } finally {
+      setUploadingVideo(false);
+    }
+  };
+
+  const handleAuditionToggle = (videoId) => {
+    setSelectedAuditionVideos(prev => {
+      if (prev.includes(videoId)) {
+        return prev.filter(id => id !== videoId);
+      } else if (prev.length < 5) {
+        return [...prev, videoId];
+      }
+      return prev; // Already at max
+    });
+  };
+
+  const handleSaveAuditions = async () => {
+    setSavingAuditions(true);
+    try {
+      await usersAPI.selectAuditionVideos(selectedAuditionVideos);
+      // Update local state
+      setVideos(prev => prev.map(v => ({
+        ...v,
+        show_in_auditions: selectedAuditionVideos.includes(v.id)
+      })));
+      setShowAuditionsSelector(false);
+    } catch (error) {
+      console.error('Error saving auditions:', error);
+      alert(error.response?.data?.detail || 'Failed to save auditions selection');
+    } finally {
+      setSavingAuditions(false);
+    }
+  };
+
+  const handleDeleteMedia = async (mediaId, type) => {
+    if (!window.confirm(`Are you sure you want to delete this ${type}?`)) return;
+    
+    setDeletingId(mediaId);
+    try {
+      await usersAPI.deleteMedia(mediaId);
+      if (type === 'photo') {
+        setPhotos(prev => prev.filter(p => p.id !== mediaId));
+      } else {
+        setVideos(prev => prev.filter(v => v.id !== mediaId));
+      }
+      if (lightboxMedia?.id === mediaId) {
+        setLightboxMedia(null);
+      }
+    } catch (error) {
+      console.error('Error deleting media:', error);
+      alert(error.response?.data?.detail || 'Failed to delete');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   if (loading) return <LoadingSpinner />;
   if (!profile) return <div className="text-center py-16 text-gray-400">Profile not found</div>;
@@ -332,6 +564,16 @@ const ProfilePage = () => {
                   Edit Profile
                 </Link>
               )}
+              {isOwnProfile && (
+                <button
+                  onClick={scrollToMedia}
+                  className="btn bg-primary text-black hover:bg-primary/90 font-medium"
+                  data-testid="upload-media-button"
+                >
+                  <Upload className="w-4 h-4" />
+                  Upload Media
+                </button>
+              )}
             </div>
           </div>
 
@@ -433,33 +675,352 @@ const ProfilePage = () => {
           )}
         </div>
 
-        {/* Tabs */}
-        <div className={`flex gap-4 border-b mb-8 ${isDark ? 'border-dark-300' : 'border-gray-200'}`}>
+        {/* Tabs - with ref for scrolling */}
+        <div ref={mediaSectionRef} className={`flex gap-4 border-b mb-8 overflow-x-auto ${isDark ? 'border-dark-300' : 'border-gray-200'}`}>
+          <button
+            onClick={() => setActiveTab('photos')}
+            className={`pb-4 px-2 font-medium transition-colors whitespace-nowrap ${
+              activeTab === 'photos'
+                ? 'text-primary border-b-2 border-primary'
+                : isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'
+            }`}
+            data-testid="photos-tab"
+          >
+            <Image className="w-4 h-4 inline mr-2" />
+            Photos ({photos.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('videos')}
+            className={`pb-4 px-2 font-medium transition-colors whitespace-nowrap ${
+              activeTab === 'videos'
+                ? 'text-primary border-b-2 border-primary'
+                : isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'
+            }`}
+            data-testid="videos-tab"
+          >
+            <Video className="w-4 h-4 inline mr-2" />
+            Videos ({videos.length})
+          </button>
           <button
             onClick={() => setActiveTab('listings')}
-            className={`pb-4 px-2 font-medium transition-colors ${
+            className={`pb-4 px-2 font-medium transition-colors whitespace-nowrap ${
               activeTab === 'listings'
                 ? 'text-primary border-b-2 border-primary'
                 : isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'
             }`}
+            data-testid="listings-tab"
           >
             <Package className="w-4 h-4 inline mr-2" />
             Listings ({listings.length})
           </button>
           <button
             onClick={() => setActiveTab('reviews')}
-            className={`pb-4 px-2 font-medium transition-colors ${
+            className={`pb-4 px-2 font-medium transition-colors whitespace-nowrap ${
               activeTab === 'reviews'
                 ? 'text-primary border-b-2 border-primary'
                 : isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'
             }`}
+            data-testid="reviews-tab"
           >
             <Star className="w-4 h-4 inline mr-2" />
             Reviews ({reviews.length})
           </button>
+          {/* Favorites tab - only visible on own profile */}
+          {isOwnProfile && (
+            <button
+              onClick={() => setActiveTab('favorites')}
+              className={`pb-4 px-2 font-medium transition-colors whitespace-nowrap ${
+                activeTab === 'favorites'
+                  ? 'text-primary border-b-2 border-primary'
+                  : isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'
+              }`}
+              data-testid="favorites-tab"
+            >
+              <Star className="w-4 h-4 inline mr-2 fill-current" />
+              Favorites ({videoFavorites.length})
+            </button>
+          )}
         </div>
 
+        {/* Hidden file inputs */}
+        <input
+          type="file"
+          ref={photoInputRef}
+          onChange={handlePhotoUpload}
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          className="hidden"
+        />
+        <input
+          type="file"
+          ref={videoInputRef}
+          onChange={handleVideoFileSelect}
+          accept="video/mp4,video/quicktime,video/webm,video/mpeg"
+          className="hidden"
+        />
+
         {/* Tab Content */}
+        {activeTab === 'photos' && (
+          <div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {/* Upload placeholder - matching listing card style */}
+              {isOwnProfile && (
+                <div
+                  onClick={() => photoInputRef.current?.click()}
+                  className={`rounded-xl overflow-hidden cursor-pointer ${
+                    isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'
+                  } ${uploadingPhoto ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {/* Image area - square */}
+                  <div className={`aspect-square border-2 border-dashed flex flex-col items-center justify-center ${
+                    isDark ? 'border-dark-300 bg-dark-400/50' : 'border-gray-300 bg-gray-50'
+                  }`}>
+                    {uploadingPhoto ? (
+                      <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+                    ) : (
+                      <>
+                        <Plus className={`w-8 h-8 mb-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+                        <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Add Photo</span>
+                      </>
+                    )}
+                  </div>
+                  {/* Info area - matches listing card height */}
+                  <div className="p-4">
+                    <p className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Upload Photo
+                    </p>
+                    <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                      JPEG, PNG, WebP, GIF
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Photo grid - card style matching listings */}
+              {photos.map(photo => (
+                <div
+                  key={photo.id}
+                  className={`rounded-xl overflow-hidden group cursor-pointer ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}
+                  onClick={() => setLightboxMedia({ ...photo, type: 'photo' })}
+                  data-testid={`photo-card-${photo.id}`}
+                >
+                  {/* Image area */}
+                  <div className="relative aspect-square">
+                    <img
+                      src={photo.url}
+                      alt={photo.filename}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    {isOwnProfile && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteMedia(photo.id, 'photo');
+                        }}
+                        disabled={deletingId === photo.id}
+                        className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                        data-testid={`delete-photo-${photo.id}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                  {/* Info area */}
+                  <div className="p-4">
+                    <p className={`text-sm font-medium truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      {photo.filename || 'Photo'}
+                    </p>
+                    <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                      {new Date(photo.uploaded_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            {photos.length === 0 && !isOwnProfile && (
+              <div className={`text-center py-12 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                <Image className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>No photos yet</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'videos' && (
+          <div>
+            {/* Auditions Selection Bar - Show only when user has 6+ videos */}
+            {isOwnProfile && videos.length >= 6 && (
+              <div className={`mb-6 p-4 rounded-xl ${isDark ? 'bg-dark-400' : 'bg-gray-100'}`}>
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div>
+                    <h4 className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      <Eye className="w-4 h-4 inline mr-2" />
+                      Auditions Feed Selection
+                    </h4>
+                    <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      {auditionVideosCount}/5 videos visible in the Auditions feed
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowAuditionsSelector(!showAuditionsSelector)}
+                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
+                    data-testid="manage-auditions-btn"
+                  >
+                    {showAuditionsSelector ? 'Done Selecting' : 'Select Videos for Auditions'}
+                  </button>
+                </div>
+                
+                {showAuditionsSelector && (
+                  <div className="mt-4 pt-4 border-t border-dark-300">
+                    <p className={`text-sm mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Click videos below to select/deselect. Selected: {selectedAuditionVideos.length}/5
+                    </p>
+                    <button
+                      onClick={handleSaveAuditions}
+                      disabled={savingAuditions}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50"
+                    >
+                      {savingAuditions ? 'Saving...' : 'Save Selection'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Video Grid - card style matching listings */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {/* Upload placeholder - matching listing card style */}
+              {isOwnProfile && (
+                <div
+                  onClick={() => videoInputRef.current?.click()}
+                  className={`rounded-xl overflow-hidden cursor-pointer ${
+                    isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'
+                  } ${uploadingVideo ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  data-testid="upload-video-button"
+                >
+                  {/* Video area - square */}
+                  <div className={`aspect-square border-2 border-dashed flex flex-col items-center justify-center ${
+                    isDark ? 'border-dark-300 bg-dark-400/50' : 'border-gray-300 bg-gray-50'
+                  }`}>
+                    {uploadingVideo ? (
+                      <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+                    ) : (
+                      <>
+                        <Plus className={`w-8 h-8 mb-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+                        <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Add Video</span>
+                      </>
+                    )}
+                  </div>
+                  {/* Info area - matches listing card height */}
+                  <div className="p-4">
+                    <p className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Upload Video
+                    </p>
+                    <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                      MP4, MOV, WebM
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Video grid - card style matching listings */}
+              {videos.map(video => (
+                <div
+                  key={video.id}
+                  className={`rounded-xl overflow-hidden group cursor-pointer ${
+                    isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'
+                  } ${
+                    showAuditionsSelector && selectedAuditionVideos.includes(video.id) 
+                      ? 'ring-4 ring-primary' 
+                      : ''
+                  }`}
+                  onClick={() => {
+                    if (showAuditionsSelector && isOwnProfile) {
+                      handleAuditionToggle(video.id);
+                    } else {
+                      setLightboxMedia({ ...video, type: 'video' });
+                    }
+                  }}
+                  data-testid={`video-card-${video.id}`}
+                >
+                  {/* Video area - square like listings */}
+                  <div className="relative aspect-square">
+                    <video
+                      src={video.url}
+                      className="w-full h-full object-cover"
+                      muted
+                      preload="metadata"
+                    />
+                    
+                    {/* Play overlay */}
+                    <div className={`absolute inset-0 flex items-center justify-center transition-opacity ${
+                      showAuditionsSelector ? 'bg-black/50' : 'bg-black/30 group-hover:bg-black/40'
+                    }`}>
+                      {showAuditionsSelector ? (
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          selectedAuditionVideos.includes(video.id) 
+                            ? 'bg-primary text-white' 
+                            : 'bg-white/20 text-white border-2 border-white'
+                        }`}>
+                          {selectedAuditionVideos.includes(video.id) && <Check className="w-6 h-6" />}
+                        </div>
+                      ) : (
+                        <Play className="w-10 h-10 text-white" />
+                      )}
+                    </div>
+                    
+                    {/* Auditions badge */}
+                    {video.show_in_auditions && !showAuditionsSelector && (
+                      <div className="absolute top-2 left-2 px-2 py-1 bg-primary text-black text-xs rounded-full flex items-center gap-1 font-medium">
+                        <Eye className="w-3 h-3" />
+                        Auditions
+                      </div>
+                    )}
+                    
+                    {/* Delete button */}
+                    {isOwnProfile && !showAuditionsSelector && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteMedia(video.id, 'video');
+                        }}
+                        disabled={deletingId === video.id}
+                        className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                        data-testid={`delete-video-${video.id}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* Info area - matches listing card style */}
+                  <div className="p-4">
+                    <p className={`text-sm font-medium truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      {video.song_name || video.description || video.filename || 'Video'}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`text-xs px-2 py-0.5 rounded ${isDark ? 'bg-dark-300 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
+                        {VIDEO_CATEGORIES.find(c => c.value === video.category)?.label || video.category || 'Video'}
+                      </span>
+                      {video.subcategory && (
+                        <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                          {video.subcategory}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            {videos.length === 0 && !isOwnProfile && (
+              <div className={`text-center py-12 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                <Video className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>No videos yet</p>
+              </div>
+            )}
+          </div>
+        )}
         {activeTab === 'listings' && (
           <div>
             {listings.length > 0 ? (
@@ -574,7 +1135,341 @@ const ProfilePage = () => {
             )}
           </div>
         )}
+
+        {/* Favorites Tab - Only visible on own profile */}
+        {activeTab === 'favorites' && isOwnProfile && (
+          <div>
+            {videoFavorites.length > 0 ? (
+              <div className="space-y-6">
+                {/* Group favorites by category */}
+                {Object.entries(
+                  videoFavorites.reduce((acc, fav) => {
+                    const cat = fav.user_category || 'Other';
+                    if (!acc[cat]) acc[cat] = [];
+                    acc[cat].push(fav);
+                    return acc;
+                  }, {})
+                ).map(([category, favs]) => (
+                  <div key={category}>
+                    <button
+                      onClick={() => setExpandedFavoriteCategories(prev => ({
+                        ...prev,
+                        [category]: !prev[category]
+                      }))}
+                      className={`flex items-center gap-2 w-full mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}
+                    >
+                      <ChevronDown className={`w-5 h-5 transition-transform ${
+                        expandedFavoriteCategories[category] !== false ? 'rotate-0' : '-rotate-90'
+                      }`} />
+                      <span className="font-semibold capitalize">
+                        {VIDEO_CATEGORIES.find(c => c.value === category)?.label || category}
+                      </span>
+                      <span className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                        ({favs.length})
+                      </span>
+                    </button>
+                    
+                    {expandedFavoriteCategories[category] !== false && (
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {favs.map(fav => (
+                          <div
+                            key={fav.id}
+                            className={`rounded-xl overflow-hidden cursor-pointer group ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}
+                            onClick={() => setLightboxMedia({ ...fav, type: 'video' })}
+                          >
+                            {/* Video thumbnail */}
+                            <div className="relative" style={{ aspectRatio: '1/1' }}>
+                              <video
+                                src={fav.media_url}
+                                className="w-full h-full object-cover"
+                                muted
+                                preload="metadata"
+                              />
+                              <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/40 transition-colors">
+                                <Play className="w-10 h-10 text-white" />
+                              </div>
+                              {/* Subcategory badge */}
+                              {fav.user_subcategories?.[0] && (
+                                <div className="absolute bottom-2 left-2 px-2 py-1 bg-primary/90 text-black text-xs rounded-full font-medium">
+                                  {fav.user_subcategories[0]}
+                                </div>
+                              )}
+                            </div>
+                            {/* Info */}
+                            <div className="p-3">
+                              <Link
+                                to={`/profile/${fav.user_id}`}
+                                className={`text-sm font-medium hover:text-primary ${isDark ? 'text-white' : 'text-gray-900'}`}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                @{fav.username}
+                              </Link>
+                              {fav.description && (
+                                <p className={`text-xs mt-1 line-clamp-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {fav.description}
+                                </p>
+                              )}
+                              {fav.user_genres?.[0] && (
+                                <span className={`inline-block mt-2 px-2 py-0.5 text-xs rounded ${isDark ? 'bg-dark-300 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
+                                  {fav.user_genres[0]}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className={`text-center py-12 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                <Star className="w-12 h-12 mx-auto mb-4 opacity-50 fill-current" />
+                <p>No favorites yet</p>
+                <p className={`text-sm mt-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                  Star videos in the Auditions feed to save them here
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Lightbox Modal */}
+      {lightboxMedia && (
+        <div 
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+          onClick={() => setLightboxMedia(null)}
+        >
+          <button
+            onClick={() => setLightboxMedia(null)}
+            className="absolute top-4 right-4 p-2 text-white hover:bg-white/10 rounded-full transition-colors"
+          >
+            <X className="w-8 h-8" />
+          </button>
+          
+          <div 
+            className="max-w-4xl max-h-[90vh] w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {lightboxMedia.type === 'photo' ? (
+              <img
+                src={lightboxMedia.url}
+                alt={lightboxMedia.filename}
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <video
+                src={lightboxMedia.url}
+                controls
+                autoPlay
+                className="w-full h-full object-contain"
+              />
+            )}
+            
+            {/* Delete button in lightbox */}
+            {isOwnProfile && (
+              <div className="flex justify-center mt-4">
+                <button
+                  onClick={() => handleDeleteMedia(lightboxMedia.id, lightboxMedia.type)}
+                  disabled={deletingId === lightboxMedia.id}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete {lightboxMedia.type === 'photo' ? 'Photo' : 'Video'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Video Upload Modal */}
+      {showVideoUploadModal && (
+        <div 
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+          onClick={() => {
+            setShowVideoUploadModal(false);
+            setVideoFile(null);
+          }}
+        >
+          <div 
+            className={`w-full max-w-lg rounded-2xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white'}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                Upload Video
+              </h3>
+              <button
+                onClick={() => {
+                  setShowVideoUploadModal(false);
+                  setVideoFile(null);
+                }}
+                className={`p-2 rounded-full ${isDark ? 'hover:bg-dark-300' : 'hover:bg-gray-100'}`}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* File preview */}
+            {videoFile && (
+              <div className={`mb-4 p-3 rounded-lg ${isDark ? 'bg-dark-300' : 'bg-gray-100'}`}>
+                <p className={`text-sm truncate ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                  <Video className="w-4 h-4 inline mr-2" />
+                  {videoFile.name}
+                </p>
+                <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                  {(videoFile.size / (1024 * 1024)).toFixed(2)} MB
+                </p>
+              </div>
+            )}
+
+            {/* Category selector - Required */}
+            <div className="mb-4">
+              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                Category <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={videoCategory}
+                onChange={(e) => {
+                  setVideoCategory(e.target.value);
+                  setVideoSubcategory(''); // Reset subcategory when category changes
+                }}
+                className={`w-full px-4 py-2 rounded-lg border ${
+                  isDark 
+                    ? 'bg-dark-300 border-dark-200 text-white' 
+                    : 'bg-white border-gray-300 text-gray-900'
+                } focus:ring-2 focus:ring-primary focus:border-transparent`}
+                data-testid="video-category-select"
+              >
+                <option value="">Select a category...</option>
+                {VIDEO_CATEGORIES.map(cat => (
+                  <option key={cat.value} value={cat.value}>{cat.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Subcategory selector - Optional */}
+            {videoCategory && VIDEO_CATEGORIES.find(c => c.value === videoCategory)?.subcategories?.length > 0 && (
+              <div className="mb-4">
+                <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Subcategory
+                </label>
+                <select
+                  value={videoSubcategory}
+                  onChange={(e) => setVideoSubcategory(e.target.value)}
+                  className={`w-full px-4 py-2 rounded-lg border ${
+                    isDark 
+                      ? 'bg-dark-300 border-dark-200 text-white' 
+                      : 'bg-white border-gray-300 text-gray-900'
+                  } focus:ring-2 focus:ring-primary focus:border-transparent`}
+                  data-testid="video-subcategory-select"
+                >
+                  <option value="">Select a subcategory (optional)...</option>
+                  {VIDEO_CATEGORIES.find(c => c.value === videoCategory)?.subcategories.map(sub => (
+                    <option key={sub} value={sub}>{sub}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Genre selector - Optional */}
+            <div className="mb-4">
+              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                Genre
+              </label>
+              <select
+                value={videoGenre}
+                onChange={(e) => setVideoGenre(e.target.value)}
+                className={`w-full px-4 py-2 rounded-lg border ${
+                  isDark 
+                    ? 'bg-dark-300 border-dark-200 text-white' 
+                    : 'bg-white border-gray-300 text-gray-900'
+                } focus:ring-2 focus:ring-primary focus:border-transparent`}
+                data-testid="video-genre-select"
+              >
+                <option value="">Select a genre (optional)...</option>
+                {MUSIC_GENRES.map(genre => (
+                  <option key={genre} value={genre}>{genre}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Description */}
+            <div className="mb-4">
+              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                Description
+              </label>
+              <textarea
+                value={videoDescription}
+                onChange={(e) => setVideoDescription(e.target.value)}
+                placeholder="Describe your video..."
+                maxLength={500}
+                rows={3}
+                className={`w-full px-4 py-2 rounded-lg border resize-none ${
+                  isDark 
+                    ? 'bg-dark-300 border-dark-200 text-white placeholder-gray-500' 
+                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                } focus:ring-2 focus:ring-primary focus:border-transparent`}
+                data-testid="video-description-input"
+              />
+            </div>
+
+            {/* Song Name */}
+            <div className="mb-6">
+              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                Song Name
+              </label>
+              <input
+                type="text"
+                value={videoSongName}
+                onChange={(e) => setVideoSongName(e.target.value)}
+                placeholder="Enter song name (if applicable)"
+                maxLength={200}
+                className={`w-full px-4 py-2 rounded-lg border ${
+                  isDark 
+                    ? 'bg-dark-300 border-dark-200 text-white placeholder-gray-500' 
+                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                } focus:ring-2 focus:ring-primary focus:border-transparent`}
+                data-testid="video-song-name-input"
+              />
+            </div>
+
+            {/* Submit buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowVideoUploadModal(false);
+                  setVideoFile(null);
+                }}
+                className={`flex-1 px-4 py-3 rounded-lg font-medium ${
+                  isDark 
+                    ? 'bg-dark-300 text-gray-300 hover:bg-dark-200' 
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                } transition-colors`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleVideoUploadSubmit}
+                disabled={!videoCategory || uploadingVideo}
+                className={`flex-1 px-4 py-3 rounded-lg font-medium bg-primary text-white hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+                data-testid="video-upload-submit"
+              >
+                {uploadingVideo ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                    Uploading...
+                  </span>
+                ) : (
+                  'Upload Video'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
