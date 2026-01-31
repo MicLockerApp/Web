@@ -287,6 +287,14 @@ app.include_router(payments_router, prefix="/api")
 app.include_router(trades_router, prefix="/api")
 app.include_router(stats_router, prefix="/api")
 
+# Google OAuth routes
+from routes.google_oauth import router as google_oauth_router
+app.include_router(google_oauth_router, prefix="/api")
+
+# Two-Factor Authentication routes
+from routes.two_factor import router as two_factor_router
+app.include_router(two_factor_router, prefix="/api")
+
 # Analytics routes
 app.include_router(analytics_router, prefix="/api")
 app.include_router(events_router, prefix="/api")
@@ -321,6 +329,10 @@ app.include_router(presence_router)
 # Venue Booking routes
 from routes.bookings import router as bookings_router
 app.include_router(bookings_router, prefix="/api")
+
+# Notifications routes
+from routes.notifications import router as notifications_router
+app.include_router(notifications_router, prefix="/api")
 
 # Health check endpoints
 @app.get("/api/health")

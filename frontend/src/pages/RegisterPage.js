@@ -3,6 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
 import VinylLogo from '../components/VinylLogo';
+import GoogleSignInButton from '../components/GoogleSignInButton';
+import TwoFactorSetup from '../components/TwoFactorSetup';
 import { Check, ChevronRight, ChevronLeft, Info, Mail, AlertCircle } from 'lucide-react';
 import { COUNTRIES, getStatesForCountry, countryHasStates } from '../data/countries';
 import analytics from '../services/analytics';
@@ -327,7 +329,8 @@ const RegisterPage = () => {
       // Track user registered event
       analytics.userRegistered(formData.category);
       
-      navigate('/');
+      // Go to 2FA setup step
+      setStep(7);
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to complete profile');
     } finally {
@@ -453,6 +456,19 @@ const RegisterPage = () => {
         {loading ? 'Creating Account...' : 'Continue'}
         <ChevronRight className="w-4 h-4 inline ml-1" />
       </button>
+
+      {/* Divider */}
+      <div className="flex items-center gap-4 my-6">
+        <div className="flex-1 h-px bg-dark-300"></div>
+        <span className="text-gray-500 text-sm">or</span>
+        <div className="flex-1 h-px bg-dark-300"></div>
+      </div>
+
+      {/* Google Sign In */}
+      <GoogleSignInButton 
+        redirectPath="/auth/google/callback" 
+        text="Sign up with Google"
+      />
     </form>
   );
 
@@ -1225,7 +1241,22 @@ const RegisterPage = () => {
     );
   };
 
-  // Get step labels for progress indicator (6 steps with email verification)
+  // Step 7: Two-Factor Authentication Setup
+  const renderStep7 = () => (
+    <div>
+      <TwoFactorSetup
+        onComplete={() => {
+          navigate('/');
+        }}
+        onSkip={() => {
+          navigate('/');
+        }}
+        isRequired={false}
+      />
+    </div>
+  );
+
+  // Get step labels for progress indicator (7 steps with email verification and 2FA)
   const getStepLabel = () => {
     switch (step) {
       case 1: return 'Create your account';
@@ -1234,6 +1265,7 @@ const RegisterPage = () => {
       case 4: return 'Add secondary categories (optional)';
       case 5: return 'Tell us more about yourself';
       case 6: return 'Contact & shipping information';
+      case 7: return 'Secure your account (optional)';
       default: return '';
     }
   };
@@ -1273,6 +1305,7 @@ const RegisterPage = () => {
           {step === 4 && renderStep4()}
           {step === 5 && renderStep5()}
           {step === 6 && renderStep6()}
+          {step === 7 && renderStep7()}
         </div>
 
         {step === 1 && (

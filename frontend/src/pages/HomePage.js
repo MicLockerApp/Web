@@ -128,12 +128,12 @@ const HomePage = () => {
             <Link to="/search" className="btn btn-primary px-8 py-3 text-lg">
               Browse Gear
             </Link>
-            <Link to="/sell" className="btn btn-outline px-8 py-3 text-lg">
-              Sell Your Gear
+            <Link to="/map" className="btn btn-outline px-8 py-3 text-lg" data-testid="discover-pros-btn">
+              Discover Pros
             </Link>
           </div>
           
-          {/* Stats - Reordered: Users, Listings, Platform Fee, Satisfaction */}
+          {/* Stats - HIDDEN (kept for future use)
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16 max-w-2xl mx-auto">
             <div>
               <p className="text-3xl font-bold text-primary">
@@ -156,6 +156,7 @@ const HomePage = () => {
               <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Satisfaction</p>
             </div>
           </div>
+          */}
         </div>
       </section>
 

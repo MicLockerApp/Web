@@ -211,7 +211,179 @@ MicLocker is a production-ready full-stack marketplace where musicians, audio en
 }
 ```
 
-## Completed This Session (January 21, 2026)
+## Completed This Session (January 31, 2026)
+
+### Google OAuth & Two-Factor Authentication Implementation
+
+#### Google OAuth Sign-In
+1. **Emergent-managed Google Auth Integration**
+   - Added "Continue with Google" button on login page
+   - Added "Sign up with Google" button on registration page
+   - Created `/app/frontend/src/components/GoogleSignInButton.js`
+   - Created `/app/frontend/src/components/GoogleAuthCallback.js` to handle OAuth redirect
+   - Created `/app/backend/routes/google_oauth.py` for backend OAuth processing
+   - New route: `/auth/google/callback` handles the OAuth flow
+
+2. **How Google OAuth Works:**
+   - User clicks "Continue with Google"
+   - Redirected to Emergent Auth (Google sign-in)
+   - Returns to `/auth/google/callback#session_id=xxx`
+   - Backend exchanges session_id for user data
+   - New users are created with email from Google
+   - Existing users are linked to their Google account
+
+#### Two-Factor Authentication (2FA)
+1. **Authenticator App (TOTP)**
+   - QR code generation for apps like Google Authenticator, Authy
+   - Manual secret entry option
+   - Backup codes generated on setup (10 codes)
+   - Uses `pyotp` library for TOTP generation/verification
+
+2. **SMS-based 2FA (Twilio)**
+   - Phone number verification via Twilio Verify
+   - **Requires Twilio credentials in backend/.env:**
+     - `TWILIO_ACCOUNT_SID`
+     - `TWILIO_AUTH_TOKEN`
+     - `TWILIO_VERIFY_SERVICE`
+   - Falls back to TOTP if SMS unavailable
+
+3. **2FA Enforcement Policy:**
+   - Optional during registration (can skip)
+   - Required for sensitive actions: withdrawals, password changes
+   - Challenge/validate flow for protected operations
+
+4. **New Components:**
+   - `/app/frontend/src/components/TwoFactorSetup.js` - Setup wizard
+   - `/app/backend/routes/two_factor.py` - 2FA API endpoints
+   - `/app/backend/models/two_factor.py` - Data models
+
+#### New API Endpoints
+- `GET /api/2fa/status` - Get user's 2FA status
+- `POST /api/2fa/setup` - Initialize 2FA setup (TOTP or SMS)
+- `POST /api/2fa/verify` - Verify and enable 2FA
+- `POST /api/2fa/disable` - Disable 2FA (requires password + code)
+- `POST /api/2fa/challenge` - Create challenge for sensitive actions
+- `POST /api/2fa/validate` - Validate challenge code
+- `POST /api/2fa/resend-sms` - Resend SMS verification code
+- `POST /api/auth/google/callback` - Process Google OAuth
+
+### Registration Flow Updated
+- Step 1-6: Same as before (account creation, email verification, profile setup)
+- Step 7: **NEW** - 2FA setup (optional, can skip)
+
+### Files Created
+- `/app/frontend/src/components/GoogleSignInButton.js`
+- `/app/frontend/src/components/GoogleAuthCallback.js`
+- `/app/frontend/src/components/TwoFactorSetup.js`
+- `/app/backend/routes/google_oauth.py`
+- `/app/backend/routes/two_factor.py`
+- `/app/backend/models/two_factor.py`
+
+### Files Modified
+- `/app/frontend/src/pages/LoginPage.js` - Added Google button
+- `/app/frontend/src/pages/RegisterPage.js` - Added Google button + 2FA step
+- `/app/frontend/src/App.js` - Added OAuth callback route
+- `/app/backend/server.py` - Registered new routers
+
+### Dependencies Added
+- `pyotp==2.9.0` - TOTP generation
+- `qrcode==8.2` - QR code generation
+- `twilio==9.10.0` - SMS delivery
+- `Pillow` - Image processing for QR codes
+
+### Venue Booking System Complete (P0, P1, P2)
+
+#### P0: Venue Booking Management UI
+1. **VenueBookingsPage** (`/venue/bookings`) - Complete management interface for venue owners
+   - Filter tabs: Pending, Accepted, Declined, All
+   - Booking request cards showing event details, artist info, dates
+   - Accept/Decline buttons with response modal
+   - Response message field for communicating with artists
+   - Document upload section for accepted bookings
+   - Component: `/app/frontend/src/pages/VenueBookingsPage.js`
+
+2. **ArtistBookingsPage** (`/my-bookings`) - Track booking requests for artists
+   - View all submitted booking requests
+   - Filter by status (All, Pending, Confirmed, Declined)
+   - Cancel pending bookings
+   - View venue responses
+   - Upload documents for accepted bookings
+   - Component: `/app/frontend/src/pages/ArtistBookingsPage.js`
+
+3. **Navbar Integration**
+   - "Manage Bookings" link for venue users (category === 'venue')
+   - "My Bookings" link for non-venue users
+   - Added Calendar icon for booking links
+
+#### P1: Notification System
+1. **Backend Notification System**
+   - Notification model with types: booking_accepted, booking_declined, booking_request, etc.
+   - CRUD API endpoints for notifications
+   - Auto-create notifications when:
+     - Artist submits booking request → Venue gets notified
+     - Venue accepts booking → Artist gets notified
+     - Venue declines booking → Artist gets notified
+   - Files: `/app/backend/models/notification.py`, `/app/backend/routes/notifications.py`
+
+2. **Frontend Notification Bell**
+   - Bell icon in navbar with unread count badge
+   - Dropdown showing recent notifications
+   - Click notification to navigate to relevant page
+   - "Mark all read" functionality
+   - Poll for new notifications every 30 seconds
+
+#### P2: Document Attachments for Approved Bookings
+1. Both venues and artists can upload documents to accepted bookings
+2. Documents stored in S3 via existing upload infrastructure
+3. Separate sections for "Your Documents" and "From Artist/Venue"
+4. Support for PDF, DOC, DOCX, TXT, JPG, PNG formats
+5. Links open documents in new tab
+
+### Extended Booking System for Audio Engineers & Recording Studios
+1. **Backend Updates** (`/app/backend/routes/bookings.py`)
+   - Added `BOOKABLE_CATEGORIES = ["venue", "audio_engineer", "recording_studio"]`
+   - All booking endpoints now support these three categories
+   - Validation rejects booking requests to non-bookable categories
+
+2. **Frontend Updates**
+   - ProfilePage shows "View Calendar" for venues, "Book Session" for engineers/studios
+   - Navbar shows "Manage Bookings" for all three bookable categories
+   - VenueBookingsPage accessible to all three categories
+   - VenueCalendarPage works for all three categories
+
+### New API Endpoints
+- `POST /api/notifications` - Create notification (internal use)
+- `GET /api/notifications` - Get user's notifications
+- `GET /api/notifications/count` - Get unread count
+- `PATCH /api/notifications/{id}/read` - Mark single notification read
+- `POST /api/notifications/mark-read` - Mark multiple/all notifications read
+- `DELETE /api/notifications/{id}` - Delete notification
+- `DELETE /api/notifications` - Clear all notifications
+
+### New Routes
+- `/venue/bookings` - Venue booking management page
+- `/my-bookings` - Artist bookings page
+
+### Files Created/Modified
+- `/app/backend/models/notification.py` - Notification data model
+- `/app/backend/routes/notifications.py` - Notification API
+- `/app/backend/routes/bookings.py` - Added notification triggers + extended categories
+- `/app/backend/server.py` - Registered notification router
+- `/app/frontend/src/pages/ArtistBookingsPage.js` - New page
+- `/app/frontend/src/pages/VenueBookingsPage.js` - Updated with document upload
+- `/app/frontend/src/pages/VenueCalendarPage.js` - Accept/Decline buttons added
+- `/app/frontend/src/pages/ProfilePage.js` - Calendar button for all bookable categories
+- `/app/frontend/src/components/Navbar.js` - Added notification bell and booking links
+- `/app/frontend/src/App.js` - Added routes
+
+### Testing
+- Backend: 14/14 tests passed (100%)
+- Frontend: All UI elements verified
+- Test files: 
+  - `/app/backend/tests/test_bookings_notifications.py`
+  - `/app/backend/tests/test_extended_bookings.py`
+
+## Completed Previous Session (January 21, 2026)
 
 ### Admin Quick Login Feature (NEW - January 21, 2026)
 1. **Admin Login Button** added to LoginPage.js

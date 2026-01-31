@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, User, Menu, X, MessageSquare, LogOut, Package, Edit, Heart, Sun, Moon, Tag, ShoppingBag, LayoutDashboard, Shield, Settings, ArrowLeftRight, List, GraduationCap, Guitar, MapPin } from 'lucide-react';
+import { Search, ShoppingCart, User, Menu, X, MessageSquare, LogOut, Package, Edit, Heart, Sun, Moon, Tag, ShoppingBag, LayoutDashboard, Shield, Settings, ArrowLeftRight, List, GraduationCap, Guitar, MapPin, Bell, Calendar, Play } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useTheme } from '../context/ThemeContext';
@@ -18,6 +18,10 @@ const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const notificationRef = useRef(null);
   
   // Search dropdown state
   const [searchResults, setSearchResults] = useState({ listings: [], users: [] });
@@ -26,18 +30,25 @@ const Navbar = () => {
   const searchRef = useRef(null);
   const searchTimeoutRef = useRef(null);
 
-  // Fetch unread message count when authenticated
+  // Fetch unread message count and notifications when authenticated
   useEffect(() => {
     const fetchUnreadCount = async () => {
       if (!isAuthenticated) {
         setUnreadCount(0);
+        setNotificationCount(0);
         return;
       }
       try {
-        const response = await messagesAPI.getUnreadCount();
-        setUnreadCount(response.data.unread_count || 0);
+        const [msgRes, notifRes] = await Promise.all([
+          messagesAPI.getUnreadCount(),
+          fetch(`${process.env.REACT_APP_BACKEND_URL}/api/notifications/count`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+          }).then(r => r.json()).catch(() => ({ unread_count: 0 }))
+        ]);
+        setUnreadCount(msgRes.data.unread_count || 0);
+        setNotificationCount(notifRes.unread_count || 0);
       } catch (error) {
-        console.error('Error fetching unread count:', error);
+        console.error('Error fetching counts:', error);
       }
     };
 
@@ -46,6 +57,66 @@ const Navbar = () => {
     const interval = setInterval(fetchUnreadCount, 30000);
     return () => clearInterval(interval);
   }, [isAuthenticated]);
+
+  // Close notification dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/notifications?limit=10`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      const data = await res.json();
+      setNotifications(data || []);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
+
+  const handleNotificationClick = async () => {
+    if (!showNotifications) {
+      fetchNotifications();
+    }
+    setShowNotifications(!showNotifications);
+  };
+
+  const markNotificationRead = async (notifId) => {
+    try {
+      await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/notifications/${notifId}/read`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: true } : n));
+      setNotificationCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error('Error marking notification read:', error);
+    }
+  };
+
+  const markAllNotificationsRead = async () => {
+    try {
+      await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/notifications/mark-read`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ mark_all_read: true })
+      });
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      setNotificationCount(0);
+    } catch (error) {
+      console.error('Error marking all read:', error);
+    }
+  };
 
   // Handle search input with debounce
   useEffect(() => {
@@ -301,6 +372,14 @@ const Navbar = () => {
               <>
                 {/* New Feature Buttons */}
                 <Link 
+                  to="/feed" 
+                  className={`p-2 ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`} 
+                  data-testid="feed-link"
+                  title="Feed"
+                >
+                  <Play className="w-5 h-5" />
+                </Link>
+                <Link 
                   to="/gigs" 
                   className={`p-2 ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`} 
                   data-testid="gigs-link"
@@ -324,6 +403,73 @@ const Navbar = () => {
                 >
                   <MapPin className="w-5 h-5" />
                 </Link>
+                
+                {/* Notifications Bell */}
+                <div className="relative" ref={notificationRef}>
+                  <button 
+                    onClick={handleNotificationClick}
+                    className={`p-2 relative ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}
+                    data-testid="notifications-bell"
+                    title="Notifications"
+                  >
+                    <Bell className="w-5 h-5" />
+                    {notificationCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                        {notificationCount > 99 ? '99+' : notificationCount}
+                      </span>
+                    )}
+                  </button>
+                  {showNotifications && (
+                    <div className={`absolute right-0 mt-2 w-80 rounded-lg shadow-xl overflow-hidden z-50 ${
+                      isDark ? 'bg-dark-400 border border-dark-300' : 'bg-white border border-gray-200'
+                    }`}>
+                      <div className={`px-4 py-3 border-b flex items-center justify-between ${isDark ? 'border-dark-300' : 'border-gray-200'}`}>
+                        <span className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Notifications</span>
+                        {notificationCount > 0 && (
+                          <button 
+                            onClick={markAllNotificationsRead}
+                            className="text-xs text-primary hover:underline"
+                          >
+                            Mark all read
+                          </button>
+                        )}
+                      </div>
+                      <div className="max-h-96 overflow-y-auto">
+                        {notifications.length === 0 ? (
+                          <div className={`p-6 text-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                            No notifications yet
+                          </div>
+                        ) : (
+                          notifications.map(notif => (
+                            <Link
+                              key={notif.id}
+                              to={notif.link || '#'}
+                              onClick={() => {
+                                if (!notif.is_read) markNotificationRead(notif.id);
+                                setShowNotifications(false);
+                              }}
+                              className={`block px-4 py-3 border-b transition-colors ${
+                                isDark 
+                                  ? `border-dark-300 ${notif.is_read ? 'bg-dark-400' : 'bg-dark-300'} hover:bg-dark-200` 
+                                  : `border-gray-100 ${notif.is_read ? 'bg-white' : 'bg-blue-50'} hover:bg-gray-50`
+                              }`}
+                            >
+                              <p className={`text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                                {notif.title}
+                              </p>
+                              <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                                {notif.message}
+                              </p>
+                              <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                                {new Date(notif.created_at).toLocaleDateString()}
+                              </p>
+                            </Link>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
                 
                 <Link to="/messages" className={`p-2 relative ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`} data-testid="messages-link">
                   <MessageSquare className="w-5 h-5" />
@@ -373,6 +519,28 @@ const Navbar = () => {
                         <LayoutDashboard className="w-4 h-4" />
                         Dashboard
                       </Link>
+                      {/* Booking Links - Show based on user type */}
+                      {['venue', 'audio_engineer', 'recording_studio'].includes(user?.category?.toLowerCase()) ? (
+                        <Link
+                          to="/venue/bookings"
+                          className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-gray-300 hover:bg-dark-300' : 'text-gray-700 hover:bg-gray-50'}`}
+                          onClick={() => setUserMenuOpen(false)}
+                          data-testid="venue-bookings-link"
+                        >
+                          <Calendar className="w-4 h-4" />
+                          Manage Bookings
+                        </Link>
+                      ) : (
+                        <Link
+                          to="/my-bookings"
+                          className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-gray-300 hover:bg-dark-300' : 'text-gray-700 hover:bg-gray-50'}`}
+                          onClick={() => setUserMenuOpen(false)}
+                          data-testid="artist-bookings-link"
+                        >
+                          <Calendar className="w-4 h-4" />
+                          My Bookings
+                        </Link>
+                      )}
                       <Link
                         to="/orders"
                         className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-gray-300 hover:bg-dark-300' : 'text-gray-700 hover:bg-gray-50'}`}
@@ -520,6 +688,14 @@ const Navbar = () => {
               </Link>
               {isAuthenticated ? (
                 <>
+                  <Link
+                    to="/feed"
+                    className={`flex items-center gap-2 py-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <Play className="w-5 h-5" />
+                    Feed
+                  </Link>
                   <Link
                     to="/gigs"
                     className={`flex items-center gap-2 py-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}

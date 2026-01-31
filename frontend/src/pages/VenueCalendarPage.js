@@ -46,6 +46,12 @@ const VenueCalendarPage = () => {
     special_requests: ''
   });
   const [submitting, setSubmitting] = useState(false);
+  
+  // Response modal state for venue owner actions
+  const [showResponseModal, setShowResponseModal] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [responseType, setResponseType] = useState(null); // 'accept' or 'decline'
+  const [responseMessage, setResponseMessage] = useState('');
 
   const isVenueOwner = user && user.id === venueId;
 
@@ -191,6 +197,36 @@ const VenueCalendarPage = () => {
     }
   };
 
+  const handleRespond = (event, type) => {
+    setSelectedEvent(event);
+    setResponseType(type);
+    setResponseMessage('');
+    setShowResponseModal(true);
+  };
+
+  const submitResponse = async () => {
+    if (!selectedEvent) return;
+    
+    setSubmitting(true);
+    try {
+      await api.patch(`/bookings/${selectedEvent.id}`, {
+        status: responseType === 'accept' ? 'accepted' : 'declined',
+        venue_response: responseMessage || null
+      });
+      
+      setShowResponseModal(false);
+      setSelectedEvent(null);
+      fetchCalendar();
+      
+      alert(`Booking request ${responseType === 'accept' ? 'accepted' : 'declined'} successfully! The artist has been notified.`);
+    } catch (error) {
+      console.error('Error responding to booking:', error);
+      alert(error.response?.data?.detail || 'Failed to respond to booking');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const renderCalendar = () => {
     const daysInMonth = getDaysInMonth(currentMonth, currentYear);
     const firstDay = getFirstDayOfMonth(currentMonth, currentYear);
@@ -331,15 +367,24 @@ const VenueCalendarPage = () => {
               <div className="divide-y divide-dark-300">
                 {dateEvents.map(event => (
                   <div key={event.id} className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                      <div className="flex items-start gap-4 flex-1">
                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isDark ? 'bg-dark-300' : 'bg-gray-100'}`}>
                           <Music className="w-6 h-6 text-primary" />
                         </div>
-                        <div>
-                          <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                            {event.event_name}
-                          </h3>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                              {event.event_name}
+                            </h3>
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              event.status === 'accepted' 
+                                ? 'bg-green-500/20 text-green-400'
+                                : 'bg-yellow-500/20 text-yellow-400'
+                            }`}>
+                              {event.status === 'accepted' ? 'Confirmed' : 'Pending'}
+                            </span>
+                          </div>
                           <div className={`flex flex-wrap items-center gap-3 mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                             <span className="flex items-center gap-1">
                               <Clock className="w-4 h-4" />
@@ -361,13 +406,50 @@ const VenueCalendarPage = () => {
                           </div>
                         </div>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        event.status === 'accepted' 
-                          ? 'bg-green-500/20 text-green-400'
-                          : 'bg-yellow-500/20 text-yellow-400'
-                      }`}>
-                        {event.status === 'accepted' ? 'Confirmed' : 'Pending'}
-                      </span>
+                      
+                      {/* Action Buttons for Venue Owner */}
+                      {isVenueOwner && event.status === 'pending' && (
+                        <div className="flex gap-2 sm:flex-col">
+                          <button
+                            onClick={() => handleRespond(event, 'accept')}
+                            data-testid={`accept-booking-${event.id}`}
+                            className="flex-1 sm:flex-none px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 flex items-center justify-center gap-2 text-sm"
+                          >
+                            <Check className="w-4 h-4" />
+                            Accept
+                          </button>
+                          <button
+                            onClick={() => handleRespond(event, 'decline')}
+                            data-testid={`decline-booking-${event.id}`}
+                            className="flex-1 sm:flex-none px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 flex items-center justify-center gap-2 text-sm"
+                          >
+                            <X className="w-4 h-4" />
+                            Decline
+                          </button>
+                          <Link
+                            to={`/messages?to=${event.artist_id}`}
+                            className={`flex-1 sm:flex-none px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2 text-sm ${
+                              isDark ? 'bg-dark-300 text-white hover:bg-dark-200' : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
+                            }`}
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                            Message
+                          </Link>
+                        </div>
+                      )}
+                      
+                      {/* Message button for confirmed bookings */}
+                      {isVenueOwner && event.status === 'accepted' && (
+                        <Link
+                          to={`/messages?to=${event.artist_id}`}
+                          className={`px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2 text-sm ${
+                            isDark ? 'bg-dark-300 text-white hover:bg-dark-200' : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
+                          }`}
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                          Message Artist
+                        </Link>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -533,7 +615,7 @@ const VenueCalendarPage = () => {
               Back to Profile
             </Link>
             <h1 className={`text-2xl sm:text-3xl font-bold mt-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              {venue?.venue_name || venue?.username}'s Calendar
+              {venue?.venue_name || venue?.username}&apos;s {venue?.category === 'recording_studio' ? 'Studio ' : ''}Calendar
             </h1>
             {venue?.location && (
               <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -543,7 +625,7 @@ const VenueCalendarPage = () => {
           </div>
           
           <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            Click on a date to see bookings or request a time
+            Click on a date to {venue?.category === 'venue' ? 'see bookings or request a time' : 'book a session'}
           </div>
         </div>
 
@@ -601,6 +683,75 @@ const VenueCalendarPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Response Modal */}
+      {showResponseModal && selectedEvent && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`w-full max-w-md rounded-2xl ${isDark ? 'bg-dark-400' : 'bg-white'} p-6`}>
+            <h2 className={`text-xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              {responseType === 'accept' ? 'Accept' : 'Decline'} Booking Request
+            </h2>
+            
+            <div className={`p-4 rounded-lg mb-4 ${isDark ? 'bg-dark-300' : 'bg-gray-50'}`}>
+              <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {selectedEvent.event_name}
+              </p>
+              <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                {getFormattedDate()} at {selectedEvent.event_time}
+              </p>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Requested by: {selectedEvent.artist_username}
+              </p>
+            </div>
+
+            <div className="mb-4">
+              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                Message to Artist (optional)
+              </label>
+              <textarea
+                value={responseMessage}
+                onChange={(e) => setResponseMessage(e.target.value)}
+                rows={3}
+                placeholder={responseType === 'accept' 
+                  ? "e.g., Looking forward to your performance! Please arrive by 7 PM for sound check."
+                  : "e.g., Unfortunately we have another event scheduled. Please try another date."
+                }
+                className={`w-full px-4 py-2 rounded-lg border ${isDark ? 'bg-dark-300 border-dark-200 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+              />
+            </div>
+
+            <div className={`p-3 rounded-lg mb-4 ${
+              responseType === 'accept' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
+            }`}>
+              <p className="text-sm">
+                {responseType === 'accept' 
+                  ? '✓ The artist will be notified that their booking has been confirmed.'
+                  : '✗ The artist will be notified that their booking request was declined.'
+                }
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowResponseModal(false)}
+                className={`flex-1 py-3 rounded-lg font-medium ${isDark ? 'bg-dark-300 text-white hover:bg-dark-200' : 'bg-gray-200 text-gray-900 hover:bg-gray-300'}`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitResponse}
+                disabled={submitting}
+                data-testid="confirm-response-btn"
+                className={`flex-1 py-3 rounded-lg font-medium text-white disabled:opacity-50 ${
+                  responseType === 'accept' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'
+                }`}
+              >
+                {submitting ? 'Processing...' : responseType === 'accept' ? 'Confirm Acceptance' : 'Confirm Decline'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

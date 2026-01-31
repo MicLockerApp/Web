@@ -916,7 +916,7 @@ const EditProfilePage = () => {
               </div>
               <PrivacyToggle
                 label="Show physical address on public profile"
-                description="Allow others to see your physical address with a map"
+                description="Selecting this, shows your location on the main map and will allow users to find you based on their radius selection"
                 checked={formData.show_physical_address}
                 onChange={handleShowPhysicalAddressToggle}
               />

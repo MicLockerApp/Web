@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import VinylLogo from '../components/VinylLogo';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 import analytics from '../services/analytics';
 
 const LoginPage = () => {
@@ -86,9 +87,22 @@ const LoginPage = () => {
             {loading ? 'Signing In...' : 'Sign In'}
           </button>
 
+          {/* Divider */}
+          <div className="flex items-center gap-4 my-6">
+            <div className={`flex-1 h-px ${isDark ? 'bg-dark-300' : 'bg-gray-200'}`}></div>
+            <span className={`${isDark ? 'text-gray-500' : 'text-gray-400'} text-sm`}>or</span>
+            <div className={`flex-1 h-px ${isDark ? 'bg-dark-300' : 'bg-gray-200'}`}></div>
+          </div>
+
+          {/* Google Sign In */}
+          <GoogleSignInButton 
+            redirectPath="/auth/google/callback" 
+            text="Continue with Google"
+          />
+
           <Link 
             to="/forgot-password" 
-            className={`block text-center mt-4 ${isDark ? 'text-gray-400 hover:text-primary' : 'text-gray-600 hover:text-primary'} transition-colors`}
+            className={`block text-center mt-6 ${isDark ? 'text-gray-400 hover:text-primary' : 'text-gray-600 hover:text-primary'} transition-colors`}
             data-testid="forgot-password-link"
           >
             Forgot Password?
