@@ -1156,3 +1156,118 @@ async def change_password(
     logger.info(f"User {current_user['id']} changed their password")
     
     return {"message": "Password changed successfully"}
+
+
+class DeleteAccountRequest(BaseModel):
+    """Request to delete user account"""
+    username: str
+    password: str
+
+
+@router.delete("/account/delete")
+async def delete_account(
+    data: DeleteAccountRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Permanently delete user account and all associated data"""
+    db = get_database()
+    
+    # Verify username matches
+    if data.username != current_user["username"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username does not match"
+        )
+    
+    # Verify password
+    if not verify_password(data.password, current_user.get("hashed_password", "")):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Incorrect password"
+        )
+    
+    user_id = current_user["id"]
+    username = current_user["username"]
+    
+    # Delete all user data from various collections
+    try:
+        # Delete user's listings
+        await db.listings.delete_many({"seller_id": user_id})
+        
+        # Delete user's profile media (photos/videos)
+        await db.profile_media.delete_many({"user_id": user_id})
+        
+        # Delete user's audition items
+        await db.auditions_items.delete_many({"user_id": user_id})
+        
+        # Delete user's favorites
+        await db.video_favorites.delete_many({"user_id": user_id})
+        await db.favorites.delete_many({"user_id": user_id})
+        
+        # Delete user's gigs
+        await db.gigs.delete_many({"user_id": user_id})
+        
+        # Delete user's messages (both sent and received threads)
+        await db.messages.delete_many({"$or": [
+            {"sender_id": user_id},
+            {"recipient_id": user_id}
+        ]})
+        await db.message_threads.delete_many({"$or": [
+            {"participant_ids": user_id}
+        ]})
+        
+        # Delete user's reviews (given and received)
+        await db.reviews.delete_many({"$or": [
+            {"reviewer_id": user_id},
+            {"seller_id": user_id}
+        ]})
+        
+        # Delete user's support tickets
+        await db.support_tickets.delete_many({"user_id": user_id})
+        
+        # Delete user's notifications
+        await db.notifications.delete_many({"user_id": user_id})
+        
+        # Delete user's bookings
+        await db.bookings.delete_many({"$or": [
+            {"venue_id": user_id},
+            {"artist_id": user_id}
+        ]})
+        
+        # Delete user's orders
+        await db.orders.delete_many({"$or": [
+            {"buyer_id": user_id},
+            {"seller_id": user_id}
+        ]})
+        
+        # Delete user's profile visits tracking
+        await db.profile_visits.delete_many({"$or": [
+            {"visitor_id": user_id},
+            {"profile_id": user_id}
+        ]})
+        
+        # Delete pending email changes
+        await db.pending_email_changes.delete_many({"user_id": user_id})
+        
+        # Delete 2FA data
+        await db.user_2fa.delete_many({"user_id": user_id})
+        
+        # Finally, delete the user account
+        result = await db.users.delete_one({"id": user_id})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to delete account"
+            )
+        
+        logger.info(f"User {username} (ID: {user_id}) deleted their account and all associated data")
+        
+        return {"message": "Account and all associated data have been permanently deleted"}
+        
+    except Exception as e:
+        logger.error(f"Error deleting account for user {user_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete account. Please contact support."
+        )
