@@ -70,6 +70,22 @@ CI=false
 
 **Reason:** 177 ESLint errors were failing the production build when `CI=true`.
 
+## Recent Updates (February 2026)
+
+### Profile Actions Feature
+- **Report User Button**: Users can report other users with 9 predefined reasons
+  - Creates a support ticket automatically
+  - Reasons: Harassment, Spam, Impersonation, Inappropriate Content, Fraud, IP Violation, Safety Threats, Underage, Other
+- **Delete Account Button**: Users can permanently delete their own account
+  - Two-step confirmation with warning modals
+  - Requires username + password verification
+  - Deletes all user data from 15+ collections
+
+### Files Modified
+- `/app/frontend/src/pages/ProfilePage.js` - Report/Delete buttons and modals
+- `/app/frontend/src/services/api.js` - ticketsAPI, deleteAccount API
+- `/app/backend/routes/auth.py` - DELETE /api/auth/account/delete endpoint
+
 ## Known Issues
 
 ### Active
