@@ -1344,6 +1344,43 @@ const AuditionsPage = () => {
       )}
 
       {/* Removed duplicate swipe hint - now handled inside VideoDisplay component */}
+
+      {/* First-Time Welcome Modal */}
+      {showWelcomeModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className={`w-full max-w-md rounded-2xl p-8 ${isDark ? 'bg-dark-200' : 'bg-white'} shadow-2xl`}>
+            {/* Icon */}
+            <div className="flex justify-center mb-6">
+              <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center">
+                <Smartphone className="w-10 h-10 text-primary" />
+              </div>
+            </div>
+            
+            {/* Title */}
+            <h2 className={`text-2xl font-bold text-center mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              Hi there! 👋
+            </h2>
+            
+            {/* Message */}
+            <p className={`text-center mb-6 leading-relaxed ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+              We know that the scroller for Auditions might be a tiny bit difficult to work with. We are currently developing native iOS and Android apps. So just bear with us as we get them up and running.
+            </p>
+            
+            <p className={`text-center mb-8 font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
+              In the meantime, enjoy MicLocker!
+            </p>
+            
+            {/* Close Button */}
+            <button
+              onClick={handleCloseWelcomeModal}
+              className="w-full py-3 px-6 bg-primary text-black font-semibold rounded-xl hover:bg-primary/90 transition-colors"
+              data-testid="welcome-modal-close"
+            >
+              Got it!
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
