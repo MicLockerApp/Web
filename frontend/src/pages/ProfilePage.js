@@ -388,6 +388,61 @@ const ProfilePage = () => {
     }
   };
 
+  // Report User handlers
+  const handleReportSubmit = async () => {
+    if (!reportReason) {
+      alert('Please select a reason for reporting');
+      return;
+    }
+    
+    setSubmittingReport(true);
+    try {
+      const reportReasonLabel = REPORT_REASONS.find(r => r.value === reportReason)?.label || reportReason;
+      
+      await ticketsAPI.create({
+        category: 'Report a User',
+        subject: `User Report: ${profile.username} - ${reportReasonLabel}`,
+        message: `Reported User: @${profile.username} (ID: ${profile.id})\n\nReason: ${reportReasonLabel}\n\nAdditional Details:\n${reportDetails || 'No additional details provided.'}`
+      });
+      
+      alert('Report submitted successfully. Our team will review this report and take appropriate action.');
+      setShowReportModal(false);
+      setReportReason('');
+      setReportDetails('');
+    } catch (error) {
+      console.error('Error submitting report:', error);
+      alert(error.response?.data?.detail || 'Failed to submit report. Please try again.');
+    } finally {
+      setSubmittingReport(false);
+    }
+  };
+
+  // Delete Account handlers
+  const handleDeleteConfirm = () => {
+    setShowDeleteConfirmModal(false);
+    setShowDeleteCredentialsModal(true);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!deleteUsername || !deletePassword) {
+      alert('Please enter both username and password');
+      return;
+    }
+    
+    setDeletingAccount(true);
+    try {
+      await authAPI.deleteAccount(deleteUsername, deletePassword);
+      alert('Your account has been permanently deleted.');
+      // Log out and redirect to home
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      alert(error.response?.data?.detail || 'Failed to delete account. Please check your credentials.');
+    } finally {
+      setDeletingAccount(false);
+    }
+  };
+
   if (loading) return <LoadingSpinner />;
   if (!profile) return <div className="text-center py-16 text-gray-400">Profile not found</div>;
 
