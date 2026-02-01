@@ -699,6 +699,17 @@ const ProfilePage = () => {
                   Message
                 </Link>
               )}
+              {/* Report User Button - for viewing other users' profiles */}
+              {!isOwnProfile && currentUser && (
+                <button
+                  onClick={() => setShowReportModal(true)}
+                  className="btn btn-secondary flex items-center justify-center gap-2 text-red-500 hover:text-red-400 hover:border-red-500/50"
+                  data-testid="report-user-button"
+                >
+                  <Flag className="w-4 h-4" />
+                  Report User
+                </button>
+              )}
               {isOwnProfile && (
                 <Link to="/settings" className="btn btn-secondary">
                   Edit Profile
