@@ -867,6 +867,25 @@ const AuditionsPage = () => {
   const [hasSwipedUp, setHasSwipedUp] = useState(false);
   const [hasSwipedHorizontal, setHasSwipedHorizontal] = useState(false);
   const [showCategoryBar, setShowCategoryBar] = useState(true);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+
+  // Check if user should see the welcome modal (first-time visitors only)
+  useEffect(() => {
+    if (currentUser) {
+      const hasSeenWelcome = localStorage.getItem(`auditions_welcome_seen_${currentUser.id}`);
+      if (!hasSeenWelcome) {
+        setShowWelcomeModal(true);
+      }
+    }
+  }, [currentUser]);
+
+  // Handle closing the welcome modal
+  const handleCloseWelcomeModal = () => {
+    if (currentUser) {
+      localStorage.setItem(`auditions_welcome_seen_${currentUser.id}`, 'true');
+    }
+    setShowWelcomeModal(false);
+  };
 
   // Track first vertical swipe
   const handleFirstSwipeUp = useCallback(() => {
