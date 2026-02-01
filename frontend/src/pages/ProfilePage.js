@@ -181,6 +181,21 @@ const ProfilePage = () => {
   const [videoFavorites, setVideoFavorites] = useState([]);
   const [expandedFavoriteCategories, setExpandedFavoriteCategories] = useState({});
   
+  // Report User modal state
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportDetails, setReportDetails] = useState('');
+  const [submittingReport, setSubmittingReport] = useState(false);
+  
+  // Delete Account modal state
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [showDeleteCredentialsModal, setShowDeleteCredentialsModal] = useState(false);
+  const [deleteUsername, setDeleteUsername] = useState('');
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  
+  const navigate = useNavigate();
+  
   const photoInputRef = useRef(null);
   const videoInputRef = useRef(null);
 
