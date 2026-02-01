@@ -39,3 +39,7 @@ uploads/
 
 # Note: .env files are NOT ignored for Emergent deployment
 # The platform requires these files to be in the repository
+-e 
+# Environment files
+*.env
+*.env.*
