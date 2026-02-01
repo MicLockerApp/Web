@@ -32,6 +32,11 @@ const CATEGORIES = [
   { value: 'merchant', label: 'Merchant', icon: '🛍️' },
   { value: 'comedian', label: 'Comedian', icon: '🎭' },
   { value: 'actor', label: 'Actor', icon: '🎬' },
+  { value: 'show_pro', label: 'Show Pro', icon: '🎪' },
+  { value: 'photographer', label: 'Photographer', icon: '📸' },
+  { value: 'videographer', label: 'Videographer', icon: '🎥' },
+  { value: 'manager', label: 'Manager', icon: '📋' },
+  { value: 'services', label: 'Services', icon: '✂️' },
 ];
 
 // Subcategories by profession
@@ -39,7 +44,7 @@ const SUBCATEGORIES = {
   musician: [
     "Accordion", "Acoustic Guitar", "Bagpipe", "Banjo", "Bass Electric", "Bass Fretless",
     "Bass Upright", "Bassoon", "Beat Makers", "Cello", "Clarinet", "Classical Guitar",
-    "Composer Orchestral", "Dobro", "Electric Guitar", "Fiddle", "Flutes", "French Horn",
+    "Composer Orchestral", "Dobro", "Drums", "Electric Guitar", "Fiddle", "Flutes", "French Horn",
     "Harmonica", "Harp", "Horns", "Keyboards Synths", "Mandolin", "Oboe", "Pedal Steel",
     "Percussion", "Piano", "Rapper", "Saxophone", "Singer Female", "Singer Male",
     "Timpani", "Trombone", "Trumpet", "Tuba", "Ukulele", "Viola", "Violin"
@@ -88,6 +93,51 @@ const SUBCATEGORIES = {
     "Comedy Actor", "Action Actor", "Voice Over Artist", "Narrator",
     "Audiobook Narrator", "Character Actor", "Leading Actor", "Supporting Actor",
     "Indie Film Actor", "Stage Actor"
+  ],
+  show_pro: [
+    "Lighting Designer", "Lighting Technician", "Sound Technician", "Stage Manager",
+    "Production Manager", "Technical Director", "Rigging Specialist", "Pyrotechnician",
+    "Special Effects Technician", "Set Designer", "Set Builder", "Props Master",
+    "Wardrobe Supervisor", "Costume Designer", "Scenic Artist", "Backline Technician",
+    "Monitor Engineer", "FOH Engineer", "Systems Technician", "Video Technician",
+    "LED Wall Technician", "Projection Technician", "Automation Operator", "Fly Operator",
+    "Spotlight Operator", "Stage Hand", "Load-In/Load-Out Crew", "Tour Manager",
+    "Production Coordinator", "Show Caller", "Broadcast Engineer"
+  ],
+  photographer: [
+    "Concert Photographer", "Event Photographer", "Portrait Photographer", "Headshot Photographer",
+    "Album Cover Photographer", "Music Video Stills", "Press/PR Photographer", "Tour Photographer",
+    "Festival Photographer", "Studio Photographer", "Product Photographer", "Fashion Photographer",
+    "Documentary Photographer", "Editorial Photographer", "Commercial Photographer",
+    "Lifestyle Photographer", "Behind-the-Scenes Photographer", "Red Carpet Photographer",
+    "Photo Editor", "Photo Retoucher", "Drone Photographer", "360 Photographer"
+  ],
+  videographer: [
+    "Music Video Director", "Music Video DP", "Concert Videographer", "Tour Videographer",
+    "Documentary Filmmaker", "EPK Producer", "Live Stream Operator", "Multi-Camera Director",
+    "Broadcast Videographer", "Social Media Content Creator", "Behind-the-Scenes Videographer",
+    "Interview Videographer", "Event Videographer", "Commercial Director", "Video Editor",
+    "Colorist", "Motion Graphics Artist", "VFX Artist", "Drone Videographer",
+    "Steadicam Operator", "Camera Operator", "DIT (Digital Imaging Technician)",
+    "Gaffer", "Grip", "Production Assistant"
+  ],
+  services: [
+    "Barber", "Hair Stylist", "Hair Colorist", "Wig Specialist", "Hair Extensions",
+    "Makeup Artist", "Special Effects Makeup", "Body Painter", "Airbrush Artist",
+    "Nail Technician", "Esthetician", "Spray Tan Artist", "Wardrobe Stylist",
+    "Personal Stylist", "Fashion Consultant", "Costume Maker", "Tailor/Alterations",
+    "Personal Trainer", "Fitness Coach", "Yoga Instructor", "Vocal Coach (Wellness)",
+    "Massage Therapist", "Physical Therapist", "Nutritionist", "Personal Chef",
+    "Driver/Transportation", "Security Personnel", "Personal Assistant",
+    "Tour Bus Driver", "Catering Services", "Craft Services"
+  ],
+  manager: [
+    "Artist Manager", "Actor Manager", "Tour Manager", "Business Manager", "Personal Manager",
+    "Talent Manager", "Music Manager", "Band Manager", "Booking Agent", "A&R Representative",
+    "Publicist", "Marketing Manager", "Social Media Manager", "Road Manager",
+    "Venue Manager", "Event Manager", "Brand Manager", "Licensing Manager", "Rights Manager",
+    "Label Manager", "Sync Licensing Manager", "Day-to-Day Manager", "Talent Buyer",
+    "Promoter", "Agent", "Entertainment Lawyer"
   ]
 };
 
@@ -443,6 +493,11 @@ const MapPage = () => {
       merchant: '#00BCD4',      // Cyan
       comedian: '#E91E63',      // Pink
       actor: '#FF9800',         // Orange
+      show_pro: '#673AB7',      // Deep Purple
+      photographer: '#3F51B5',  // Indigo
+      videographer: '#009688', // Teal
+      manager: '#607D8B',      // Blue Grey
+      services: '#795548',     // Brown
     };
     return colors[category] || '#757575';
   };

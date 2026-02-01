@@ -286,6 +286,36 @@ MicLocker is a production-ready full-stack marketplace where musicians, audio en
 
 ## Completed This Session (January 31, 2026)
 
+### Auditions Page UI/UX Bug Fixes (January 31, 2026)
+
+1. **Duplicate Swipe Hint Fixed**
+   - Issue: "Swipe up for more" hint was showing on ALL videos in the feed (6 instead of 1)
+   - Root cause: The hint was rendered for every video component because it only checked `hasSwipedUp` state
+   - Fix: Added `isActive` condition so hint only shows on the currently active video
+   - File: `/app/frontend/src/pages/AuditionsPage.js` line 476
+
+2. **Missing Props Fixed in AuditionItem Component**
+   - Issue: AuditionItem wasn't receiving swipe state props
+   - Fix: Added missing props to AuditionItem:
+     - `hasSwipedUp`
+     - `hasSwipedHorizontal`
+     - `onFirstSwipeUp`
+     - `onFirstHorizontalSwipe`
+     - `showCategoryBar`
+
+3. **Share Modal Verified Complete**
+   - Facebook, Instagram, X, Reddit, and Copy Link options all working
+   - Opens when clicking share button in Auditions feed
+
+4. **Video Subcategory Selector Verified Working**
+   - Category dropdown in video upload modal shows all 6 categories
+   - Subcategory dropdown appears and populates correctly when category selected
+   - All 38+ subcategories for Musicians category confirmed working
+
+### Testing Results
+- All Auditions page tests passed (iteration_29.json)
+- All notification and booking tests passed (iteration_30.json)
+
 ### Google OAuth & Two-Factor Authentication Implementation
 
 #### Google OAuth Sign-In
@@ -1125,4 +1155,81 @@ The `transfer_data.destination` parameter automatically routes funds to the sell
    - Added `seller_review_count` field to listing API responses
    - Updated `/app/backend/routes/listings.py` - All listing endpoints
    - Updated `/app/frontend/src/components/ListingCard.js` - Shows "(0)" next to star rating
+
+---
+
+## Session Updates (February 1, 2026)
+
+### P0 Fixes - Auditions Feed & Profile Thumbnails
+**Status: ✅ VERIFIED WORKING**
+
+1. **Duplicate Video Prevention in Auditions Feed**
+   - Backend logic at `/app/backend/routes/auditions.py` lines 61-68
+   - Uses `seen_ids` set to filter out duplicate video IDs
+   - Tested: Vertical scrolling shows unique videos without repetition
+   - With 2 videos in database, both display uniquely without duplicates
+
+2. **Profile Page Video Thumbnails - Static Images**
+   - **Videos Tab**: Uses `<img>` when `thumbnail_url` exists, falls back to `<video>` if not
+   - **Favorites Tab**: Fixed to use same thumbnail logic (was still using `<video>` + play icon)
+   - **Play icon overlay REMOVED** from both tabs as requested
+   - File: `/app/frontend/src/pages/ProfilePage.js`
+   - Note: If video has no `thumbnail_url`, shows video element with `preload="metadata"` (dark background)
+
+### New User Categories Added (February 1, 2026)
+**Status: ✅ IMPLEMENTED**
+
+Added 4 new main categories with comprehensive subcategories across the entire codebase:
+
+1. **Show Pro** (`show_pro`) - Show Production professionals
+   - 31 subcategories including: Lighting Designer, Sound Technician, Stage Manager, Production Manager, Technical Director, Rigging Specialist, Pyrotechnician, Set Designer, Props Master, Costume Designer, FOH Engineer, Video Technician, Tour Manager, etc.
+
+2. **Photographers** (`photographer`) - Photography professionals
+   - 22 subcategories including: Concert Photographer, Event Photographer, Portrait Photographer, Headshot Photographer, Album Cover Photographer, Tour Photographer, Festival Photographer, Documentary Photographer, Red Carpet Photographer, Drone Photographer, etc.
+
+3. **Videographers** (`videographer`) - Video professionals
+   - 25 subcategories including: Music Video Director, Concert Videographer, Documentary Filmmaker, EPK Producer, Live Stream Operator, Social Media Content Creator, Video Editor, Colorist, Motion Graphics Artist, Drone Videographer, etc.
+
+4. **Services** (`services`) - Entertainment industry support services
+   - 31 subcategories including: Barber, Hair Stylist, Hair Colorist, Wig Specialist, Makeup Artist, Special Effects Makeup, Wardrobe Stylist, Personal Trainer, Massage Therapist, Personal Chef, Driver/Transportation, Security Personnel, Catering Services, etc.
+
+### Files Modified for New Categories
+**Backend:**
+- `/app/backend/models/user.py` - Added USER_CATEGORIES list, new specs arrays (SHOW_PRO_SPECS, PHOTOGRAPHER_SPECS, VIDEOGRAPHER_SPECS, SERVICES_SPECS), new fields in UserCategoryUpdate and UserProfileUpdate
+- `/app/backend/models/gig.py` - Updated GIG_CATEGORIES and GIG_SUBCATEGORIES with new categories
+- `/app/backend/routes/auth.py` - Updated /categories endpoint to return new category options, added profile completion handlers for new categories
+
+**Frontend:**
+- `/app/frontend/src/pages/RegisterPage.js` - Added new category options with icons and descriptions, added form sections for new category specializations
+- `/app/frontend/src/pages/MapPage.js` - Updated CATEGORIES filter list, SUBCATEGORIES mapping, and getCategoryColor function with new category colors
+- `/app/frontend/src/pages/AuditionsPage.js` - Added new categories to AUDITION_CATEGORIES with subcategories
+- `/app/frontend/src/pages/ProfilePage.js` - Updated VIDEO_CATEGORIES for video uploads with new categories
+- `/app/frontend/src/components/gigs/constants.js` - Updated CATEGORY_ICONS and CATEGORY_LABELS with new categories
+
+### Category Icons & Colors
+| Category | Icon | Color |
+|----------|------|-------|
+| Show Pro | 🎪 | Deep Purple (#673AB7) |
+| Photographer | 📸 | Indigo (#3F51B5) |
+| Videographer | 🎥 | Teal (#009688) |
+| Manager | 📋 | Blue Grey (#607D8B) |
+| Services | ✂️ | Brown (#795548) |
+
+### API Endpoint Updated
+- `GET /api/auth/categories` now returns 12 categories and their options:
+  - musician, audio_engineer, recording_studio, venue, merchant, comedian, actor, **show_pro**, **photographer**, **videographer**, **manager**, **services**
+
+### Manager Category Added (February 1, 2026)
+**5th new category** added with 28 subcategories:
+- Artist Manager, Actor Manager, Tour Manager, Business Manager, Personal Manager
+- Talent Manager, Music Manager, Band Manager, Booking Agent, A&R Representative
+- Publicist, Marketing Manager, Social Media Manager, Road Manager
+- Venue Manager, Event Manager, Brand Manager, Licensing Manager, Rights Manager
+- Label Manager, Sync Licensing Manager, Royalty Manager, Day-to-Day Manager
+- Management Assistant, Talent Buyer, Promoter, Agent, Entertainment Lawyer
+
+**Note:** New categories are always placed before "Services" (the catch-all category).
+
+### Files Modified
+- `/app/frontend/src/pages/ProfilePage.js` - Favorites tab now uses thumbnail images without play overlay
 

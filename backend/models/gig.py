@@ -8,11 +8,11 @@ from datetime import datetime
 import uuid
 
 
-# Gig Types - "services" replaces "can_provide"
-GIG_TYPES = ["looking_for", "services"]
+# Gig Types - "services" replaces "can_provide", "show_trades" for show trading
+GIG_TYPES = ["looking_for", "services", "show_trades"]
 
-# Main Categories (expanded with Comedians and Actors)
-GIG_CATEGORIES = ["musician", "audio_engineer", "recording_studio", "venue", "merchant", "comedian", "actor"]
+# Main Categories (expanded with Comedians, Actors, Show Pro, Photographers, Videographers, Manager, and Services)
+GIG_CATEGORIES = ["musician", "audio_engineer", "recording_studio", "venue", "merchant", "comedian", "actor", "show_pro", "photographer", "videographer", "manager", "services"]
 
 # Music Genres for filtering
 MUSIC_GENRES = [
@@ -26,7 +26,7 @@ GIG_SUBCATEGORIES = {
     "musician": [
         "Accordion", "Acoustic Guitar", "Bagpipe", "Banjo", "Bass Electric", "Bass Fretless",
         "Bass Upright", "Bassoon", "Beat Makers", "Cello", "Clarinet", "Classical Guitar",
-        "Composer Orchestral", "Dobro", "Electric Guitar", "Fiddle", "Flutes", "French Horn",
+        "Composer Orchestral", "Dobro", "Drums", "Electric Guitar", "Fiddle", "Flutes", "French Horn",
         "Harmonica", "Harp", "Horns", "Keyboards Synths", "Mandolin", "Oboe", "Pedal Steel",
         "Percussion", "Piano", "Rapper", "Saxophone", "Singer Female", "Singer Male",
         "Timpani", "Trombone", "Trumpet", "Tuba", "Ukulele", "Viola", "Violin"
@@ -81,6 +81,51 @@ GIG_SUBCATEGORIES = {
         "Comedy Actor", "Action Actor", "Voice Over Artist", "Narrator",
         "Audiobook Narrator", "Character Actor", "Leading Actor", "Supporting Actor",
         "Casting Director", "Acting Coach", "Dialect Coach", "Scene Partner"
+    ],
+    "show_pro": [
+        "Lighting Designer", "Lighting Technician", "Sound Technician", "Stage Manager",
+        "Production Manager", "Technical Director", "Rigging Specialist", "Pyrotechnician",
+        "Special Effects Technician", "Set Designer", "Set Builder", "Props Master",
+        "Wardrobe Supervisor", "Costume Designer", "Scenic Artist", "Backline Technician",
+        "Monitor Engineer", "FOH Engineer", "Systems Technician", "Video Technician",
+        "LED Wall Technician", "Projection Technician", "Automation Operator", "Fly Operator",
+        "Spotlight Operator", "Stage Hand", "Load-In/Load-Out Crew", "Tour Manager",
+        "Production Coordinator", "Show Caller", "Broadcast Engineer"
+    ],
+    "photographer": [
+        "Concert Photographer", "Event Photographer", "Portrait Photographer", "Headshot Photographer",
+        "Album Cover Photographer", "Music Video Stills", "Press/PR Photographer", "Tour Photographer",
+        "Festival Photographer", "Studio Photographer", "Product Photographer", "Fashion Photographer",
+        "Documentary Photographer", "Editorial Photographer", "Commercial Photographer",
+        "Lifestyle Photographer", "Behind-the-Scenes Photographer", "Red Carpet Photographer",
+        "Photo Editor", "Photo Retoucher", "Drone Photographer", "360 Photographer"
+    ],
+    "videographer": [
+        "Music Video Director", "Music Video DP", "Concert Videographer", "Tour Videographer",
+        "Documentary Filmmaker", "EPK Producer", "Live Stream Operator", "Multi-Camera Director",
+        "Broadcast Videographer", "Social Media Content Creator", "Behind-the-Scenes Videographer",
+        "Interview Videographer", "Event Videographer", "Commercial Director", "Video Editor",
+        "Colorist", "Motion Graphics Artist", "VFX Artist", "Drone Videographer",
+        "Steadicam Operator", "Camera Operator", "DIT (Digital Imaging Technician)",
+        "Gaffer", "Grip", "Production Assistant"
+    ],
+    "services": [
+        "Barber", "Hair Stylist", "Hair Colorist", "Wig Specialist", "Hair Extensions",
+        "Makeup Artist", "Special Effects Makeup", "Body Painter", "Airbrush Artist",
+        "Nail Technician", "Esthetician", "Spray Tan Artist", "Wardrobe Stylist",
+        "Personal Stylist", "Fashion Consultant", "Costume Maker", "Tailor/Alterations",
+        "Personal Trainer", "Fitness Coach", "Yoga Instructor", "Vocal Coach (Wellness)",
+        "Massage Therapist", "Physical Therapist", "Nutritionist", "Personal Chef",
+        "Driver/Transportation", "Security Personnel", "Personal Assistant",
+        "Tour Bus Driver", "Catering Services", "Craft Services"
+    ],
+    "manager": [
+        "Artist Manager", "Actor Manager", "Tour Manager", "Business Manager", "Personal Manager",
+        "Talent Manager", "Music Manager", "Band Manager", "Booking Agent", "A&R Representative",
+        "Publicist", "Marketing Manager", "Social Media Manager", "Road Manager",
+        "Venue Manager", "Event Manager", "Brand Manager", "Licensing Manager", "Rights Manager",
+        "Label Manager", "Sync Licensing Manager", "Royalty Manager", "Day-to-Day Manager",
+        "Management Assistant", "Talent Buyer", "Promoter", "Agent", "Entertainment Lawyer"
     ]
 }
 
@@ -118,7 +163,7 @@ class GigSocialLinks(BaseModel):
 
 
 class GigCreate(BaseModel):
-    gig_type: str = Field(..., description="Either 'looking_for' or 'services'")
+    gig_type: str = Field(..., description="Either 'looking_for', 'services', or 'show_trades'")
     title: str = Field(..., min_length=5, max_length=200)
     description: str = Field(..., min_length=20, max_length=5000)
     category: str = Field(..., description="Main category")

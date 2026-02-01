@@ -4,6 +4,7 @@ import { Search, ShoppingCart, User, Menu, X, MessageSquare, LogOut, Package, Ed
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useTheme } from '../context/ThemeContext';
+import { useImmersive } from '../context/ImmersiveContext';
 import { messagesAPI, searchAPI } from '../services/api';
 import VinylLogo from './VinylLogo';
 import AnimatedSearchPlaceholder from './AnimatedSearchPlaceholder';
@@ -13,6 +14,7 @@ const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const { cart } = useCart();
   const { isDark, toggleTheme } = useTheme();
+  const { isImmersiveMode } = useImmersive();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
@@ -20,8 +22,8 @@ const Navbar = () => {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   
-  // Check if we're on the feed page
-  const isAuditionsPage = location.pathname === '/auditions';
+  // Check if we're on the auditions feed page (hide search/chatbot there)
+  const isAuditionsPage = location.pathname === '/auditions' || location.pathname === '/';
   const [notificationCount, setNotificationCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -190,11 +192,11 @@ const Navbar = () => {
   const hasResults = searchResults.listings.length > 0 || (isAuthenticated && searchResults.users.length > 0);
 
   return (
-    <nav className={`sticky top-0 z-50 border-b transition-colors duration-300 ${
+    <nav className={`sticky top-0 z-50 border-b transition-all duration-500 ease-out ${
       isDark 
         ? 'bg-dark-600 border-dark-300' 
         : 'bg-white border-gray-200 shadow-sm'
-    }`}>
+    } ${isImmersiveMode && isAuditionsPage ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100'}`}>
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo - Always show MicLocker text */}
@@ -205,7 +207,8 @@ const Navbar = () => {
             </span>
           </Link>
 
-          {/* Search Bar with Dropdown */}
+          {/* Search Bar with Dropdown - Hidden on Auditions page */}
+          {!isAuditionsPage && (
           <div ref={searchRef} className="relative flex-1 max-w-xl mx-4 hidden md:block">
             <form onSubmit={handleSearch}>
               <div className="relative">
@@ -351,38 +354,33 @@ const Navbar = () => {
               </div>
             )}
           </div>
+          )}
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-4">
-            <Link
-              to="/sell"
-              className="btn btn-primary text-sm"
-              data-testid="sell-button"
-            >
-              Sell Your Gear
-            </Link>
-
-            {/* Guitar icon - navigates to homepage */}
+            {/* Gear icon - navigates to marketplace (no text on desktop) */}
             <Link 
-              to="/" 
+              to="/gear" 
               className={`p-2 ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`} 
-              data-testid="home-guitar-link"
-              title="Home"
+              data-testid="gear-link"
+              title="Gear"
             >
               <Guitar className="w-5 h-5" />
             </Link>
 
+            {/* Auditions icon */}
+            <Link 
+              to="/" 
+              className={`p-2 ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`} 
+              data-testid="auditions-link"
+              title="Auditions"
+            >
+              <Play className="w-5 h-5" />
+            </Link>
+
             {isAuthenticated ? (
               <>
-                {/* New Feature Buttons */}
-                <Link 
-                  to="/auditions" 
-                  className={`p-2 ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`} 
-                  data-testid="auditions-link"
-                  title="Auditions"
-                >
-                  <Play className="w-5 h-5" />
-                </Link>
+                {/* Gigs link */}
                 <Link 
                   to="/gigs" 
                   className={`p-2 ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`} 
@@ -678,30 +676,23 @@ const Navbar = () => {
           <div className={`md:hidden py-4 border-t ${isDark ? 'border-dark-300' : 'border-gray-200'}`}>
             <div className="flex flex-col gap-2">
               <Link
-                to="/sell"
-                className="btn btn-primary text-center"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Sell Your Gear
-              </Link>
-              <Link
                 to="/"
                 className={`flex items-center gap-2 py-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
+                <Play className="w-5 h-5" />
+                Auditions
+              </Link>
+              <Link
+                to="/gear"
+                className={`flex items-center gap-2 py-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
                 <Guitar className="w-5 h-5" />
-                Home
+                Gear
               </Link>
               {isAuthenticated ? (
                 <>
-                  <Link
-                    to="/auditions"
-                    className={`flex items-center gap-2 py-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <Play className="w-5 h-5" />
-                    Auditions
-                  </Link>
                   <Link
                     to="/gigs"
                     className={`flex items-center gap-2 py-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}

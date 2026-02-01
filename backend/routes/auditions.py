@@ -26,47 +26,138 @@ async def get_auditions(
     subcategory: Optional[str] = Query(None, description="Filter by user subcategory (Electric Guitar, Mixing Engineers, etc.)"),
     genre: Optional[str] = Query(None, description="Filter by music genre (Rock, Metal, Jazz, etc.)"),
     featured_only: bool = Query(False, description="Only show featured content"),
-    limit: int = Query(20, ge=1, le=50),
+    limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     current_user: Optional[dict] = Depends(get_current_user_optional)
 ):
     """
     Get audition items with optional filtering by category, subcategory, and genre.
     
-    - If no filters: returns featured content or all content
-    - If category filter: returns content from users with that category
-    - If subcategory filter: returns content from users with that specific subcategory
-    - If genre filter: returns content from users with that genre in their profile
+    - Featured/no filters: returns ALL videos randomized
+    - Category filter: returns videos from that category
+    - All videos come from profile_media collection
     """
+    import random
     db = get_database()
     
-    # Build query
-    query = {}
+    # Determine if this is the featured view (no category filter or explicitly featured)
+    is_featured_view = featured_only or not category or category == "featured"
     
-    if featured_only or (not category and not subcategory and not genre):
-        # Default to featured content when no filters
-        query["is_featured"] = True
+    # Build query for profile_media videos - get ALL videos for featured
+    video_query = {"type": "video"}
     
-    if category and category != "featured":
-        query["user_category"] = category
+    # Only apply category/subcategory/genre filters if NOT featured view
+    if not is_featured_view:
+        if category:
+            video_query["category"] = category
+        if subcategory:
+            video_query["subcategory"] = subcategory
+        if genre:
+            video_query["genre"] = genre
     
-    if subcategory:
-        # Match users who have this subcategory in their list
-        query["user_subcategories"] = {"$in": [subcategory]}
+    # Get ALL videos from profile_media
+    videos = await db.profile_media.find(video_query, {"_id": 0}).to_list(length=100)
     
-    if genre:
-        # Match users who have this genre in their list
-        query["user_genres"] = {"$in": [genre]}
+    # Deduplicate by video ID
+    seen_ids = set()
+    unique_videos = []
+    for v in videos:
+        if v.get("id") not in seen_ids:
+            seen_ids.add(v.get("id"))
+            unique_videos.append(v)
+    videos = unique_videos
     
-    # Fetch audition items sorted by recency
-    cursor = db.auditions.find(query, {"_id": 0}).sort("created_at", -1).skip(offset).limit(limit)
-    items = await cursor.to_list(length=limit)
+    logger.info(f"Found {len(videos)} unique videos in profile_media (featured={is_featured_view}, category={category})")
     
-    # If no items found with filters, return empty list (frontend will show appropriate message)
-    if not items:
-        return []
+    # For featured view, randomize the order
+    if is_featured_view and videos:
+        random.shuffle(videos)
     
-    return [AuditionItemResponse(**item) for item in items]
+    if videos:
+        # Convert profile_media format to audition format
+        audition_items = []
+        for video in videos[offset:offset+limit]:
+            # Get user info
+            user = await db.users.find_one({"id": video.get("user_id")}, {"_id": 0})
+            if user:
+                # Build user_subcategories list
+                user_subcategories = []
+                if video.get("subcategory"):
+                    user_subcategories = [video.get("subcategory")]
+                elif user.get("subcategories"):
+                    user_subcategories = user.get("subcategories")
+                
+                # Build user_genres list
+                user_genres = []
+                if video.get("genre"):
+                    user_genres = [video.get("genre")]
+                elif user.get("genres"):
+                    user_genres = user.get("genres")
+                
+                audition_item = {
+                    "id": video.get("id"),
+                    "media_url": video.get("url"),
+                    "thumbnail_url": video.get("thumbnail_url"),
+                    "user_id": video.get("user_id"),
+                    "username": user.get("username", "unknown"),
+                    "user_avatar": user.get("avatar") or user.get("profile_image"),
+                    "user_is_verified": user.get("is_verified", False),
+                    "user_category": video.get("category") or user.get("category"),
+                    "user_subcategories": user_subcategories,
+                    "user_genres": user_genres,
+                    "description": video.get("description", ""),
+                    "song_name": video.get("song_name") or f"Original Sound - {user.get('username', 'unknown')}",
+                    "likes_count": video.get("likes_count", 0),
+                    "comments_count": video.get("comments_count", 0),
+                    "shares_count": video.get("shares_count", 0),
+                    "is_featured": True,
+                    "created_at": video.get("uploaded_at", datetime.now(timezone.utc))
+                }
+                audition_items.append(audition_item)
+        
+        if audition_items:
+            return [AuditionItemResponse(**item) for item in audition_items]
+    
+    # Also check auditions_items collection (videos synced from profile uploads)
+    auditions_query = {}
+    if not is_featured_view:
+        if category:
+            auditions_query["user_category"] = category
+        if subcategory:
+            auditions_query["user_subcategories"] = {"$in": [subcategory]}
+        if genre:
+            auditions_query["user_genres"] = {"$in": [genre]}
+    
+    items = await db.auditions_items.find(auditions_query, {"_id": 0}).to_list(length=limit)
+    
+    if is_featured_view and items:
+        random.shuffle(items)
+    
+    if items:
+        logger.info(f"Found {len(items)} items in auditions_items")
+        return [AuditionItemResponse(**item) for item in items[offset:offset+limit]]
+    
+    # Finally check legacy auditions collection
+    legacy_query = {}
+    if is_featured_view:
+        legacy_query["is_featured"] = True
+    else:
+        if category:
+            legacy_query["user_category"] = category
+        if subcategory:
+            legacy_query["user_subcategories"] = {"$in": [subcategory]}
+        if genre:
+            legacy_query["user_genres"] = {"$in": [genre]}
+    
+    cursor = db.auditions.find(legacy_query, {"_id": 0}).sort("created_at", -1).skip(offset).limit(limit)
+    legacy_items = await cursor.to_list(length=limit)
+    
+    if legacy_items:
+        logger.info(f"Found {len(legacy_items)} items in auditions collection")
+        return [AuditionItemResponse(**item) for item in legacy_items]
+    
+    logger.info("No videos found in any collection")
+    return []
 
 
 @router.post("", response_model=AuditionItemResponse)
@@ -146,23 +237,73 @@ async def get_video_favorites(
     ).sort("created_at", -1)
     favorites = await favorites_cursor.to_list(length=100)
     
-    # Get the audition items for these favorites
-    audition_ids = [f["audition_id"] for f in favorites]
+    # Get the video IDs
+    video_ids = [f["audition_id"] for f in favorites]
     
-    if not audition_ids:
+    if not video_ids:
         return []
     
-    # First try auditions collection, then auditions_items
+    # First check profile_media collection
+    videos = await db.profile_media.find(
+        {"id": {"$in": video_ids}},
+        {"_id": 0}
+    ).to_list(length=100)
+    
+    audition_items = []
+    
+    if videos:
+        for video in videos:
+            # Get user info
+            user = await db.users.find_one({"id": video.get("user_id")}, {"_id": 0})
+            if user:
+                # Build user_subcategories list
+                user_subcategories = []
+                if video.get("subcategory"):
+                    user_subcategories = [video.get("subcategory")]
+                elif user.get("subcategories"):
+                    user_subcategories = user.get("subcategories") or []
+                
+                # Build user_genres list
+                user_genres = []
+                if video.get("genre"):
+                    user_genres = [video.get("genre")]
+                elif user.get("genres"):
+                    user_genres = user.get("genres") or []
+                
+                audition_item = {
+                    "id": video.get("id"),
+                    "media_url": video.get("url"),
+                    "thumbnail_url": video.get("thumbnail_url"),
+                    "user_id": video.get("user_id"),
+                    "username": user.get("username", "unknown"),
+                    "user_avatar": user.get("avatar") or user.get("profile_image"),
+                    "user_is_verified": user.get("is_verified", False),
+                    "user_category": video.get("category") or user.get("category"),
+                    "user_subcategories": user_subcategories,
+                    "user_genres": user_genres,
+                    "description": video.get("description", ""),
+                    "song_name": video.get("song_name") or f"Original Sound - {user.get('username', 'unknown')}",
+                    "likes_count": video.get("likes_count", 0),
+                    "comments_count": video.get("comments_count", 0),
+                    "shares_count": video.get("shares_count", 0),
+                    "is_featured": True,
+                    "created_at": video.get("uploaded_at", datetime.now(timezone.utc))
+                }
+                audition_items.append(audition_item)
+    
+    if audition_items:
+        return [AuditionItemResponse(**item) for item in audition_items]
+    
+    # Fallback: check auditions and auditions_items collections
     cursor = db.auditions.find(
-        {"id": {"$in": audition_ids}},
+        {"id": {"$in": video_ids}},
         {"_id": 0}
     )
     items = await cursor.to_list(length=100)
     
-    # If no items in auditions, try auditions_items
     if not items:
         cursor = db.auditions_items.find(
-            {"id": {"$in": audition_ids}},
+            {"id": {"$in": video_ids}},
             {"_id": 0}
         )
         items = await cursor.to_list(length=100)
@@ -173,12 +314,63 @@ async def get_video_favorites(
 @router.get("/user/{user_id}", response_model=List[AuditionItemResponse])
 async def get_user_auditions_items(
     user_id: str,
-    limit: int = Query(20, ge=1, le=50),
+    limit: int = Query(5, ge=1, le=5),
     offset: int = Query(0, ge=0)
 ):
-    """Get all auditions items from a specific user."""
+    """Get all auditions items from a specific user - max 5 videos."""
     db = get_database()
     
+    # First check profile_media for this user's videos
+    videos = await db.profile_media.find(
+        {"user_id": user_id, "type": "video"}, 
+        {"_id": 0}
+    ).sort("uploaded_at", -1).limit(limit).to_list(length=limit)
+    
+    if videos:
+        # Get user info
+        user = await db.users.find_one({"id": user_id}, {"_id": 0})
+        if user:
+            audition_items = []
+            for video in videos:
+                # Build user_subcategories list
+                user_subcategories = []
+                if video.get("subcategory"):
+                    user_subcategories = [video.get("subcategory")]
+                elif user.get("subcategories"):
+                    user_subcategories = user.get("subcategories") or []
+                
+                # Build user_genres list
+                user_genres = []
+                if video.get("genre"):
+                    user_genres = [video.get("genre")]
+                elif user.get("genres"):
+                    user_genres = user.get("genres") or []
+                
+                audition_item = {
+                    "id": video.get("id"),
+                    "media_url": video.get("url"),
+                    "thumbnail_url": video.get("thumbnail_url"),
+                    "user_id": video.get("user_id"),
+                    "username": user.get("username", "unknown"),
+                    "user_avatar": user.get("avatar") or user.get("profile_image"),
+                    "user_is_verified": user.get("is_verified", False),
+                    "user_category": video.get("category") or user.get("category"),
+                    "user_subcategories": user_subcategories,
+                    "user_genres": user_genres,
+                    "description": video.get("description", ""),
+                    "song_name": video.get("song_name") or f"Original Sound - {user.get('username', 'unknown')}",
+                    "likes_count": video.get("likes_count", 0),
+                    "comments_count": video.get("comments_count", 0),
+                    "shares_count": video.get("shares_count", 0),
+                    "is_featured": True,
+                    "created_at": video.get("uploaded_at", datetime.now(timezone.utc))
+                }
+                audition_items.append(audition_item)
+            
+            if audition_items:
+                return [AuditionItemResponse(**item) for item in audition_items]
+    
+    # Fallback to auditions_items collection
     cursor = db.auditions_items.find(
         {"user_id": user_id}, 
         {"_id": 0}
@@ -352,8 +544,10 @@ async def add_video_favorite(
     """Add a video to favorites."""
     db = get_database()
     
-    # Check if audition exists (in either collection)
-    item = await db.auditions.find_one({"id": item_id})
+    # Check if video exists (check all possible collections)
+    item = await db.profile_media.find_one({"id": item_id})
+    if not item:
+        item = await db.auditions.find_one({"id": item_id})
     if not item:
         item = await db.auditions_items.find_one({"id": item_id})
     
@@ -373,17 +567,33 @@ async def add_video_favorite(
     from datetime import datetime, timezone
     import uuid
     
+    # Get category info from the video or user
+    video_category = item.get("category") or item.get("user_category")
+    video_subcategory = item.get("subcategory")
+    if not video_subcategory and item.get("user_subcategories"):
+        video_subcategory = item.get("user_subcategories", [None])[0]
+    video_genre = item.get("genre")
+    if not video_genre and item.get("user_genres"):
+        video_genre = item.get("user_genres", [None])[0]
+    
     favorite = {
         "id": str(uuid.uuid4()),
         "user_id": current_user["id"],
         "audition_id": item_id,
-        "category": item.get("user_category"),
-        "subcategory": item.get("user_subcategories", [None])[0] if item.get("user_subcategories") else None,
-        "genre": item.get("user_genres", [None])[0] if item.get("user_genres") else None,
+        "video_owner_id": item.get("user_id"),
+        "category": video_category,
+        "subcategory": video_subcategory,
+        "genre": video_genre,
         "created_at": datetime.now(timezone.utc)
     }
     
     await db.video_favorites.insert_one(favorite)
+    
+    # Also increment the likes_count on the video
+    await db.profile_media.update_one(
+        {"id": item_id},
+        {"$inc": {"likes_count": 1}}
+    )
     
     logger.info(f"User {current_user['username']} added video {item_id} to favorites")
     
@@ -405,6 +615,12 @@ async def remove_video_favorite(
     
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Not in favorites")
+    
+    # Decrement the likes_count on the video
+    await db.profile_media.update_one(
+        {"id": item_id},
+        {"$inc": {"likes_count": -1}}
+    )
     
     logger.info(f"User {current_user['username']} removed video {item_id} from favorites")
     

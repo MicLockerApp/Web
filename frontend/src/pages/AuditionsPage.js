@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Star, Share2, Music, Play, Volume2, VolumeX, Search, ChevronDown, SlidersHorizontal, X, Facebook, Twitter, Link2, Copy } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useImmersive } from '../context/ImmersiveContext';
 import { Link, useNavigate } from 'react-router-dom';
 import api, { usersAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -21,7 +22,7 @@ const AUDITION_CATEGORIES = [
     subcategories: [
       "Accordion", "Acoustic Guitar", "Bagpipe", "Banjo", "Bass Electric", "Bass Fretless",
       "Bass Upright", "Bassoon", "Beat Makers", "Cello", "Clarinet", "Classical Guitar",
-      "Composer Orchestral", "Dobro", "Electric Guitar", "Fiddle", "Flutes", "French Horn",
+      "Composer Orchestral", "Dobro", "Drums", "Electric Guitar", "Fiddle", "Flutes", "French Horn",
       "Harmonica", "Harp", "Horns", "Keyboards Synths", "Mandolin", "Oboe", "Pedal Steel",
       "Percussion", "Piano", "Rapper", "Saxophone", "Singer Female", "Singer Male",
       "Timpani", "Trombone", "Trumpet", "Tuba", "Ukulele", "Viola", "Violin"
@@ -89,119 +90,62 @@ const AUDITION_CATEGORIES = [
       "Character Actor", "Stage Actor"
     ]
   },
+  { 
+    value: 'show_pro', 
+    label: 'Show Pro',
+    subcategories: [
+      "Lighting Designer", "Lighting Technician", "Sound Technician", "Stage Manager",
+      "Production Manager", "Technical Director", "Rigging Specialist", "Pyrotechnician",
+      "Set Designer", "Set Builder", "Props Master", "Costume Designer",
+      "Backline Technician", "Monitor Engineer", "FOH Engineer", "Video Technician",
+      "Stage Hand", "Tour Manager", "Production Coordinator"
+    ]
+  },
+  { 
+    value: 'photographer', 
+    label: 'Photographers',
+    subcategories: [
+      "Concert Photographer", "Event Photographer", "Portrait Photographer", "Headshot Photographer",
+      "Album Cover Photographer", "Press/PR Photographer", "Tour Photographer",
+      "Festival Photographer", "Studio Photographer", "Product Photographer",
+      "Documentary Photographer", "Red Carpet Photographer", "Drone Photographer"
+    ]
+  },
+  { 
+    value: 'videographer', 
+    label: 'Videographers',
+    subcategories: [
+      "Music Video Director", "Music Video DP", "Concert Videographer", "Tour Videographer",
+      "Documentary Filmmaker", "EPK Producer", "Live Stream Operator", "Multi-Camera Director",
+      "Social Media Content Creator", "Event Videographer", "Video Editor",
+      "Colorist", "Motion Graphics Artist", "Drone Videographer"
+    ]
+  },
+  { 
+    value: 'manager', 
+    label: 'Managers',
+    subcategories: [
+      "Artist Manager", "Actor Manager", "Tour Manager", "Business Manager", "Personal Manager",
+      "Talent Manager", "Music Manager", "Band Manager", "Booking Agent", "A&R Representative",
+      "Publicist", "Marketing Manager", "Social Media Manager", "Road Manager",
+      "Event Manager", "Talent Buyer", "Promoter", "Agent"
+    ]
+  },
+  { 
+    value: 'services', 
+    label: 'Services',
+    subcategories: [
+      "Barber", "Hair Stylist", "Hair Colorist", "Wig Specialist", "Makeup Artist",
+      "Special Effects Makeup", "Wardrobe Stylist", "Personal Stylist", "Costume Maker",
+      "Tailor/Alterations", "Personal Trainer", "Massage Therapist", "Personal Chef",
+      "Driver/Transportation", "Security Personnel", "Personal Assistant", "Catering Services"
+    ]
+  },
 ];
 
 // Sample audition data - used as fallback when API returns empty
-const SAMPLE_AUDITIONS = [
-  {
-    id: '1',
-    media_url: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-    thumbnail_url: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400',
-    user_id: 'user1',
-    username: 'dj_beats',
-    user_avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100',
-    user_is_verified: true,
-    user_category: 'musician',
-    user_subcategories: ['Beat Makers', 'Keyboards Synths'],
-    user_genres: ['Electronic', 'Hip Hop'],
-    description: 'Late night studio session vibes',
-    song_name: 'Original Sound - dj_beats',
-    likes_count: 12400,
-    comments_count: 234,
-    shares_count: 89,
-    is_featured: true
-  },
-  {
-    id: '2',
-    media_url: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-    thumbnail_url: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400',
-    user_id: 'user2',
-    username: 'guitar_hero',
-    user_avatar: 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=100',
-    user_is_verified: false,
-    user_category: 'musician',
-    user_subcategories: ['Electric Guitar'],
-    user_genres: ['Rock', 'Metal'],
-    description: 'New riff I\'ve been working on. What do you think?',
-    song_name: 'Electric Dreams - guitar_hero',
-    likes_count: 8700,
-    comments_count: 156,
-    shares_count: 45,
-    is_featured: true
-  },
-  {
-    id: '3',
-    media_url: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-    thumbnail_url: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=400',
-    user_id: 'user3',
-    username: 'vocal_queen',
-    user_avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100',
-    user_is_verified: true,
-    user_category: 'musician',
-    user_subcategories: ['Singer Female'],
-    user_genres: ['Pop', 'R&B'],
-    description: 'Cover of my favorite song. Full version on my profile!',
-    song_name: 'Midnight Sky - vocal_queen',
-    likes_count: 24500,
-    comments_count: 567,
-    shares_count: 234,
-    is_featured: true
-  },
-  {
-    id: '4',
-    media_url: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
-    thumbnail_url: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=400',
-    user_id: 'user4',
-    username: 'mix_master',
-    user_avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100',
-    user_is_verified: false,
-    user_category: 'audio_engineer',
-    user_subcategories: ['Mixing Engineers', 'Mastering Engineers'],
-    user_genres: ['Rock', 'Metal', 'Electronic'],
-    description: 'Before and after mix comparison. Swipe for the magic!',
-    song_name: 'Studio Session - mix_master',
-    likes_count: 5600,
-    comments_count: 89,
-    shares_count: 23,
-    is_featured: true
-  },
-  {
-    id: '5',
-    media_url: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
-    thumbnail_url: 'https://images.unsplash.com/photo-1571330735066-03aaa9429d89?w=400',
-    user_id: 'user5',
-    username: 'piano_vibes',
-    user_avatar: 'https://images.unsplash.com/photo-1607746882042-944635dfe10e?w=100',
-    user_is_verified: true,
-    user_category: 'musician',
-    user_subcategories: ['Piano'],
-    user_genres: ['Classical', 'Jazz'],
-    description: 'Classical meets modern. This piece took me 3 months to learn.',
-    song_name: 'Moonlight Sonata Remix - piano_vibes',
-    likes_count: 45200,
-    comments_count: 890,
-    shares_count: 567,
-    is_featured: true
-  },
-  {
-    id: '6',
-    media_url: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-    thumbnail_url: 'https://images.unsplash.com/photo-1516924962500-2b4b3b99ea02?w=400',
-    user_id: 'user6',
-    username: 'metal_shredder',
-    user_avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100',
-    user_is_verified: true,
-    user_category: 'musician',
-    user_subcategories: ['Electric Guitar'],
-    user_genres: ['Metal', 'Rock'],
-    description: 'Shredding some metal riffs. Turn up the volume!',
-    song_name: 'Fury Unleashed - metal_shredder',
-    likes_count: 18900,
-    comments_count: 445,
-    shares_count: 178,
-    is_featured: true
-  }
-];
+// No sample auditions - real data only from database
+const SAMPLE_AUDITIONS = [];
 
 // Single Video Display Component
 const VideoDisplay = ({ 
@@ -221,7 +165,9 @@ const VideoDisplay = ({
   onFirstSwipeUp,
   onFirstHorizontalSwipe,
   onNavigateToProfile,
-  showCategoryBar
+  showCategoryBar,
+  isImmersiveMode,
+  onToggleImmersiveMode
 }) => {
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
@@ -230,7 +176,7 @@ const VideoDisplay = ({
   const [isFavorited, setIsFavorited] = useState(false);
   const [favoriteCount, setFavoriteCount] = useState(item.likes_count || 0);
   const [showShareModal, setShowShareModal] = useState(false);
-  const [isImmersiveMode, setIsImmersiveMode] = useState(false);
+  const [currentItemId, setCurrentItemId] = useState(item.id);
   
   // Touch handling for horizontal swipe
   const touchStartX = useRef(0);
@@ -238,13 +184,33 @@ const VideoDisplay = ({
   const touchStartY = useRef(0);
   const touchEndY = useRef(0);
 
-  // Check if video is in user's favorites on mount
+  // Reset favorite state when item changes (horizontal swipe)
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
+    if (currentItemId !== item.id) {
+      setCurrentItemId(item.id);
+      setFavoriteCount(item.likes_count || 0);
+      setIsFavorited(false);
+    }
+  }, [item.id, item.likes_count, currentItemId]);
+
+  // Check if video is in user's favorites on mount or when item changes
+  useEffect(() => {
+    let isMounted = true;
     if (currentUser && item.id) {
       usersAPI.checkVideoFavorite(item.id)
-        .then(res => setIsFavorited(res.data?.is_favorite || false))
-        .catch(() => {});
+        .then(res => {
+          if (isMounted) {
+            setIsFavorited(res.data?.is_favorite || false);
+          }
+        })
+        .catch(() => {
+          if (isMounted) {
+            setIsFavorited(false);
+          }
+        });
     }
+    return () => { isMounted = false; };
   }, [currentUser, item.id]);
 
   // Handle video play/pause based on active state - auto-play with sound when active
@@ -253,12 +219,38 @@ const VideoDisplay = ({
     if (!video) return;
     
     if (isActive) {
-      video.play().catch(() => {});
+      // Small delay to ensure video element is ready
+      const playVideo = async () => {
+        try {
+          video.currentTime = 0;
+          video.muted = isMuted;
+          await video.play();
+          setIsPlaying(true);
+        } catch (error) {
+          // Auto-play was prevented, try muted
+          console.log('Autoplay prevented, trying muted');
+          video.muted = true;
+          try {
+            await video.play();
+            setIsPlaying(true);
+          } catch (e) {
+            console.log('Could not autoplay video');
+            setIsPlaying(false);
+          }
+        }
+      };
+      
+      // Small timeout to let the scroll settle
+      const timer = setTimeout(playVideo, 100);
+      return () => clearTimeout(timer);
     } else {
+      // Stop completely when not active
       video.pause();
       video.currentTime = 0;
+      video.muted = true;
+      setIsPlaying(false);
     }
-  }, [isActive]);
+  }, [isActive, isMuted]);
 
   // Sync playing state with video element
   useEffect(() => {
@@ -277,12 +269,12 @@ const VideoDisplay = ({
     };
   }, []);
 
-  // Handle mute state
+  // Handle mute state - only apply if active
   useEffect(() => {
-    if (videoRef.current) {
+    if (videoRef.current && isActive) {
       videoRef.current.muted = isMuted;
     }
-  }, [isMuted]);
+  }, [isMuted, isActive]);
 
   const togglePlay = (e) => {
     e.stopPropagation();
@@ -374,21 +366,34 @@ const VideoDisplay = ({
 
   const toggleImmersiveMode = (e) => {
     e.stopPropagation();
-    setIsImmersiveMode(!isImmersiveMode);
+    onToggleImmersiveMode();
   };
 
   // Horizontal swipe handlers
   const handleTouchStart = (e) => {
+    // Don't track touch if it starts on a button or interactive element
+    if (e.target.closest('button') || e.target.closest('a')) {
+      return;
+    }
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
   };
 
   const handleTouchMove = (e) => {
+    // Don't track touch if it started on a button
+    if (touchStartX.current === 0 && touchStartY.current === 0) {
+      return;
+    }
     touchEndX.current = e.touches[0].clientX;
     touchEndY.current = e.touches[0].clientY;
   };
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = (e) => {
+    // Don't process swipe if touch started on a button
+    if (touchStartX.current === 0 && touchStartY.current === 0) {
+      return;
+    }
+    
     const diffX = touchStartX.current - touchEndX.current;
     const diffY = Math.abs(touchStartY.current - touchEndY.current);
     const threshold = 50;
@@ -414,6 +419,12 @@ const VideoDisplay = ({
         }
       }
     }
+    
+    // Reset touch coordinates
+    touchStartX.current = 0;
+    touchStartY.current = 0;
+    touchEndX.current = 0;
+    touchEndY.current = 0;
   };
 
   return (
@@ -430,7 +441,6 @@ const VideoDisplay = ({
         poster={item.thumbnail_url}
         loop
         playsInline
-        muted={isMuted}
         onClick={togglePlay}
         className="w-full h-full object-cover cursor-pointer"
       />
@@ -472,13 +482,8 @@ const VideoDisplay = ({
           isImmersiveMode ? 'opacity-0 translate-x-[-100px]' : 'opacity-100 translate-x-0'
         }`}
       >
-        {/* Swipe hints - positioned above user info, left-aligned */}
-        {!hasSwipedUp && (
-          <p className="text-white/70 text-sm mb-4 animate-pulse">
-            ↑ Swipe up for more
-          </p>
-        )}
-        {hasSwipedUp && !hasSwipedHorizontal && totalHorizontalItems > 1 && (
+        {/* Horizontal swipe hint - only show after vertical swipe */}
+        {isActive && hasSwipedUp && !hasSwipedHorizontal && totalHorizontalItems > 1 && (
           <p className="text-white/70 text-sm mb-4 animate-pulse">
             ← → Swipe left or right to see more of this user's content
           </p>
@@ -519,10 +524,10 @@ const VideoDisplay = ({
         </div>
       </div>
 
-      {/* Action Buttons - Right Side, bottom-aligned with song info */}
+      {/* Action Buttons - Right Side, positioned above the spinning vinyl */}
       <div 
-        className={`absolute right-3 bottom-4 flex flex-col items-center gap-4 transition-all duration-300 ${
-          isImmersiveMode ? 'opacity-0 translate-y-[100px]' : 'opacity-100 translate-y-0'
+        className={`absolute right-3 bottom-20 flex flex-col items-center gap-4 transition-all duration-500 ease-out ${
+          isImmersiveMode ? 'opacity-0 pointer-events-none translate-y-[200px]' : 'opacity-100 translate-y-0'
         }`}
       >
         {/* Filter/Genre Button */}
@@ -531,6 +536,8 @@ const VideoDisplay = ({
             e.stopPropagation();
             onFilterClick();
           }}
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
           className="flex flex-col items-center gap-1"
           data-testid="audition-filter-btn"
         >
@@ -543,6 +550,8 @@ const VideoDisplay = ({
         {/* Favorite (Star) */}
         <button 
           onClick={handleFavorite}
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
           className="flex flex-col items-center gap-1"
           data-testid="audition-favorite-btn"
         >
@@ -559,6 +568,8 @@ const VideoDisplay = ({
           className="flex flex-col items-center gap-1"
           data-testid="audition-share-btn"
           onClick={handleShare}
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
         >
           <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
             <Share2 className="w-6 h-6 text-white" />
@@ -572,6 +583,8 @@ const VideoDisplay = ({
             e.stopPropagation();
             onToggleMute();
           }}
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
           className="flex flex-col items-center gap-1"
           data-testid="audition-mute-btn"
         >
@@ -585,13 +598,12 @@ const VideoDisplay = ({
         </button>
       </div>
 
-      {/* Spinning Album Art - Always visible, controls immersive mode */}
+      {/* Spinning Album Art - Below action stack, always visible, controls immersive mode */}
       <button
         onClick={toggleImmersiveMode}
-        className="absolute right-3 bottom-4 w-12 h-12 rounded-full border-2 border-gray-800 overflow-hidden animate-spin-slow z-20"
-        style={{ 
-          bottom: isImmersiveMode ? '1rem' : 'calc(1rem + 240px)'
-        }}
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchEnd={(e) => e.stopPropagation()}
+        className="absolute right-3 bottom-4 w-12 h-12 rounded-full border-2 border-gray-800 overflow-hidden animate-spin-slow z-30"
         data-testid="immersive-mode-toggle"
       >
         <img 
@@ -704,14 +716,16 @@ const AuditionItem = ({
   hasSwipedHorizontal,
   onFirstSwipeUp,
   onFirstHorizontalSwipe,
-  showCategoryBar
+  showCategoryBar,
+  isImmersiveMode,
+  onToggleImmersiveMode
 }) => {
   const navigate = useNavigate();
   const [userVideos, setUserVideos] = useState([item]);
   const [horizontalIndex, setHorizontalIndex] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [videosLoaded, setVideosLoaded] = useState(false);
-  const maxVideosBeforeProfile = 6; // Show 6 videos max, then go to profile
+  const maxVideosBeforeProfile = 5; // Show 5 videos max, then 6th swipe goes to profile
 
   // Reset state when item changes (vertical scroll to different user)
   useEffect(() => {
@@ -726,35 +740,21 @@ const AuditionItem = ({
     
     setLoadingMore(true);
     try {
-      const response = await api.get(`/auditions/user/${item.user_id}?limit=6`);
-      if (response.data && response.data.length > 1) {
+      const response = await api.get(`/auditions/user/${item.user_id}?limit=5`);
+      if (response.data && response.data.length > 0) {
+        // Only show actual videos - max 5
         setUserVideos(response.data.slice(0, maxVideosBeforeProfile));
-      } else {
-        // Generate sample additional videos for demo
-        const additionalVideos = Array.from({ length: 5 }, (_, i) => ({
-          ...item,
-          id: `${item.id}-extra-${i + 1}`,
-          description: `More content from @${item.username} (${i + 2}/6)`,
-          song_name: `Track ${i + 2} - ${item.username}`
-        }));
-        setUserVideos([item, ...additionalVideos]);
       }
+      // If API returns nothing, keep the single video we already have
       setVideosLoaded(true);
     } catch (error) {
       console.error('Failed to fetch user videos:', error);
-      // Generate sample additional videos for demo
-      const additionalVideos = Array.from({ length: 5 }, (_, i) => ({
-        ...item,
-        id: `${item.id}-extra-${i + 1}`,
-        description: `More content from @${item.username} (${i + 2}/6)`,
-        song_name: `Track ${i + 2} - ${item.username}`
-      }));
-      setUserVideos([item, ...additionalVideos]);
+      // On error, keep the single video - don't generate fake ones
       setVideosLoaded(true);
     } finally {
       setLoadingMore(false);
     }
-  }, [item, loadingMore, videosLoaded]);
+  }, [item, loadingMore, videosLoaded, maxVideosBeforeProfile]);
 
   // Load more videos when component becomes active
   useEffect(() => {
@@ -791,13 +791,13 @@ const AuditionItem = ({
       // Go to next video
       setHorizontalIndex(prev => prev + 1);
     } else if (userVideos.length >= maxVideosBeforeProfile && horizontalIndex === maxVideosBeforeProfile - 1) {
-      // We've shown all 6 videos - go to user's profile
+      // We've shown all 5 videos - 6th swipe goes to user's profile
       navigate(`/profile/${item.user_id}`);
     } else if (userVideos.length < maxVideosBeforeProfile && !loadingMore) {
       // Need to load more videos first
       fetchUserVideos();
     } else if (userVideos.length > 1 && horizontalIndex === userVideos.length - 1) {
-      // We've shown all available videos (less than 6) - go to profile
+      // We've shown all available videos (less than 5) - go to profile
       navigate(`/profile/${item.user_id}`);
     }
   }, [horizontalIndex, userVideos.length, maxVideosBeforeProfile, navigate, item.user_id, fetchUserVideos, loadingMore]);
@@ -831,6 +831,8 @@ const AuditionItem = ({
         onFirstHorizontalSwipe={onFirstHorizontalSwipe}
         onNavigateToProfile={handleNavigateToProfile}
         showCategoryBar={showCategoryBar}
+        isImmersiveMode={isImmersiveMode}
+        onToggleImmersiveMode={onToggleImmersiveMode}
       />
       
       {/* Loading indicator when fetching more */}
@@ -846,14 +848,16 @@ const AuditionItem = ({
 // Main Auditions Page Component
 const AuditionsPage = () => {
   const { isDark } = useTheme();
+  const { isImmersiveMode, toggleImmersiveMode } = useImmersive();
+  const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const containerRef = useRef(null);
   const auditionsRef = useRef(null);
   const dropdownRef = useRef(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(false); // Auto-play with sound by default
-  const [auditions, setAuditions] = useState(SAMPLE_AUDITIONS);
-  const [loading, setLoading] = useState(false);
+  const [auditions, setAuditions] = useState([]); // Start empty, load from API
+  const [loading, setLoading] = useState(true); // Start loading
   const [activeCategory, setActiveCategory] = useState('featured');
   const [activeSubcategory, setActiveSubcategory] = useState(null);
   const [activeGenre, setActiveGenre] = useState(null);
@@ -897,29 +901,8 @@ const AuditionsPage = () => {
       if (response.data && response.data.length > 0) {
         setAuditions(response.data);
       } else {
-        // Filter sample data as fallback for demo purposes
-        let filteredSamples = SAMPLE_AUDITIONS;
-        
-        if (category && category !== 'featured') {
-          filteredSamples = SAMPLE_AUDITIONS.filter(item => 
-            item.user_category === category
-          );
-          
-          if (subcategory) {
-            filteredSamples = filteredSamples.filter(item =>
-              item.user_subcategories?.includes(subcategory)
-            );
-          }
-          
-          if (genre) {
-            filteredSamples = filteredSamples.filter(item =>
-              item.user_genres?.includes(genre)
-            );
-          }
-        }
-        
-        // If no matches, show all samples
-        setAuditions(filteredSamples.length > 0 ? filteredSamples : SAMPLE_AUDITIONS);
+        // No videos available - show empty state
+        setAuditions([]);
       }
       
       // Reset to first item when filter changes
@@ -931,8 +914,8 @@ const AuditionsPage = () => {
       }
     } catch (error) {
       console.error('Failed to fetch auditions:', error);
-      // Use sample data as fallback
-      setAuditions(SAMPLE_AUDITIONS);
+      // Show empty state on error
+      setAuditions([]);
     } finally {
       setLoading(false);
     }
@@ -1099,17 +1082,19 @@ const AuditionsPage = () => {
   return (
     <div 
       ref={containerRef}
-      className={`fixed inset-0 ${isDark ? 'bg-dark-600' : 'bg-gray-900'} flex items-center justify-center`}
+      className={`fixed inset-0 ${isDark ? 'bg-dark-600' : 'bg-gray-900'} flex items-center justify-center pt-16`}
       style={{ touchAction: 'none' }}
       onTouchStart={handleOuterTouch}
       onTouchMove={handleOuterTouch}
     >
       {/* Mobile-width Feed Container */}
       <div className="relative w-full max-w-[430px] h-full bg-black">
-        {/* Category Navigation Bar - Absolute positioned over auditions */}
+        {/* Category Navigation Bar - Positioned below navbar */}
         <div 
           ref={dropdownRef}
-          className="absolute top-0 left-0 right-0 z-30"
+          className={`absolute top-0 left-0 right-0 z-30 transition-all duration-500 ease-out ${
+            isImmersiveMode ? '-translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'
+          }`}
         >
           {/* Main category row */}
           <div className="bg-gradient-to-b from-black via-black/80 to-transparent pt-3 pb-2">
@@ -1159,7 +1144,7 @@ const AuditionsPage = () => {
               dropdownOpen ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'
             }`}
           >
-            <div className="bg-black/95 backdrop-blur-sm border-t border-white/10">
+            <div className="bg-black/95 backdrop-blur-sm border-t border-white/10 rounded-b-2xl mx-2 mb-2">
               <div className="max-h-56 overflow-y-auto py-2 px-3 scrollbar-hide">
                 {dropdownCategory?.subcategories?.map((sub, index) => (
                   <button
@@ -1215,14 +1200,29 @@ const AuditionsPage = () => {
           {/* No Results State */}
           {!loading && auditions.length === 0 && (
             <div className="h-full w-full flex items-center justify-center bg-black">
-              <div className="flex flex-col items-center gap-4 text-center px-8">
-                <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center">
-                  <Search className="w-8 h-8 text-white/40" />
+              <div className="flex flex-col items-center gap-6 text-center px-8 max-w-sm">
+                <div className="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center">
+                  <Play className="w-10 h-10 text-white/40" />
                 </div>
-                <h3 className="text-white text-lg font-semibold">No videos found</h3>
-                <p className="text-white/60 text-sm">
-                  No content matches your current filters. Try selecting a different category or check back later.
-                </p>
+                <div>
+                  <h3 className="text-white text-xl font-semibold mb-3">Uh oh!</h3>
+                  <p className="text-white/70 text-base leading-relaxed">
+                    Looks like there are no videos that are currently ready to show. Be the first to post a video today!
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    if (currentUser) {
+                      navigate(`/profile/${currentUser.id}?scrollToMedia=true`);
+                    } else {
+                      navigate('/login');
+                    }
+                  }}
+                  className="px-8 py-3 bg-primary text-black font-semibold rounded-full hover:bg-primary/90 transition-colors text-base"
+                  data-testid="add-video-btn"
+                >
+                  Add a video!
+                </button>
               </div>
             </div>
           )}
@@ -1243,6 +1243,13 @@ const AuditionsPage = () => {
                 onToggleMute={toggleMute}
                 onFilterClick={() => setGenreFilterOpen(true)}
                 hasActiveGenre={!!activeGenre}
+                hasSwipedUp={hasSwipedUp}
+                hasSwipedHorizontal={hasSwipedHorizontal}
+                onFirstSwipeUp={handleFirstSwipeUp}
+                onFirstHorizontalSwipe={handleFirstHorizontalSwipe}
+                showCategoryBar={showCategoryBar}
+                isImmersiveMode={isImmersiveMode}
+                onToggleImmersiveMode={toggleImmersiveMode}
               />
             </div>
           ))}
@@ -1317,12 +1324,7 @@ const AuditionsPage = () => {
         </div>
       )}
 
-      {/* Swipe Hint - only show on first item and before first swipe */}
-      {!loading && currentIndex === 0 && auditions.length > 1 && !hasSwipedUp && (
-        <div className="absolute bottom-36 left-1/2 -translate-x-1/2 text-white/60 text-sm animate-bounce z-10">
-          <span>Swipe up for more</span>
-        </div>
-      )}
+      {/* Removed duplicate swipe hint - now handled inside VideoDisplay component */}
     </div>
   );
 };

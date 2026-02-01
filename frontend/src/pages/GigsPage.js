@@ -23,14 +23,14 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { GigCard, CreateGigModal, ViewGigModal, CATEGORY_ICONS, CATEGORY_LABELS } from '../components/gigs';
 import {
   List, Search, Filter, Plus, X, ChevronDown, ChevronUp,
-  User, Eye, Trash2, Check, Music, Briefcase
+  User, Eye, Trash2, Check, Music, Briefcase, RefreshCw
 } from 'lucide-react';
 
 const GigsPage = () => {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   
   // Main state
-  const [activeTab, setActiveTab] = useState('looking_for'); // 'looking_for' or 'services'
+  const [activeTab, setActiveTab] = useState('looking_for'); // 'looking_for', 'services', or 'show_trades'
   const [gigs, setGigs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState(null);
@@ -270,6 +270,18 @@ const GigsPage = () => {
             <Briefcase className="w-4 h-4 inline mr-2" />
             Services
           </button>
+          <button
+            onClick={() => { setActiveTab('show_trades'); setPage(1); }}
+            className={`flex-1 md:flex-none px-6 py-3 rounded-xl font-medium transition-all ${
+              activeTab === 'show_trades'
+                ? 'bg-primary text-black'
+                : 'bg-dark-400 text-gray-400 hover:text-white hover:bg-dark-300'
+            }`}
+            data-testid="tab-show-trades"
+          >
+            <RefreshCw className="w-4 h-4 inline mr-2" />
+            Show Trades
+          </button>
         </div>
 
         {/* Tab Description Blurb */}
@@ -277,8 +289,10 @@ const GigsPage = () => {
           <p className="text-gray-300 text-sm">
             {activeTab === 'looking_for' ? (
               <>Here other users (such as a band) are posting for things such as a new drummer for example. If you fit that description and you like what you see, reach out! Use filters to find exactly what you are looking for.</>
-            ) : (
+            ) : activeTab === 'services' ? (
               <>Here other users are posting about what they bring to the table. If you are looking for someone who plays guitar for example, you can find guitarists here. Use filters to find exactly what you are looking for.</>
+            ) : (
+              <>Here, you can ask for show trades!</>
             )}
           </p>
         </div>
@@ -416,7 +430,7 @@ const GigsPage = () => {
         <div className="flex items-center justify-between mb-4">
           <p className="text-gray-400">
             {totalGigs} gig{totalGigs !== 1 ? 's' : ''} found
-            {activeTab === 'looking_for' ? ' looking for services' : ' offering services'}
+            {activeTab === 'looking_for' ? ' looking for services' : activeTab === 'services' ? ' offering services' : ' for show trades'}
           </p>
         </div>
 
@@ -435,7 +449,7 @@ const GigsPage = () => {
                       <div>
                         <h4 className="text-white font-medium">{gig.title}</h4>
                         <p className="text-gray-400 text-sm">
-                          {gig.gig_type === 'looking_for' ? 'Looking For' : 'Services'} • {CATEGORY_LABELS[gig.category]}
+                          {gig.gig_type === 'looking_for' ? 'Looking For' : gig.gig_type === 'services' ? 'Services' : 'Show Trades'} • {CATEGORY_LABELS[gig.category]}
                         </p>
                       </div>
                     </div>

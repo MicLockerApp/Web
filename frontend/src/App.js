@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { DateRangeProvider } from './context/DateRangeContext';
+import { ImmersiveProvider } from './context/ImmersiveContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ChatWidget from './components/ChatWidget';
@@ -108,8 +109,8 @@ const PresenceTrackerComponent = () => {
 // Component to conditionally render ChatWidget
 const ConditionalChatWidget = () => {
   const location = useLocation();
-  // Hide ChatWidget on auditions page
-  if (location.pathname === '/auditions') {
+  // Hide ChatWidget on auditions feed page (/ and /auditions)
+  if (location.pathname === '/' || location.pathname === '/auditions') {
     return null;
   }
   return <ChatWidget />;
@@ -121,10 +122,13 @@ function AppContent() {
       <AuthProvider>
         <PresenceTrackerComponent />
         <CartProvider>
+          <ImmersiveProvider>
           <ReviewGatingWrapper>
             <Layout>
               <Routes>
-              <Route path="/" element={<HomePage />} />
+              <Route path="/" element={<AuditionsPage />} />
+              <Route path="/auditions" element={<AuditionsPage />} />
+              <Route path="/gear" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/auth/google/callback" element={<GoogleAuthCallback />} />
@@ -196,6 +200,7 @@ function AppContent() {
           {/* AI Chat Widget - Hidden on auditions page */}
           <ConditionalChatWidget />
           </ReviewGatingWrapper>
+          </ImmersiveProvider>
         </CartProvider>
       </AuthProvider>
     </Router>

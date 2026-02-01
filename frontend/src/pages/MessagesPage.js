@@ -5,7 +5,6 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { messagesAPI, usersAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
-import S3MediaUploader from '../components/S3MediaUploader';
 import analytics from '../services/analytics';
 
 const MessagesPage = () => {
@@ -42,9 +41,9 @@ const MessagesPage = () => {
   const [threadMenuOpen, setThreadMenuOpen] = useState(null);
   
   // Image upload state
-  const [showImageUploader, setShowImageUploader] = useState(false);
   const [pendingImages, setPendingImages] = useState([]);
   const [uploadingImages, setUploadingImages] = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -120,14 +119,18 @@ const MessagesPage = () => {
     e.preventDefault();
     e.stopPropagation();
     if (!newMessage.trim() && pendingImages.length === 0) return;
+    
+    // Check if any images are still uploading
+    if (pendingImages.some(img => img.uploading)) return;
 
     setSending(true);
     try {
       const recipientId = selectedThread?.other_user_id || toUserId;
-      await messagesAPI.send(recipientId, newMessage.trim() || ' ', null, pendingImages.length > 0 ? pendingImages : null);
+      // Extract URLs from pendingImages objects
+      const imageUrls = pendingImages.length > 0 ? pendingImages.map(img => img.url) : null;
+      await messagesAPI.send(recipientId, newMessage.trim() || ' ', null, imageUrls);
       setNewMessage('');
       setPendingImages([]);
-      setShowImageUploader(false);
       
       // Track message sent
       analytics.messageSent(selectedThread?.id || 'new', recipientId);
@@ -227,6 +230,74 @@ const MessagesPage = () => {
     setSearchUsername('');
     setSearchResults([]);
     setSearchError('');
+  };
+
+  // Handle file selection for attachments
+  const handleFileSelect = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    
+    // Limit to 5 files
+    const filesToUpload = files.slice(0, 5 - pendingImages.length);
+    if (filesToUpload.length === 0) return;
+    
+    setUploadingImages(true);
+    
+    for (const file of filesToUpload) {
+      // Create local preview first
+      const localPreview = URL.createObjectURL(file);
+      const previewId = Date.now() + Math.random();
+      setPendingImages(prev => [...prev, { id: previewId, url: localPreview, uploading: true }]);
+      
+      try {
+        // Upload to S3 using the direct upload endpoint
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/uploads/direct`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: formData
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          // Replace local preview with S3 URL
+          setPendingImages(prev => 
+            prev.map(img => img.id === previewId ? { ...img, url: data.url, uploading: false } : img)
+          );
+          URL.revokeObjectURL(localPreview);
+        } else {
+          console.error('Upload failed:', await response.text());
+          // Remove failed upload
+          setPendingImages(prev => prev.filter(img => img.id !== previewId));
+          URL.revokeObjectURL(localPreview);
+        }
+      } catch (error) {
+        console.error('Error uploading file:', error);
+        // Remove failed upload
+        setPendingImages(prev => prev.filter(img => img.id === previewId));
+        URL.revokeObjectURL(localPreview);
+      }
+    }
+    
+    setUploadingImages(false);
+    // Clear the input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // Auto-grow textarea handler
+  const handleTextareaChange = (e) => {
+    setNewMessage(e.target.value);
+    // Reset height to auto to get the correct scrollHeight
+    e.target.style.height = 'auto';
+    // Set new height, max 200px
+    const newHeight = Math.min(e.target.scrollHeight, 200);
+    e.target.style.height = newHeight + 'px';
   };
 
   // Handle deleting a single message
@@ -530,72 +601,78 @@ const MessagesPage = () => {
                 <form onSubmit={handleSendMessage} className={`p-4 border-t ${
                   isDark ? 'border-dark-300' : 'border-gray-200'
                 }`}>
-                  {/* Pending Images Preview */}
+                  {/* Pending Images Preview - Simple thumbnail view */}
                   {pendingImages.length > 0 && (
-                    <div className="flex gap-2 mb-3 flex-wrap">
-                      {pendingImages.map((url, idx) => (
-                        <div key={idx} className="relative">
-                          <img 
-                            src={url} 
-                            alt={`Attachment ${idx + 1}`} 
-                            className="w-16 h-16 object-cover rounded-lg"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setPendingImages(prev => prev.filter((_, i) => i !== idx))}
-                            className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center"
-                          >
-                            <X className="w-3 h-3 text-white" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {/* Image Uploader */}
-                  {showImageUploader && (
                     <div className={`mb-3 p-3 rounded-lg ${isDark ? 'bg-dark-300' : 'bg-gray-100'}`}>
-                      <S3MediaUploader
-                        onUploadComplete={(urls) => {
-                          setPendingImages(prev => [...prev, ...urls]);
-                          setShowImageUploader(false);
-                        }}
-                        maxFiles={5}
-                        acceptedTypes={['image/*']}
-                        label="Upload images"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowImageUploader(false)}
-                        className={`mt-2 text-sm ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
-                      >
-                        Cancel
-                      </button>
+                      <p className={`text-xs mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {pendingImages.length} file{pendingImages.length > 1 ? 's' : ''} ready to send
+                      </p>
+                      <div className="flex gap-2 flex-wrap">
+                        {pendingImages.map((img, idx) => (
+                          <div key={idx} className="relative">
+                            <img 
+                              src={img.url} 
+                              alt={`Attachment ${idx + 1}`} 
+                              className={`w-16 h-16 object-cover rounded-lg ${img.uploading ? 'opacity-50' : ''}`}
+                            />
+                            {img.uploading && (
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <Loader2 className="w-5 h-5 text-white animate-spin" />
+                              </div>
+                            )}
+                            {!img.uploading && (
+                              <button
+                                type="button"
+                                onClick={() => setPendingImages(prev => prev.filter((_, i) => i !== idx))}
+                                className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center"
+                              >
+                                <X className="w-3 h-3 text-white" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                   
-                  <div className="flex gap-2">
+                  {/* Hidden file input */}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileSelect}
+                    accept="image/*,video/*"
+                    multiple
+                    className="hidden"
+                  />
+                  
+                  <div className="flex gap-2 items-end">
                     <button
                       type="button"
-                      onClick={() => setShowImageUploader(!showImageUploader)}
-                      className={`p-2 rounded-lg ${isDark ? 'bg-dark-300 hover:bg-dark-200 text-gray-400' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}
-                      title="Attach image"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingImages || pendingImages.length >= 5}
+                      className={`p-2 rounded-lg self-end ${isDark ? 'bg-dark-300 hover:bg-dark-200 text-gray-400' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'} ${
+                        (uploadingImages || pendingImages.length >= 5) ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                      title="Attach image or video"
                     >
-                      <Image className="w-5 h-5" />
+                      {uploadingImages ? <Loader2 className="w-5 h-5 animate-spin" /> : <Image className="w-5 h-5" />}
                     </button>
-                    <input
-                      type="text"
+                    <textarea
                       value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
+                      onChange={handleTextareaChange}
                       placeholder="Type a message..."
-                      className="flex-1"
+                      className={`flex-1 resize-none overflow-y-auto px-3 py-2 rounded-lg ${
+                        isDark ? 'bg-dark-300 text-white placeholder-gray-500' : 'bg-gray-100 text-gray-900 placeholder-gray-400'
+                      }`}
+                      style={{ minHeight: '40px', maxHeight: '200px' }}
+                      rows={1}
                       disabled={sending}
                       data-testid="message-input"
                     />
                     <button
                       type="submit"
-                      className="btn btn-primary px-4"
-                      disabled={sending || (!newMessage.trim() && pendingImages.length === 0)}
+                      className="btn btn-primary px-4 self-end"
+                      disabled={sending || uploadingImages || (!newMessage.trim() && pendingImages.length === 0)}
                       data-testid="send-message-button"
                     >
                       {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}

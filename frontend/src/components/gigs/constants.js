@@ -5,7 +5,7 @@
  * Extracted for reusability and single source of truth.
  */
 
-// Category icons mapping - includes Comedians and Actors
+// Category icons mapping - includes all categories
 export const CATEGORY_ICONS = {
   musician: '🎸',
   audio_engineer: '🎚️',
@@ -13,7 +13,12 @@ export const CATEGORY_ICONS = {
   venue: '🏟️',
   merchant: '🛍️',
   comedian: '🎭',
-  actor: '🎬'
+  actor: '🎬',
+  show_pro: '🎪',
+  photographer: '📸',
+  videographer: '🎥',
+  manager: '📋',
+  services: '✂️'
 };
 
 export const CATEGORY_LABELS = {
@@ -23,7 +28,12 @@ export const CATEGORY_LABELS = {
   venue: 'Venues',
   merchant: 'Merchants',
   comedian: 'Comedians',
-  actor: 'Actors'
+  actor: 'Actors',
+  show_pro: 'Show Pro',
+  photographer: 'Photographers',
+  videographer: 'Videographers',
+  manager: 'Managers',
+  services: 'Services'
 };
 
 // Placeholder images from Pexels for gigs without media

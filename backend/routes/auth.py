@@ -512,6 +512,21 @@ async def complete_profile(
             update_data["merchant_products"] = category_data.merchant_products
         if category_data.business_name:
             update_data["business_name"] = category_data.business_name
+    elif category_data.category == "show_pro":
+        if category_data.show_pro_specializations:
+            update_data["show_pro_specializations"] = category_data.show_pro_specializations
+    elif category_data.category == "photographer":
+        if category_data.photographer_specializations:
+            update_data["photographer_specializations"] = category_data.photographer_specializations
+    elif category_data.category == "videographer":
+        if category_data.videographer_specializations:
+            update_data["videographer_specializations"] = category_data.videographer_specializations
+    elif category_data.category == "manager":
+        if category_data.manager_specializations:
+            update_data["manager_specializations"] = category_data.manager_specializations
+    elif category_data.category == "services":
+        if category_data.services_specializations:
+            update_data["services_specializations"] = category_data.services_specializations
     
     # Add contact info if provided
     if category_data.phone:
@@ -537,7 +552,8 @@ async def get_categories():
     from models.user import (
         MUSICIAN_INSTRUMENTS, AUDIO_ENGINEER_SPECS,
         RECORDING_STUDIO_OFFERINGS, MUSIC_GENRES, MERCHANT_PRODUCT_TYPES,
-        COMEDIAN_SPECIALTIES, ACTOR_SPECIALTIES
+        COMEDIAN_SPECIALTIES, ACTOR_SPECIALTIES,
+        SHOW_PRO_SPECS, PHOTOGRAPHER_SPECS, VIDEOGRAPHER_SPECS, MANAGER_SPECS, SERVICES_SPECS
     )
     
     return {
@@ -560,6 +576,21 @@ async def get_categories():
         },
         "actor_options": {
             "specialties": ACTOR_SPECIALTIES
+        },
+        "show_pro_options": {
+            "specializations": SHOW_PRO_SPECS
+        },
+        "photographer_options": {
+            "specializations": PHOTOGRAPHER_SPECS
+        },
+        "videographer_options": {
+            "specializations": VIDEOGRAPHER_SPECS
+        },
+        "manager_options": {
+            "specializations": MANAGER_SPECS
+        },
+        "services_options": {
+            "specializations": SERVICES_SPECS
         }
     }
 

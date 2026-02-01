@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { MapPin, Star, MessageSquare, Calendar, Music, Mic2, Building2, Package, Mail, Phone, Globe, ShoppingBag, Image, Video, Plus, X, Play, Trash2, Check, Eye, Upload, ChevronDown } from 'lucide-react';
 import { usersAPI, listingsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -22,7 +22,7 @@ const VIDEO_CATEGORIES = [
     subcategories: [
       "Accordion", "Acoustic Guitar", "Bagpipe", "Banjo", "Bass Electric", "Bass Fretless",
       "Bass Upright", "Bassoon", "Beat Makers", "Cello", "Clarinet", "Classical Guitar",
-      "Composer Orchestral", "Dobro", "Electric Guitar", "Fiddle", "Flutes", "French Horn",
+      "Composer Orchestral", "Dobro", "Drums", "Electric Guitar", "Fiddle", "Flutes", "French Horn",
       "Harmonica", "Harp", "Horns", "Keyboards Synths", "Mandolin", "Oboe", "Pedal Steel",
       "Percussion", "Piano", "Rapper", "Saxophone", "Singer Female", "Singer Male",
       "Timpani", "Trombone", "Trumpet", "Tuba", "Ukulele", "Viola", "Violin"
@@ -71,6 +71,51 @@ const VIDEO_CATEGORIES = [
       "Stunt Performer", "Motion Capture", "Musical Theater"
     ]
   },
+  { 
+    value: 'show_pro', 
+    label: 'Show Pro',
+    subcategories: [
+      "Lighting Designer", "Sound Technician", "Stage Manager", "Production Manager",
+      "Technical Director", "Set Designer", "Props Master", "Costume Designer",
+      "Backline Technician", "FOH Engineer", "Video Technician", "Stage Hand"
+    ]
+  },
+  { 
+    value: 'photographer', 
+    label: 'Photographers',
+    subcategories: [
+      "Concert Photographer", "Event Photographer", "Portrait Photographer",
+      "Album Cover Photographer", "Press/PR Photographer", "Tour Photographer",
+      "Studio Photographer", "Documentary Photographer"
+    ]
+  },
+  { 
+    value: 'videographer', 
+    label: 'Videographers',
+    subcategories: [
+      "Music Video Director", "Concert Videographer", "Documentary Filmmaker",
+      "Live Stream Operator", "Social Media Content Creator", "Video Editor",
+      "Motion Graphics Artist", "Drone Videographer"
+    ]
+  },
+  { 
+    value: 'manager', 
+    label: 'Managers',
+    subcategories: [
+      "Artist Manager", "Actor Manager", "Tour Manager", "Business Manager",
+      "Talent Manager", "Band Manager", "Booking Agent", "Publicist",
+      "Marketing Manager", "Event Manager", "Promoter", "Agent"
+    ]
+  },
+  { 
+    value: 'services', 
+    label: 'Services',
+    subcategories: [
+      "Barber", "Hair Stylist", "Makeup Artist", "Wardrobe Stylist",
+      "Personal Trainer", "Massage Therapist", "Personal Chef",
+      "Driver/Transportation", "Security Personnel", "Catering Services"
+    ]
+  },
 ];
 
 const MUSIC_GENRES = [
@@ -103,6 +148,7 @@ const SocialIcon = ({ platform }) => {
 
 const ProfilePage = () => {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const { user: currentUser } = useAuth();
   const { isDark } = useTheme();
   const [profile, setProfile] = useState(null);
@@ -143,6 +189,17 @@ const ProfilePage = () => {
   
   // Refs
   const mediaSectionRef = useRef(null);
+
+  // Handle scrollToMedia query parameter
+  useEffect(() => {
+    if (searchParams.get('scrollToMedia') === 'true' && !loading) {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        mediaSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+        setActiveTab('videos');
+      }, 500);
+    }
+  }, [searchParams, loading]);
 
   // Track profile visits for Top 8 Fans feature
   useProfileVisitTracker(id);
@@ -943,20 +1000,36 @@ const ProfilePage = () => {
                   }}
                   data-testid={`video-card-${video.id}`}
                 >
-                  {/* Video area - square like listings */}
-                  <div className="relative aspect-square">
-                    <video
-                      src={video.url}
-                      className="w-full h-full object-cover"
-                      muted
-                      preload="metadata"
-                    />
+                  {/* Video thumbnail area - square like listings */}
+                  <div className="relative aspect-square bg-black">
+                    {video.thumbnail_url ? (
+                      <img
+                        src={video.thumbnail_url}
+                        alt={video.description || 'Video thumbnail'}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <video
+                        src={`${video.url}#t=0.5`}
+                        className="w-full h-full object-cover"
+                        muted
+                        preload="metadata"
+                        playsInline
+                      />
+                    )}
                     
-                    {/* Play overlay */}
-                    <div className={`absolute inset-0 flex items-center justify-center transition-opacity ${
-                      showAuditionsSelector ? 'bg-black/50' : 'bg-black/30 group-hover:bg-black/40'
-                    }`}>
-                      {showAuditionsSelector ? (
+                    {/* Play icon overlay - always show for videos */}
+                    {!showAuditionsSelector && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="w-14 h-14 rounded-full bg-black/50 flex items-center justify-center">
+                          <Play className="w-7 h-7 text-white fill-white ml-1" />
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Selection overlay - only show when in selection mode */}
+                    {showAuditionsSelector && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                           selectedAuditionVideos.includes(video.id) 
                             ? 'bg-primary text-white' 
@@ -964,10 +1037,8 @@ const ProfilePage = () => {
                         }`}>
                           {selectedAuditionVideos.includes(video.id) && <Check className="w-6 h-6" />}
                         </div>
-                      ) : (
-                        <Play className="w-10 h-10 text-white" />
-                      )}
-                    </div>
+                      </div>
+                    )}
                     
                     {/* Auditions badge */}
                     {video.show_in_auditions && !showAuditionsSelector && (
@@ -1177,16 +1248,28 @@ const ProfilePage = () => {
                             className={`rounded-xl overflow-hidden cursor-pointer group ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}
                             onClick={() => setLightboxMedia({ ...fav, type: 'video' })}
                           >
-                            {/* Video thumbnail */}
-                            <div className="relative" style={{ aspectRatio: '1/1' }}>
-                              <video
-                                src={fav.media_url}
-                                className="w-full h-full object-cover"
-                                muted
-                                preload="metadata"
-                              />
-                              <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/40 transition-colors">
-                                <Play className="w-10 h-10 text-white" />
+                            {/* Video thumbnail - with play overlay */}
+                            <div className="relative aspect-square bg-black">
+                              {fav.thumbnail_url ? (
+                                <img
+                                  src={fav.thumbnail_url}
+                                  alt={fav.description || 'Video thumbnail'}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <video
+                                  src={`${fav.media_url}#t=0.5`}
+                                  className="w-full h-full object-cover"
+                                  muted
+                                  preload="metadata"
+                                  playsInline
+                                />
+                              )}
+                              {/* Play icon overlay */}
+                              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                <div className="w-12 h-12 rounded-full bg-black/50 flex items-center justify-center">
+                                  <Play className="w-6 h-6 text-white fill-white ml-0.5" />
+                                </div>
                               </div>
                               {/* Subcategory badge */}
                               {fav.user_subcategories?.[0] && (

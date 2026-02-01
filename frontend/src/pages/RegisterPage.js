@@ -41,6 +41,16 @@ const RegisterPage = () => {
     comedian_specialties: [],
     // Actor fields
     actor_specialties: [],
+    // Show Pro fields
+    show_pro_specializations: [],
+    // Photographer fields
+    photographer_specializations: [],
+    // Videographer fields
+    videographer_specializations: [],
+    // Manager fields
+    manager_specializations: [],
+    // Services fields
+    services_specializations: [],
     // Contact info (Step 6)
     phone: '',
     // Mailing address
@@ -75,6 +85,11 @@ const RegisterPage = () => {
     { value: 'merchant', label: 'Merchant', icon: '🛍️', description: 'Sell merchandise & apparel' },
     { value: 'comedian', label: 'Comedian', icon: '🎭', description: 'Perform comedy shows or acts' },
     { value: 'actor', label: 'Actor', icon: '🎬', description: 'Act in film, TV, or theater' },
+    { value: 'show_pro', label: 'Show Pro', icon: '🎪', description: 'Production, lighting, sound, staging' },
+    { value: 'photographer', label: 'Photographer', icon: '📸', description: 'Concert, event, or portrait photography' },
+    { value: 'videographer', label: 'Videographer', icon: '🎥', description: 'Music videos, live streams, content' },
+    { value: 'manager', label: 'Manager', icon: '📋', description: 'Artist, tour, or talent management' },
+    { value: 'services', label: 'Services', icon: '✂️', description: 'Hair, makeup, styling, wellness' },
   ];
 
   useEffect(() => {
@@ -895,6 +910,166 @@ const RegisterPage = () => {
                     {formData.actor_specialties.includes(specialty) && <Check className="w-3 h-3 text-primary" />}
                   </div>
                   {specialty}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Show Pro Section */}
+        {allCategories.includes('show_pro') && (
+          <div className="mb-8">
+            <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
+              <span className="text-xl">🎪</span> Show Production Specialties
+            </h3>
+            <p className="text-gray-500 text-sm mb-3">Select your production specialties (multiple allowed)</p>
+            <div className="max-h-48 overflow-y-auto grid grid-cols-2 gap-2 p-1">
+              {categoryOptions?.show_pro_options?.specializations?.map(spec => (
+                <div
+                  key={spec}
+                  onClick={(e) => toggleSelection('show_pro_specializations', spec, e)}
+                  className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 cursor-pointer ${
+                    formData.show_pro_specializations.includes(spec)
+                      ? 'bg-primary text-black'
+                      : 'bg-dark-300 text-gray-300 hover:bg-dark-200'
+                  }`}
+                >
+                  <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${
+                    formData.show_pro_specializations.includes(spec)
+                      ? 'bg-black border-black'
+                      : 'border-gray-500'
+                  }`}>
+                    {formData.show_pro_specializations.includes(spec) && <Check className="w-3 h-3 text-primary" />}
+                  </div>
+                  {spec}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Photographer Section */}
+        {allCategories.includes('photographer') && (
+          <div className="mb-8">
+            <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
+              <span className="text-xl">📸</span> Photography Specialties
+            </h3>
+            <p className="text-gray-500 text-sm mb-3">Select your photography specialties (multiple allowed)</p>
+            <div className="max-h-48 overflow-y-auto grid grid-cols-2 gap-2 p-1">
+              {categoryOptions?.photographer_options?.specializations?.map(spec => (
+                <div
+                  key={spec}
+                  onClick={(e) => toggleSelection('photographer_specializations', spec, e)}
+                  className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 cursor-pointer ${
+                    formData.photographer_specializations.includes(spec)
+                      ? 'bg-primary text-black'
+                      : 'bg-dark-300 text-gray-300 hover:bg-dark-200'
+                  }`}
+                >
+                  <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${
+                    formData.photographer_specializations.includes(spec)
+                      ? 'bg-black border-black'
+                      : 'border-gray-500'
+                  }`}>
+                    {formData.photographer_specializations.includes(spec) && <Check className="w-3 h-3 text-primary" />}
+                  </div>
+                  {spec}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Videographer Section */}
+        {allCategories.includes('videographer') && (
+          <div className="mb-8">
+            <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
+              <span className="text-xl">🎥</span> Videography Specialties
+            </h3>
+            <p className="text-gray-500 text-sm mb-3">Select your videography specialties (multiple allowed)</p>
+            <div className="max-h-48 overflow-y-auto grid grid-cols-2 gap-2 p-1">
+              {categoryOptions?.videographer_options?.specializations?.map(spec => (
+                <div
+                  key={spec}
+                  onClick={(e) => toggleSelection('videographer_specializations', spec, e)}
+                  className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 cursor-pointer ${
+                    formData.videographer_specializations.includes(spec)
+                      ? 'bg-primary text-black'
+                      : 'bg-dark-300 text-gray-300 hover:bg-dark-200'
+                  }`}
+                >
+                  <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${
+                    formData.videographer_specializations.includes(spec)
+                      ? 'bg-black border-black'
+                      : 'border-gray-500'
+                  }`}>
+                    {formData.videographer_specializations.includes(spec) && <Check className="w-3 h-3 text-primary" />}
+                  </div>
+                  {spec}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Manager Section */}
+        {allCategories.includes('manager') && (
+          <div className="mb-8">
+            <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
+              <span className="text-xl">📋</span> Management Specialties
+            </h3>
+            <p className="text-gray-500 text-sm mb-3">Select your management specialties (multiple allowed)</p>
+            <div className="max-h-48 overflow-y-auto grid grid-cols-2 gap-2 p-1">
+              {categoryOptions?.manager_options?.specializations?.map(spec => (
+                <div
+                  key={spec}
+                  onClick={(e) => toggleSelection('manager_specializations', spec, e)}
+                  className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 cursor-pointer ${
+                    formData.manager_specializations.includes(spec)
+                      ? 'bg-primary text-black'
+                      : 'bg-dark-300 text-gray-300 hover:bg-dark-200'
+                  }`}
+                >
+                  <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${
+                    formData.manager_specializations.includes(spec)
+                      ? 'bg-black border-black'
+                      : 'border-gray-500'
+                  }`}>
+                    {formData.manager_specializations.includes(spec) && <Check className="w-3 h-3 text-primary" />}
+                  </div>
+                  {spec}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Services Section */}
+        {allCategories.includes('services') && (
+          <div className="mb-8">
+            <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
+              <span className="text-xl">✂️</span> Service Specialties
+            </h3>
+            <p className="text-gray-500 text-sm mb-3">Select your service specialties (multiple allowed)</p>
+            <div className="max-h-48 overflow-y-auto grid grid-cols-2 gap-2 p-1">
+              {categoryOptions?.services_options?.specializations?.map(spec => (
+                <div
+                  key={spec}
+                  onClick={(e) => toggleSelection('services_specializations', spec, e)}
+                  className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 cursor-pointer ${
+                    formData.services_specializations.includes(spec)
+                      ? 'bg-primary text-black'
+                      : 'bg-dark-300 text-gray-300 hover:bg-dark-200'
+                  }`}
+                >
+                  <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${
+                    formData.services_specializations.includes(spec)
+                      ? 'bg-black border-black'
+                      : 'border-gray-500'
+                  }`}>
+                    {formData.services_specializations.includes(spec) && <Check className="w-3 h-3 text-primary" />}
+                  </div>
+                  {spec}
                 </div>
               ))}
             </div>

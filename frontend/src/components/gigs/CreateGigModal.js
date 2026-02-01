@@ -13,7 +13,7 @@ import React, { useState, useRef } from 'react';
 import {
   X, ChevronDown, ChevronUp, MapPin, DollarSign, Mail, Phone,
   Image, Video, Search, Briefcase, Check, AlertCircle,
-  Globe, Music
+  Globe, Music, RefreshCw
 } from 'lucide-react';
 import useS3Upload from '../../hooks/useS3Upload';
 import { gigsAPI } from '../../services/api';
@@ -134,7 +134,7 @@ const CreateGigModal = ({ categories, onClose, onSuccess }) => {
             <div className="space-y-6">
               <div>
                 <label className="block text-gray-300 font-medium mb-3">What type of post is this?</label>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <button type="button" onClick={() => setFormData({ ...formData, gig_type: 'looking_for' })}
                     className={`p-4 rounded-xl border-2 text-left transition-all ${formData.gig_type === 'looking_for' ? 'border-primary bg-primary/10' : 'border-dark-300 bg-dark-500 hover:border-dark-200'}`}>
                     <Search className={`w-8 h-8 mb-2 ${formData.gig_type === 'looking_for' ? 'text-primary' : 'text-gray-400'}`} />
@@ -146,6 +146,12 @@ const CreateGigModal = ({ categories, onClose, onSuccess }) => {
                     <Briefcase className={`w-8 h-8 mb-2 ${formData.gig_type === 'services' ? 'text-primary' : 'text-gray-400'}`} />
                     <h4 className={`font-semibold ${formData.gig_type === 'services' ? 'text-primary' : 'text-white'}`}>Services</h4>
                     <p className="text-gray-400 text-sm mt-1">Share what you offer</p>
+                  </button>
+                  <button type="button" onClick={() => setFormData({ ...formData, gig_type: 'show_trades' })}
+                    className={`p-4 rounded-xl border-2 text-left transition-all ${formData.gig_type === 'show_trades' ? 'border-primary bg-primary/10' : 'border-dark-300 bg-dark-500 hover:border-dark-200'}`}>
+                    <RefreshCw className={`w-8 h-8 mb-2 ${formData.gig_type === 'show_trades' ? 'text-primary' : 'text-gray-400'}`} />
+                    <h4 className={`font-semibold ${formData.gig_type === 'show_trades' ? 'text-primary' : 'text-white'}`}>Show Trades</h4>
+                    <p className="text-gray-400 text-sm mt-1">Ask for show trades</p>
                   </button>
                 </div>
               </div>
@@ -216,7 +222,7 @@ const CreateGigModal = ({ categories, onClose, onSuccess }) => {
               <div>
                 <label className="block text-gray-300 font-medium mb-2">Title *</label>
                 <input type="text" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder={formData.gig_type === 'looking_for' ? "e.g., Looking for a drummer for upcoming tour" : "e.g., Professional mixing and mastering services"}
+                  placeholder={formData.gig_type === 'looking_for' ? "e.g., Looking for a drummer for upcoming tour" : formData.gig_type === 'services' ? "e.g., Professional mixing and mastering services" : "e.g., Looking to trade shows in Chicago area"}
                   className="w-full px-4 py-3 bg-dark-500 border border-dark-300 rounded-xl text-white" maxLength={200} />
                 <p className="text-gray-500 text-xs mt-1">{formData.title.length}/200</p>
               </div>
