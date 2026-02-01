@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, Link, useSearchParams } from 'react-router-dom';
-import { MapPin, Star, MessageSquare, Calendar, Music, Mic2, Building2, Package, Mail, Phone, Globe, ShoppingBag, Image, Video, Plus, X, Play, Trash2, Check, Eye, Upload, ChevronDown } from 'lucide-react';
-import { usersAPI, listingsAPI } from '../services/api';
+import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { MapPin, Star, MessageSquare, Calendar, Music, Mic2, Building2, Package, Mail, Phone, Globe, ShoppingBag, Image, Video, Plus, X, Play, Trash2, Check, Eye, Upload, ChevronDown, Flag, AlertTriangle } from 'lucide-react';
+import { usersAPI, listingsAPI, ticketsAPI, authAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import LoadingSpinner from '../components/LoadingSpinner';
