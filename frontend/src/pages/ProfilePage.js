@@ -146,6 +146,19 @@ const SocialIcon = ({ platform }) => {
   return icons[platform] || null;
 };
 
+// Report reasons for reporting users
+const REPORT_REASONS = [
+  { value: 'harassment', label: 'Harassment or Bullying' },
+  { value: 'spam', label: 'Spam or Scam' },
+  { value: 'impersonation', label: 'Impersonation or Fake Account' },
+  { value: 'inappropriate_content', label: 'Inappropriate or Offensive Content' },
+  { value: 'fraud', label: 'Fraud or Suspicious Activity' },
+  { value: 'intellectual_property', label: 'Intellectual Property Violation' },
+  { value: 'safety_threat', label: 'Threats or Safety Concerns' },
+  { value: 'underage', label: 'Underage User' },
+  { value: 'other', label: 'Other Violation' },
+];
+
 const ProfilePage = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
