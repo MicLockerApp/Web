@@ -1658,6 +1658,279 @@ const ProfilePage = () => {
           </div>
         </div>
       )}
+
+      {/* Report User Modal */}
+      {showReportModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`w-full max-w-md rounded-xl p-6 ${isDark ? 'bg-dark-200' : 'bg-white'}`}>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                Report User
+              </h3>
+              <button
+                onClick={() => {
+                  setShowReportModal(false);
+                  setReportReason('');
+                  setReportDetails('');
+                }}
+                className={`p-2 rounded-full hover:bg-opacity-10 ${isDark ? 'hover:bg-white text-gray-400' : 'hover:bg-black text-gray-500'}`}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className={`mb-4 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              Report <span className="font-semibold text-primary">@{profile.username}</span> for violating our Terms of Service or Community Guidelines.
+            </p>
+
+            {/* Reason Dropdown */}
+            <div className="mb-4">
+              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                Reason for Report *
+              </label>
+              <select
+                value={reportReason}
+                onChange={(e) => setReportReason(e.target.value)}
+                className={`w-full px-4 py-3 rounded-lg border ${
+                  isDark 
+                    ? 'bg-dark-300 border-dark-200 text-white' 
+                    : 'bg-white border-gray-300 text-gray-900'
+                } focus:ring-2 focus:ring-primary focus:border-transparent`}
+                data-testid="report-reason-select"
+              >
+                <option value="">Select a reason...</option>
+                {REPORT_REASONS.map((reason) => (
+                  <option key={reason.value} value={reason.value}>
+                    {reason.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Additional Details */}
+            <div className="mb-6">
+              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                Additional Details (Optional)
+              </label>
+              <textarea
+                value={reportDetails}
+                onChange={(e) => setReportDetails(e.target.value)}
+                placeholder="Please provide any additional context or evidence that may help us investigate this report..."
+                rows={4}
+                className={`w-full px-4 py-3 rounded-lg border ${
+                  isDark 
+                    ? 'bg-dark-300 border-dark-200 text-white placeholder-gray-500' 
+                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                } focus:ring-2 focus:ring-primary focus:border-transparent resize-none`}
+                data-testid="report-details-textarea"
+              />
+            </div>
+
+            {/* Submit buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowReportModal(false);
+                  setReportReason('');
+                  setReportDetails('');
+                }}
+                className={`flex-1 px-4 py-3 rounded-lg font-medium ${
+                  isDark 
+                    ? 'bg-dark-300 text-gray-300 hover:bg-dark-200' 
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                } transition-colors`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReportSubmit}
+                disabled={!reportReason || submittingReport}
+                className="flex-1 px-4 py-3 rounded-lg font-medium bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                data-testid="report-submit-button"
+              >
+                {submittingReport ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                    Submitting...
+                  </span>
+                ) : (
+                  'Submit Report'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteConfirmModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`w-full max-w-md rounded-xl p-6 ${isDark ? 'bg-dark-200' : 'bg-white'}`}>
+            <div className="flex items-center justify-center mb-4">
+              <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center">
+                <AlertTriangle className="w-8 h-8 text-red-500" />
+              </div>
+            </div>
+            
+            <h3 className={`text-xl font-semibold text-center mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              Delete Your Account?
+            </h3>
+
+            <p className={`text-center mb-6 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              Are you sure you want to delete your account? This action will permanently remove all your data including:
+            </p>
+
+            <ul className={`mb-6 space-y-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <li className="flex items-center gap-2">
+                <span className="text-red-500">•</span> Your profile and all media
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-red-500">•</span> All your listings and gigs
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-red-500">•</span> Messages and conversations
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-red-500">•</span> Reviews and favorites
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-red-500">•</span> Order history and bookings
+              </li>
+            </ul>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirmModal(false)}
+                className={`flex-1 px-4 py-3 rounded-lg font-medium ${
+                  isDark 
+                    ? 'bg-dark-300 text-gray-300 hover:bg-dark-200' 
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                } transition-colors`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                className="flex-1 px-4 py-3 rounded-lg font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
+                data-testid="delete-confirm-button"
+              >
+                Yes, Delete My Account
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Account Credentials Modal */}
+      {showDeleteCredentialsModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`w-full max-w-md rounded-xl p-6 ${isDark ? 'bg-dark-200' : 'bg-white'}`}>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                Confirm Account Deletion
+              </h3>
+              <button
+                onClick={() => {
+                  setShowDeleteCredentialsModal(false);
+                  setDeleteUsername('');
+                  setDeletePassword('');
+                }}
+                className={`p-2 rounded-full hover:bg-opacity-10 ${isDark ? 'hover:bg-white text-gray-400' : 'hover:bg-black text-gray-500'}`}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Warning Banner */}
+            <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 mb-6">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-red-500 font-semibold text-sm">This action is permanent and irreversible</p>
+                  <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Once you confirm deletion, all of your data will be permanently erased and cannot be recovered.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <p className={`mb-4 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              To confirm deletion, please enter your username and password:
+            </p>
+
+            {/* Username Input */}
+            <div className="mb-4">
+              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                Username
+              </label>
+              <input
+                type="text"
+                value={deleteUsername}
+                onChange={(e) => setDeleteUsername(e.target.value)}
+                placeholder="Enter your username"
+                className={`w-full px-4 py-3 rounded-lg border ${
+                  isDark 
+                    ? 'bg-dark-300 border-dark-200 text-white placeholder-gray-500' 
+                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                } focus:ring-2 focus:ring-red-500 focus:border-transparent`}
+                data-testid="delete-username-input"
+              />
+            </div>
+
+            {/* Password Input */}
+            <div className="mb-6">
+              <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                Password
+              </label>
+              <input
+                type="password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                placeholder="Enter your password"
+                className={`w-full px-4 py-3 rounded-lg border ${
+                  isDark 
+                    ? 'bg-dark-300 border-dark-200 text-white placeholder-gray-500' 
+                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                } focus:ring-2 focus:ring-red-500 focus:border-transparent`}
+                data-testid="delete-password-input"
+              />
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteCredentialsModal(false);
+                  setDeleteUsername('');
+                  setDeletePassword('');
+                }}
+                className={`flex-1 px-4 py-3 rounded-lg font-medium ${
+                  isDark 
+                    ? 'bg-dark-300 text-gray-300 hover:bg-dark-200' 
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                } transition-colors`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={!deleteUsername || !deletePassword || deletingAccount}
+                className="flex-1 px-4 py-3 rounded-lg font-medium bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                data-testid="delete-final-button"
+              >
+                {deletingAccount ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                    Deleting...
+                  </span>
+                ) : (
+                  'Permanently Delete Account'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
