@@ -725,6 +725,17 @@ const ProfilePage = () => {
                   Upload Media
                 </button>
               )}
+              {/* Delete Account Button - only on own profile */}
+              {isOwnProfile && (
+                <button
+                  onClick={() => setShowDeleteConfirmModal(true)}
+                  className="btn btn-secondary flex items-center justify-center gap-2 text-red-500 hover:text-red-400 hover:border-red-500/50 mt-2"
+                  data-testid="delete-account-button"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete Account
+                </button>
+              )}
             </div>
           </div>
 
