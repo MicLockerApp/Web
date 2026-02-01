@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Star, Share2, Music, Play, Volume2, VolumeX, Search, ChevronDown, SlidersHorizontal, X, Facebook, Twitter, Link2, Copy } from 'lucide-react';
+import { Star, Share2, Music, Play, Volume2, VolumeX, Search, ChevronDown, SlidersHorizontal, X, Facebook, Twitter, Link2, Copy, Smartphone } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useImmersive } from '../context/ImmersiveContext';
 import { Link, useNavigate } from 'react-router-dom';
