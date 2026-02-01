@@ -75,6 +75,8 @@ export const authAPI = {
     api.delete('/auth/account/pending-email-change'),
   changePassword: (currentPassword, newPassword) => 
     api.post('/auth/account/change-password', { current_password: currentPassword, new_password: newPassword }),
+  deleteAccount: (username, password) =>
+    api.delete('/auth/account/delete', { data: { username, password } }),
 };
 
 // Users APIs
