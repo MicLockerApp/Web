@@ -343,4 +343,22 @@ export const profileVisitsAPI = {
   getMyFanStats: (profileId) => api.get(`/profile-visits/my-stats/${profileId}`),
 };
 
+// Tickets/Support API
+export const ticketsAPI = {
+  // Create a new support ticket
+  create: (data) => api.post('/tickets', data),
+  
+  // Get current user's tickets
+  getMyTickets: (params) => api.get('/tickets/my-tickets', { params }),
+  
+  // Get a specific ticket
+  get: (ticketId) => api.get(`/tickets/${ticketId}`),
+  
+  // Add a reply to a ticket
+  reply: (ticketId, message) => api.post(`/tickets/${ticketId}/reply`, { message }),
+  
+  // Get available categories
+  getCategories: () => api.get('/tickets/categories'),
+};
+
 export default api;
