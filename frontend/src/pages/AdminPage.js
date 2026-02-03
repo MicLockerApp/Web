@@ -83,6 +83,12 @@ const AdminPage = () => {
   const [userActionError, setUserActionError] = useState('');
   const [selectedRole, setSelectedRole] = useState('');
 
+  // Role change modal state (separate from user action modal)
+  const [showRoleChangeModal, setShowRoleChangeModal] = useState(false);
+  const [roleChangeUser, setRoleChangeUser] = useState(null);
+  const [roleChangeSelectedRole, setRoleChangeSelectedRole] = useState('');
+  const [roleChangeError, setRoleChangeError] = useState('');
+
   // Reset analytics modal state
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetOptions, setResetOptions] = useState({
