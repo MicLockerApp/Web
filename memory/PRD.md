@@ -72,6 +72,17 @@ CI=false
 
 ## Recent Updates (February 2026)
 
+### Admin Panel Role Management
+- Added dedicated "Change Role" button (Shield icon) in Users tab
+- Created `RoleChangeModal.js` for role management
+- Updated `UserStatusBadge` to display Owner/Admin/Manager/Employee roles with color-coded badges
+- `miclockerfounder` account confirmed as Owner with full admin access
+
+### Files Modified
+- `/app/frontend/src/components/admin/UsersTab.js` - Role button, status badges
+- `/app/frontend/src/components/admin/RoleChangeModal.js` - NEW modal
+- `/app/frontend/src/pages/AdminPage.js` - Modal state/handlers
+
 ### First-Time Welcome Modal (Auditions Page)
 - Shows a friendly welcome message for first-time visitors on the Auditions page
 - Explains that native iOS/Android apps are in development
