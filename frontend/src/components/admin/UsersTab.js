@@ -69,6 +69,7 @@ function UsersTab({
                   user={u} 
                   onOpenActionModal={onOpenUserActionModal}
                   onOpenRoleChangeModal={onOpenRoleChangeModal}
+                  currentUserRole={currentUserRole}
                 />
               ))}
             </tbody>
