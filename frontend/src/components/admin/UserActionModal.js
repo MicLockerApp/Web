@@ -127,17 +127,6 @@ function UserActionModal({
             />
           )}
 
-          {/* Role Management */}
-          <RoleChangeAction
-            user={selectedUser}
-            currentUserRole={currentUserRole}
-            isProtected={isProtectedUser}
-            isLoading={actionLoading === selectedUser.id}
-            selectedRole={selectedRole}
-            setSelectedRole={setSelectedRole}
-            onRoleChange={onRoleChange}
-          />
-
           {/* Delete User */}
           <DeleteUserAction
             user={selectedUser}
