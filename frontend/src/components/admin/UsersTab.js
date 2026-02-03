@@ -19,7 +19,8 @@ function UsersTab({
   pagination,
   onSearch,
   onOpenUserActionModal,
-  onOpenRoleChangeModal
+  onOpenRoleChangeModal,
+  currentUserRole
 }) {
   return (
     <div>
