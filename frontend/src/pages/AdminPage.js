@@ -549,6 +549,7 @@ const AdminPage = () => {
             pagination={usersPagination}
             onSearch={fetchUsers}
             onOpenUserActionModal={openUserActionModal}
+            onOpenRoleChangeModal={openRoleChangeModal}
           />
         )}
 
