@@ -72,6 +72,15 @@ CI=false
 
 ## Recent Updates (February 2026)
 
+### First-Time Welcome Modal (Auditions Page)
+- Shows a friendly welcome message for first-time visitors on the Auditions page
+- Explains that native iOS/Android apps are in development
+- Uses localStorage for per-user persistence (`auditions_welcome_seen_{userId}`)
+- Appears once per user, dismisses with "Got it!" button
+
+### Files Modified
+- `/app/frontend/src/pages/AuditionsPage.js` - Welcome modal
+
 ### Profile Actions Feature
 - **Report User Button**: Users can report other users with 9 predefined reasons
   - Creates a support ticket automatically
