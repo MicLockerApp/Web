@@ -12,23 +12,19 @@
 
 import React from 'react';
 import {
-  X, AlertCircle, CheckCircle, Clock, Ban, Shield, Trash2, AlertTriangle
+  X, AlertCircle, CheckCircle, Clock, Ban, Trash2, AlertTriangle
 } from 'lucide-react';
-import { PROTECTED_EMAILS, ROLE_OPTIONS } from './utils';
+import { PROTECTED_EMAILS } from './utils';
 
 function UserActionModal({
   selectedUser,
-  currentUserRole,
   actionLoading,
   userActionError,
   banReason,
   setBanReason,
-  selectedRole,
-  setSelectedRole,
   onSuspend,
   onBan,
   onUnban,
-  onRoleChange,
   onDelete,
   onClose
 }) {
