@@ -608,6 +608,19 @@ const AdminPage = () => {
           />
         )}
 
+        {showRoleChangeModal && roleChangeUser && (
+          <RoleChangeModal
+            selectedUser={roleChangeUser}
+            currentUserRole={currentUserRole}
+            actionLoading={actionLoading}
+            userActionError={roleChangeError}
+            selectedRole={roleChangeSelectedRole}
+            setSelectedRole={setRoleChangeSelectedRole}
+            onRoleChange={handleRoleChangeFromModal}
+            onClose={() => setShowRoleChangeModal(false)}
+          />
+        )}
+
         {showAddEmployeeModal && (
           <AddEmployeeModal
             isOpen={showAddEmployeeModal}
