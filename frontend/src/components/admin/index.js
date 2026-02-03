@@ -16,6 +16,7 @@ export { default as UserActionModal } from './UserActionModal';
 export { default as AddEmployeeModal } from './AddEmployeeModal';
 export { default as EditEmployeeModal } from './EditEmployeeModal';
 export { default as ResetAnalyticsModal } from './ResetAnalyticsModal';
+export { default as RoleChangeModal } from './RoleChangeModal';
 
 // Utilities
 export { 
