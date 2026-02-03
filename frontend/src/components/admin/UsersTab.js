@@ -96,7 +96,14 @@ function UsersTab({
 /**
  * Single user row in the table
  */
-function UserRow({ user, onOpenActionModal, onOpenRoleChangeModal }) {
+function UserRow({ user, onOpenActionModal, onOpenRoleChangeModal, currentUserRole }) {
+  // Owners can change roles for ANY user (including other admins/owners)
+  const isCurrentUserOwner = currentUserRole === 'owner';
+  // Show change role button if: current user is owner OR target user is not admin/employee
+  const canChangeRole = isCurrentUserOwner || (!user.is_admin && !user.is_employee);
+  // Show manage/delete button only for non-admin users (owners shouldn't be able to delete other admins easily)
+  const canManageUser = !user.is_admin && !user.is_employee;
+
   return (
     <tr className="border-t border-dark-300 hover:bg-dark-300/50">
       <td className="px-6 py-4">
@@ -142,8 +149,8 @@ function UserRow({ user, onOpenActionModal, onOpenRoleChangeModal }) {
           >
             <Eye className="w-4 h-4 text-gray-400" />
           </Link>
-          {/* Change Role Button - available for all non-admin users */}
-          {!user.is_admin && !user.is_employee && (
+          {/* Change Role Button - Owners can change ANY user's role */}
+          {canChangeRole && (
             <button
               onClick={() => onOpenRoleChangeModal(user)}
               className="p-2 bg-dark-200 rounded-lg hover:bg-purple-500/20 text-gray-400 hover:text-purple-400"
@@ -153,8 +160,8 @@ function UserRow({ user, onOpenActionModal, onOpenRoleChangeModal }) {
               <Shield className="w-4 h-4" />
             </button>
           )}
-          {/* Delete/Manage Button */}
-          {!user.is_admin && !user.is_employee && (
+          {/* Delete/Manage Button - Only for non-admin users */}
+          {canManageUser && (
             <button
               onClick={() => onOpenActionModal(user)}
               className="p-2 bg-dark-200 rounded-lg hover:bg-red-500/20 text-gray-400 hover:text-red-400"
