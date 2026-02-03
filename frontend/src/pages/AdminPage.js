@@ -550,6 +550,7 @@ const AdminPage = () => {
             onSearch={fetchUsers}
             onOpenUserActionModal={openUserActionModal}
             onOpenRoleChangeModal={openRoleChangeModal}
+            currentUserRole={currentUserRole}
           />
         )}
 
