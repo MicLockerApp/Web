@@ -192,6 +192,33 @@ const AdminPage = () => {
     setShowUserActionModal(true);
   };
 
+  // Role change modal handlers (separate modal)
+  const openRoleChangeModal = (userToManage) => {
+    setRoleChangeUser(userToManage);
+    setRoleChangeSelectedRole(userToManage.role || 'user');
+    setRoleChangeError('');
+    setShowRoleChangeModal(true);
+  };
+
+  const handleRoleChangeFromModal = async () => {
+    if (!roleChangeUser || !roleChangeSelectedRole) return;
+    if (roleChangeSelectedRole === (roleChangeUser.role || 'user')) {
+      setRoleChangeError('Role is already set to this value');
+      return;
+    }
+    setActionLoading(roleChangeUser.id);
+    setRoleChangeError('');
+    try {
+      await adminAPI.changeUserRole(roleChangeUser.id, roleChangeSelectedRole);
+      setShowRoleChangeModal(false);
+      fetchUsers(usersPagination.page);
+    } catch (error) {
+      setRoleChangeError(error.response?.data?.detail || 'Failed to change user role');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleSuspendFromModal = async () => {
     if (!selectedUser) return;
     setActionLoading(selectedUser.id);
