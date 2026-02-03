@@ -592,17 +592,13 @@ const AdminPage = () => {
         {showUserActionModal && selectedUser && (
           <UserActionModal
             selectedUser={selectedUser}
-            currentUserRole={currentUserRole}
             actionLoading={actionLoading}
             userActionError={userActionError}
             banReason={banReason}
             setBanReason={setBanReason}
-            selectedRole={selectedRole}
-            setSelectedRole={setSelectedRole}
             onSuspend={handleSuspendFromModal}
             onBan={handleBanUser}
             onUnban={handleUnbanUser}
-            onRoleChange={handleRoleChange}
             onDelete={handleDeleteUser}
             onClose={() => setShowUserActionModal(false)}
           />
