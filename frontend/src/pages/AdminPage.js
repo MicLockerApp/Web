@@ -33,6 +33,7 @@ import {
   AddEmployeeModal,
   EditEmployeeModal,
   ResetAnalyticsModal,
+  RoleChangeModal,
   getRoleBadgeClasses,
   PROTECTED_EMAILS,
   ROLE_OPTIONS
