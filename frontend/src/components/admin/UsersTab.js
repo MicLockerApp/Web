@@ -172,9 +172,20 @@ function UserRow({ user, onOpenActionModal, onOpenRoleChangeModal }) {
  * User status badge component
  */
 function UserStatusBadge({ user }) {
-  if (user.is_admin) {
-    return <span className="badge bg-primary/20 text-primary">Admin</span>;
+  // Check role first (owner, admin, manager, employee)
+  if (user.role === 'owner') {
+    return <span className="badge bg-yellow-500/20 text-yellow-400">Owner</span>;
   }
+  if (user.role === 'admin' || user.is_admin) {
+    return <span className="badge bg-purple-500/20 text-purple-400">Admin</span>;
+  }
+  if (user.role === 'manager') {
+    return <span className="badge bg-blue-500/20 text-blue-400">Manager</span>;
+  }
+  if (user.role === 'employee' || user.is_employee) {
+    return <span className="badge bg-cyan-500/20 text-cyan-400">Employee</span>;
+  }
+  // Then check account status
   if (user.is_banned) {
     return <span className="badge bg-red-700/30 text-red-300">Banned</span>;
   }
