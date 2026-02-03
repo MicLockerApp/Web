@@ -10,7 +10,7 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Eye, UserX, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Eye, UserX, ChevronLeft, ChevronRight, Shield } from 'lucide-react';
 
 function UsersTab({
   users,
@@ -18,7 +18,8 @@ function UsersTab({
   setUserSearch,
   pagination,
   onSearch,
-  onOpenUserActionModal
+  onOpenUserActionModal,
+  onOpenRoleChangeModal
 }) {
   return (
     <div>
