@@ -94,7 +94,7 @@ function UsersTab({
 /**
  * Single user row in the table
  */
-function UserRow({ user, onOpenActionModal }) {
+function UserRow({ user, onOpenActionModal, onOpenRoleChangeModal }) {
   return (
     <tr className="border-t border-dark-300 hover:bg-dark-300/50">
       <td className="px-6 py-4">
@@ -140,6 +140,18 @@ function UserRow({ user, onOpenActionModal }) {
           >
             <Eye className="w-4 h-4 text-gray-400" />
           </Link>
+          {/* Change Role Button - available for all non-admin users */}
+          {!user.is_admin && !user.is_employee && (
+            <button
+              onClick={() => onOpenRoleChangeModal(user)}
+              className="p-2 bg-dark-200 rounded-lg hover:bg-purple-500/20 text-gray-400 hover:text-purple-400"
+              title="Change Role"
+              data-testid={`change-role-${user.id}`}
+            >
+              <Shield className="w-4 h-4" />
+            </button>
+          )}
+          {/* Delete/Manage Button */}
           {!user.is_admin && !user.is_employee && (
             <button
               onClick={() => onOpenActionModal(user)}
