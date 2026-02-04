@@ -277,9 +277,9 @@ Production: `https://eventsphere-21.preview.emergentagent.com/api`
     """,
     version="2.0.0",
     lifespan=lifespan,
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/openapi.json",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json",
     openapi_tags=[
         {"name": "Authentication", "description": "User authentication and registration"},
         {"name": "Users", "description": "User profile and search operations"},
