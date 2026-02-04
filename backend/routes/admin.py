@@ -39,9 +39,9 @@ def can_modify_role(actor_role: str, target_current_role: str, target_new_role: 
     actor_level = get_role_level(actor_role)
     target_level = get_role_level(target_current_role)
     
-    # Only owners can modify other owners
-    if target_current_role == "owner" and actor_role != "owner":
-        return False
+    # Owners can modify anyone's role (including other owners)
+    if actor_role == "owner":
+        return True
     
     # Actor must have higher or equal level than target
     if actor_level < target_level:
