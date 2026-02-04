@@ -541,16 +541,13 @@ async def change_user_role(
     actor_role = admin_user.get("role", "admin" if admin_user.get("is_admin") else "user")
     target_current_role = user.get("role", "user")
     target_email = user.get("email", "")
+    actor_email = admin_user.get("email", "")
     
-    # Protected owner emails cannot be demoted from owner
-    if target_email in PROTECTED_OWNER_EMAILS and request.role != "owner":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="This account is a protected owner and cannot be demoted"
-        )
-    
-    # Check if actor can make this change
-    if not can_modify_role(actor_role, target_current_role, request.role):
+    # Super admin (miclocker.support) can change ANY user's role
+    if actor_email == SUPER_ADMIN_EMAIL:
+        pass  # Allow all role changes
+    # Check if actor can make this change (other owners/admins)
+    elif not can_modify_role(actor_role, target_current_role, request.role):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Insufficient permissions to change this user's role"
