@@ -253,9 +253,44 @@ async def create_analytics_indexes():
 
 app = FastAPI(
     title="MicLocker API",
-    description="Marketplace API for musical equipment",
-    version="1.0.0",
-    lifespan=lifespan
+    description="""
+## MicLocker Marketplace API
+
+A comprehensive API for the MicLocker creative professionals marketplace.
+
+### Features:
+- **Authentication**: User registration, login, 2FA, Google OAuth
+- **Users**: Profile management, search, favorites
+- **Listings**: Create, manage, and browse marketplace listings
+- **Orders**: Shopping cart, checkout, order management
+- **Messages**: Direct messaging with media attachments
+- **Gig Board**: Post and browse gigs (Looking For, Services, Show Trades)
+- **Auditions**: TikTok-style video feed for discovering talent
+- **Admin**: User management, analytics, role management
+- **Bookings**: Venue booking system
+
+### Authentication
+Most endpoints require a Bearer token. Obtain a token via `/api/auth/login`.
+
+### Base URL
+Production: `https://eventsphere-21.preview.emergentagent.com/api`
+    """,
+    version="2.0.0",
+    lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
+    openapi_tags=[
+        {"name": "Authentication", "description": "User authentication and registration"},
+        {"name": "Users", "description": "User profile and search operations"},
+        {"name": "Listings", "description": "Marketplace listing operations"},
+        {"name": "Orders", "description": "Shopping cart and order management"},
+        {"name": "Messages", "description": "Direct messaging system"},
+        {"name": "Gigs", "description": "Gig board operations"},
+        {"name": "Auditions", "description": "Video auditions feed"},
+        {"name": "Admin", "description": "Administrative operations"},
+        {"name": "Bookings", "description": "Venue booking system"},
+    ]
 )
 
 # Setup centralized error handling (request ID tracking + standardized errors)
