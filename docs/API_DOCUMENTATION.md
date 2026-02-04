@@ -3,25 +3,26 @@
 ## Overview
 MicLocker is a comprehensive marketplace API for creative professionals. This documentation provides details on all available API endpoints.
 
-## Live Documentation
+## Live Documentation URLs
 
 ### Swagger UI (Interactive)
-**URL:** https://eventsphere-21.preview.emergentagent.com/docs
+🔗 **https://eventsphere-21.preview.emergentagent.com/api/docs**
 
 The Swagger UI allows you to:
 - Browse all available endpoints
 - See request/response schemas
 - Test API calls directly in the browser
+- Authenticate and test protected endpoints
 
 ### ReDoc (Alternative Format)
-**URL:** https://eventsphere-21.preview.emergentagent.com/redoc
+🔗 **https://eventsphere-21.preview.emergentagent.com/api/redoc**
 
 ReDoc provides a clean, readable format for API documentation.
 
 ### OpenAPI JSON Spec
-**URL:** https://eventsphere-21.preview.emergentagent.com/openapi.json
+🔗 **https://eventsphere-21.preview.emergentagent.com/api/openapi.json**
 
-Download the raw OpenAPI 3.0 specification for use in:
+Download the raw OpenAPI 3.1 specification for use in:
 - iOS/Swift code generation
 - Android/Kotlin code generation
 - Postman collections
@@ -114,19 +115,19 @@ curl -X GET "https://eventsphere-21.preview.emergentagent.com/api/users/profile/
 ### iOS/Swift
 ```bash
 # Using OpenAPI Generator
-openapi-generator generate -i openapi.json -g swift5 -o ./ios-client
+openapi-generator generate -i https://eventsphere-21.preview.emergentagent.com/api/openapi.json -g swift5 -o ./ios-client
 ```
 
 ### Android/Kotlin
 ```bash
 # Using OpenAPI Generator
-openapi-generator generate -i openapi.json -g kotlin -o ./android-client
+openapi-generator generate -i https://eventsphere-21.preview.emergentagent.com/api/openapi.json -g kotlin -o ./android-client
 ```
 
 ### JavaScript/TypeScript
 ```bash
 # Using OpenAPI Generator
-openapi-generator generate -i openapi.json -g typescript-axios -o ./ts-client
+openapi-generator generate -i https://eventsphere-21.preview.emergentagent.com/api/openapi.json -g typescript-axios -o ./ts-client
 ```
 
 ## Rate Limiting
