@@ -24,12 +24,10 @@ ROLE_HIERARCHY = {
 }
 
 # Owner emails that cannot be demoted
-PROTECTED_OWNER_EMAILS = [
-    "james.mcdougall@miclockerapp.com",
-    "info@miclockerapp.com"
-]
+# REMOVED: All users can now have their roles changed by owners
+PROTECTED_OWNER_EMAILS = []  # Empty - no protected users
 
-# Super admin account - can delete ANY account including owners
+# Super admin account - can change ANY account's role including other owners
 SUPER_ADMIN_EMAIL = "info@miclockerapp.com"
 
 def get_role_level(role: str) -> int:
