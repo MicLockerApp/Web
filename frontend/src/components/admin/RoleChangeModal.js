@@ -7,11 +7,10 @@
 
 import React from 'react';
 import { X, Shield } from 'lucide-react';
-import { PROTECTED_EMAILS, ROLE_OPTIONS } from './utils';
+import { ROLE_OPTIONS } from './utils';
 
 function RoleChangeModal({
   selectedUser,
-  currentUserRole,
   actionLoading,
   userActionError,
   selectedRole,
@@ -23,9 +22,7 @@ function RoleChangeModal({
     return null;
   }
 
-  const isProtectedUser = PROTECTED_EMAILS.includes(selectedUser.email);
   const isRoleUnchanged = selectedRole === (selectedUser.role || 'user');
-  const isDisabled = isProtectedUser && currentUserRole !== 'owner';
 
   /**
    * Returns role badge styling based on role value.
@@ -82,9 +79,6 @@ function RoleChangeModal({
               <span className={`badge text-xs capitalize ${getRoleBadgeClass(selectedUser.role)}`}>
                 Current: {selectedUser.role || 'user'}
               </span>
-              {isProtectedUser && (
-                <span className="badge bg-yellow-500/20 text-yellow-400 text-xs">Protected Owner</span>
-              )}
             </div>
           </div>
         </div>
@@ -106,7 +100,6 @@ function RoleChangeModal({
             value={selectedRole}
             onChange={(e) => setSelectedRole(e.target.value)}
             className="w-full bg-dark-300 border border-dark-200 rounded-lg px-4 py-3 text-white mb-4"
-            disabled={isDisabled}
             data-testid="role-select"
           >
             {ROLE_OPTIONS.map(role => (
@@ -136,19 +129,13 @@ function RoleChangeModal({
           </button>
           <button
             onClick={onRoleChange}
-            disabled={actionLoading || isRoleUnchanged || isDisabled}
+            disabled={actionLoading || isRoleUnchanged}
             className="flex-1 py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             data-testid="save-role-btn"
           >
             {actionLoading ? 'Saving...' : 'Save Role'}
           </button>
         </div>
-
-        {isDisabled && (
-          <p className="text-yellow-400 text-xs mt-3 text-center">
-            Only owners can change the role of protected users.
-          </p>
-        )}
       </div>
     </div>
   );
