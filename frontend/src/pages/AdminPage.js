@@ -608,7 +608,6 @@ const AdminPage = () => {
         {showRoleChangeModal && roleChangeUser && (
           <RoleChangeModal
             selectedUser={roleChangeUser}
-            currentUserRole={currentUserRole}
             actionLoading={actionLoading}
             userActionError={roleChangeError}
             selectedRole={roleChangeSelectedRole}
