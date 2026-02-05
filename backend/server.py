@@ -273,7 +273,8 @@ A comprehensive API for the MicLocker creative professionals marketplace.
 Most endpoints require a Bearer token. Obtain a token via `/api/auth/login`.
 
 ### Base URL
-Production: `https://eventsphere-21.preview.emergentagent.com/api`
+Production: `https://miclockerapp.com/api`
+Preview/Staging: `https://eventsphere-21.preview.emergentagent.com/api`
     """,
     version="2.0.0",
     lifespan=lifespan,
