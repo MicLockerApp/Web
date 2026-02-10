@@ -1443,6 +1443,176 @@ const EditProfilePage = () => {
             </div>
           )}
 
+          {/* Show Pro Section */}
+          {allCategories.includes('show_pro') && (
+            <div className={`rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
+              <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <span>🎪</span> Show Pro Specializations
+              </h2>
+              <p className={`text-sm mb-3 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                Select your show production specializations (multiple allowed)
+              </p>
+              <div className="max-h-48 overflow-y-auto grid grid-cols-2 gap-2">
+                {categoryOptions?.show_pro_options?.specializations?.map(spec => (
+                  <div
+                    key={spec}
+                    onClick={() => toggleSelection('show_pro_specializations', spec)}
+                    className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 cursor-pointer ${
+                      formData.show_pro_specializations.includes(spec)
+                        ? 'bg-primary text-black'
+                        : isDark ? 'bg-dark-300 text-gray-300 hover:bg-dark-200' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${
+                      formData.show_pro_specializations.includes(spec)
+                        ? 'bg-black border-black'
+                        : 'border-gray-500'
+                    }`}>
+                      {formData.show_pro_specializations.includes(spec) && <Check className="w-3 h-3 text-primary" />}
+                    </div>
+                    {spec}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Photographer Section */}
+          {allCategories.includes('photographer') && (
+            <div className={`rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
+              <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <span>📸</span> Photographer Specializations
+              </h2>
+              <p className={`text-sm mb-3 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                Select your photography specializations (multiple allowed)
+              </p>
+              <div className="max-h-48 overflow-y-auto grid grid-cols-2 gap-2">
+                {categoryOptions?.photographer_options?.specializations?.map(spec => (
+                  <div
+                    key={spec}
+                    onClick={() => toggleSelection('photographer_specializations', spec)}
+                    className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 cursor-pointer ${
+                      formData.photographer_specializations.includes(spec)
+                        ? 'bg-primary text-black'
+                        : isDark ? 'bg-dark-300 text-gray-300 hover:bg-dark-200' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${
+                      formData.photographer_specializations.includes(spec)
+                        ? 'bg-black border-black'
+                        : 'border-gray-500'
+                    }`}>
+                      {formData.photographer_specializations.includes(spec) && <Check className="w-3 h-3 text-primary" />}
+                    </div>
+                    {spec}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Videographer Section */}
+          {allCategories.includes('videographer') && (
+            <div className={`rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
+              <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <span>🎥</span> Videographer Specializations
+              </h2>
+              <p className={`text-sm mb-3 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                Select your videography specializations (multiple allowed)
+              </p>
+              <div className="max-h-48 overflow-y-auto grid grid-cols-2 gap-2">
+                {categoryOptions?.videographer_options?.specializations?.map(spec => (
+                  <div
+                    key={spec}
+                    onClick={() => toggleSelection('videographer_specializations', spec)}
+                    className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 cursor-pointer ${
+                      formData.videographer_specializations.includes(spec)
+                        ? 'bg-primary text-black'
+                        : isDark ? 'bg-dark-300 text-gray-300 hover:bg-dark-200' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${
+                      formData.videographer_specializations.includes(spec)
+                        ? 'bg-black border-black'
+                        : 'border-gray-500'
+                    }`}>
+                      {formData.videographer_specializations.includes(spec) && <Check className="w-3 h-3 text-primary" />}
+                    </div>
+                    {spec}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Manager Section */}
+          {allCategories.includes('manager') && (
+            <div className={`rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
+              <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <span>💼</span> Manager Specializations
+              </h2>
+              <p className={`text-sm mb-3 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                Select your management specializations (multiple allowed)
+              </p>
+              <div className="max-h-48 overflow-y-auto grid grid-cols-2 gap-2">
+                {categoryOptions?.manager_options?.specializations?.map(spec => (
+                  <div
+                    key={spec}
+                    onClick={() => toggleSelection('manager_specializations', spec)}
+                    className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 cursor-pointer ${
+                      formData.manager_specializations.includes(spec)
+                        ? 'bg-primary text-black'
+                        : isDark ? 'bg-dark-300 text-gray-300 hover:bg-dark-200' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${
+                      formData.manager_specializations.includes(spec)
+                        ? 'bg-black border-black'
+                        : 'border-gray-500'
+                    }`}>
+                      {formData.manager_specializations.includes(spec) && <Check className="w-3 h-3 text-primary" />}
+                    </div>
+                    {spec}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Services Section */}
+          {allCategories.includes('services') && (
+            <div className={`rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
+              <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <span>💇</span> Services Specializations
+              </h2>
+              <p className={`text-sm mb-3 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+                Select your service specializations (multiple allowed)
+              </p>
+              <div className="max-h-48 overflow-y-auto grid grid-cols-2 gap-2">
+                {categoryOptions?.services_options?.specializations?.map(spec => (
+                  <div
+                    key={spec}
+                    onClick={() => toggleSelection('services_specializations', spec)}
+                    className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 cursor-pointer ${
+                      formData.services_specializations.includes(spec)
+                        ? 'bg-primary text-black'
+                        : isDark ? 'bg-dark-300 text-gray-300 hover:bg-dark-200' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${
+                      formData.services_specializations.includes(spec)
+                        ? 'bg-black border-black'
+                        : 'border-gray-500'
+                    }`}>
+                      {formData.services_specializations.includes(spec) && <Check className="w-3 h-3 text-primary" />}
+                    </div>
+                    {spec}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Submit Button */}
           <div className="flex gap-4">
             <button
