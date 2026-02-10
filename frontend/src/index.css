@@ -476,11 +476,34 @@ html.light {
   display: none;
 }
 
-/* Date Picker Styling for Dark Theme */
-input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(1);
-  opacity: 0.7;
+/* Date Picker Styling - Theme-aware calendar icons */
+/* Dark mode: Yellow calendar icon */
+.dark .date-input-themed::-webkit-calendar-picker-indicator {
+  filter: invert(48%) sepia(99%) saturate(500%) hue-rotate(10deg) brightness(100%);
+  opacity: 0.9;
   cursor: pointer;
+}
+
+.dark .date-input-themed::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  filter: invert(48%) sepia(99%) saturate(700%) hue-rotate(10deg) brightness(110%);
+}
+
+/* Light mode: Black calendar icon */
+.light .date-input-themed::-webkit-calendar-picker-indicator {
+  filter: none;
+  opacity: 0.8;
+  cursor: pointer;
+}
+
+.light .date-input-themed::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* Fallback for non-themed date inputs */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.8;
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator:hover {
@@ -488,30 +511,53 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 }
 
 /* Make the date picker popup more visible */
-input[type="date"]::-webkit-datetime-edit {
+.dark input[type="date"]::-webkit-datetime-edit {
   color: white;
+}
+
+.light input[type="date"]::-webkit-datetime-edit {
+  color: #171717;
 }
 
 input[type="date"]::-webkit-datetime-edit-fields-wrapper {
   background-color: transparent;
 }
 
-input[type="date"]::-webkit-datetime-edit-text {
+.dark input[type="date"]::-webkit-datetime-edit-text {
   color: #6B7280;
   padding: 0 0.3em;
 }
 
-input[type="date"]::-webkit-datetime-edit-month-field,
-input[type="date"]::-webkit-datetime-edit-day-field,
-input[type="date"]::-webkit-datetime-edit-year-field {
+.light input[type="date"]::-webkit-datetime-edit-text {
+  color: #9CA3AF;
+  padding: 0 0.3em;
+}
+
+.dark input[type="date"]::-webkit-datetime-edit-month-field,
+.dark input[type="date"]::-webkit-datetime-edit-day-field,
+.dark input[type="date"]::-webkit-datetime-edit-year-field {
   color: white;
 }
 
-input[type="date"]::-webkit-datetime-edit-month-field:focus,
-input[type="date"]::-webkit-datetime-edit-day-field:focus,
-input[type="date"]::-webkit-datetime-edit-year-field:focus {
+.light input[type="date"]::-webkit-datetime-edit-month-field,
+.light input[type="date"]::-webkit-datetime-edit-day-field,
+.light input[type="date"]::-webkit-datetime-edit-year-field {
+  color: #171717;
+}
+
+.dark input[type="date"]::-webkit-datetime-edit-month-field:focus,
+.dark input[type="date"]::-webkit-datetime-edit-day-field:focus,
+.dark input[type="date"]::-webkit-datetime-edit-year-field:focus {
   background-color: rgba(250, 204, 21, 0.2);
   color: #FACC15;
+  outline: none;
+}
+
+.light input[type="date"]::-webkit-datetime-edit-month-field:focus,
+.light input[type="date"]::-webkit-datetime-edit-day-field:focus,
+.light input[type="date"]::-webkit-datetime-edit-year-field:focus {
+  background-color: rgba(250, 204, 21, 0.3);
+  color: #B45309;
   outline: none;
 }
 
