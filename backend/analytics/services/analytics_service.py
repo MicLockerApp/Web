@@ -407,19 +407,27 @@ class AnalyticsService:
         
         result = await db.analytics_events.aggregate(pipeline).to_list(length=100)
         
+        # Create a dict of dates with data
+        visitors_by_date = {r["_id"]: r["unique_visitors"] for r in result}
+        
+        # Generate all dates in range and fill missing days with 0
+        timeline = []
+        current_date = start_date
+        while current_date < end_date:
+            date_str = current_date.strftime("%Y-%m-%d")
+            visitors = visitors_by_date.get(date_str, 0)
+            timeline.append({"date": date_str, "visitors": visitors})
+            current_date += timedelta(days=1)
+        
         # Calculate totals
         total_visitors = sum(r["unique_visitors"] for r in result)
-        avg_daily = total_visitors / len(result) if result else 0
-        
-        # Format timeline
-        timeline = [
-            {"date": r["_id"], "visitors": r["unique_visitors"]}
-            for r in result
-        ]
+        days_in_range = len(timeline)
+        avg_daily = total_visitors / days_in_range if days_in_range else 0
         
         return {
             "total_visitors": total_visitors,
             "avg_daily_visitors": round(avg_daily, 1),
             "days_with_data": len(result),
+            "days_in_range": days_in_range,
             "timeline": timeline
         }
