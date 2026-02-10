@@ -382,6 +382,9 @@ const AnalyticsDashboard = () => {
                   {dailyVisitors.timeline.map((day, index) => {
                     const maxVisitors = Math.max(...dailyVisitors.timeline.map(d => d.visitors), 1);
                     const height = (day.visitors / maxVisitors) * 100;
+                    // Parse date as local time to avoid timezone shift
+                    const [year, month, dayNum] = day.date.split('-').map(Number);
+                    const localDate = new Date(year, month - 1, dayNum);
                     return (
                       <div key={index} className="flex flex-col items-center flex-1 min-w-[50px] max-w-[80px]">
                         {/* Visitor count label above bar */}
@@ -392,12 +395,12 @@ const AnalyticsDashboard = () => {
                         <div 
                           className="w-full bg-gradient-to-t from-cyan-600 to-cyan-400 rounded-t-md hover:from-cyan-500 hover:to-cyan-300 transition-all cursor-pointer relative"
                           style={{ height: `${Math.max(height, 8)}%`, minHeight: '20px' }}
-                          title={`${day.visitors} visitors on ${new Date(day.date).toLocaleDateString()}`}
+                          title={`${day.visitors} visitors on ${localDate.toLocaleDateString()}`}
                         />
                         {/* Date label below bar */}
                         <div className="mt-2 text-center">
                           <span className="text-gray-400 text-xs block">
-                            {new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            {localDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                           </span>
                         </div>
                       </div>
