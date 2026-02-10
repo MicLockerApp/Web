@@ -224,6 +224,12 @@ const EditProfilePage = () => {
           business_name: profile.business_name || '',
           comedian_specialties: profile.comedian_specialties || [],
           actor_specialties: profile.actor_specialties || [],
+          // New category specializations
+          show_pro_specializations: profile.show_pro_specializations || [],
+          photographer_specializations: profile.photographer_specializations || [],
+          videographer_specializations: profile.videographer_specializations || [],
+          manager_specializations: profile.manager_specializations || [],
+          services_specializations: profile.services_specializations || [],
           // Contact info
           phone: profile.phone || '',
           website: profile.website || '',
