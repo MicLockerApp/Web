@@ -126,6 +126,12 @@ const EditProfilePage = () => {
     business_name: '',
     comedian_specialties: [],
     actor_specialties: [],
+    // New category specializations
+    show_pro_specializations: [],
+    photographer_specializations: [],
+    videographer_specializations: [],
+    manager_specializations: [],
+    services_specializations: [],
     // Contact info
     phone: '',
     website: '',
