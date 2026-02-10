@@ -1106,7 +1106,7 @@ const RegisterPage = () => {
           <Info className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
           <div>
             <p className="text-gray-300 text-sm">
-              <strong className="text-white">This information is optional</strong>, but will be needed if you plan on buying, selling, or trading on the platform.
+              <strong className="text-white">This information is optional</strong>, but you will need it if you plan on buying, selling or trading on the platform. This also helps users find you in regards to their radius of you or your business on the Discover Pros section.
             </p>
           </div>
         </div>
