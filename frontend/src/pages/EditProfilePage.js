@@ -168,6 +168,11 @@ const EditProfilePage = () => {
     { value: 'merchant', label: 'Merchant', icon: '🛍️' },
     { value: 'comedian', label: 'Comedian', icon: '🎭' },
     { value: 'actor', label: 'Actor', icon: '🎬' },
+    { value: 'show_pro', label: 'Show Pro', icon: '🎪' },
+    { value: 'photographer', label: 'Photographer', icon: '📸' },
+    { value: 'videographer', label: 'Videographer', icon: '🎥' },
+    { value: 'manager', label: 'Manager', icon: '💼' },
+    { value: 'services', label: 'Services', icon: '💇' },
   ];
 
   useEffect(() => {
