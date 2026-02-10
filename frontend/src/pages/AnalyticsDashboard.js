@@ -221,24 +221,36 @@ const AnalyticsDashboard = () => {
               </button>
             </div>
             
-            {/* Custom Date Range Picker */}
-            <div className="flex items-center gap-2 bg-dark-400 rounded-lg p-2">
-              <Calendar className="w-4 h-4 text-gray-400" />
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="bg-transparent border-none text-white text-sm focus:outline-none focus:ring-0 w-32"
-                data-testid="start-date-input"
-              />
-              <span className="text-gray-500">to</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="bg-transparent border-none text-white text-sm focus:outline-none focus:ring-0 w-32"
-                data-testid="end-date-input"
-              />
+            {/* Custom Date Range Picker - Modern Styled */}
+            <div className="flex items-center gap-3 bg-gradient-to-r from-dark-400 to-dark-300 rounded-xl p-3 border border-dark-200 shadow-lg">
+              <div className="flex items-center gap-2">
+                <div className="bg-primary/20 p-2 rounded-lg">
+                  <Calendar className="w-4 h-4 text-primary" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs text-gray-500 uppercase tracking-wider">From</span>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="bg-dark-300 border border-dark-200 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent cursor-pointer hover:bg-dark-200 transition-colors"
+                    style={{ colorScheme: 'dark' }}
+                    data-testid="start-date-input"
+                  />
+                </div>
+              </div>
+              <div className="w-8 h-0.5 bg-gradient-to-r from-primary/50 to-cyan-500/50 rounded-full"></div>
+              <div className="flex flex-col">
+                <span className="text-xs text-gray-500 uppercase tracking-wider">To</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="bg-dark-300 border border-dark-200 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent cursor-pointer hover:bg-dark-200 transition-colors"
+                  style={{ colorScheme: 'dark' }}
+                  data-testid="end-date-input"
+                />
+              </div>
             </div>
             
             <button
