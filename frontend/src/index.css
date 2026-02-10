@@ -475,3 +475,43 @@ html.light {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Date Picker Styling for Dark Theme */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* Make the date picker popup more visible */
+input[type="date"]::-webkit-datetime-edit {
+  color: white;
+}
+
+input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  background-color: transparent;
+}
+
+input[type="date"]::-webkit-datetime-edit-text {
+  color: #6B7280;
+  padding: 0 0.3em;
+}
+
+input[type="date"]::-webkit-datetime-edit-month-field,
+input[type="date"]::-webkit-datetime-edit-day-field,
+input[type="date"]::-webkit-datetime-edit-year-field {
+  color: white;
+}
+
+input[type="date"]::-webkit-datetime-edit-month-field:focus,
+input[type="date"]::-webkit-datetime-edit-day-field:focus,
+input[type="date"]::-webkit-datetime-edit-year-field:focus {
+  background-color: rgba(250, 204, 21, 0.2);
+  color: #FACC15;
+  outline: none;
+}
+
