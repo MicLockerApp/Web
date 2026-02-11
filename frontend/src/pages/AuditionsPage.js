@@ -223,20 +223,16 @@ const VideoDisplay = ({
       const playVideo = async () => {
         try {
           video.currentTime = 0;
-          video.muted = isMuted;
+          video.muted = isMuted; // Use current mute state (default: unmuted)
           await video.play();
           setIsPlaying(true);
         } catch (error) {
-          // Auto-play was prevented, try muted
-          console.log('Autoplay prevented, trying muted');
-          video.muted = true;
-          try {
-            await video.play();
-            setIsPlaying(true);
-          } catch (e) {
-            console.log('Could not autoplay video');
-            setIsPlaying(false);
-          }
+          // Autoplay with sound was prevented by browser
+          // Still try to play - browser may have user interaction context
+          console.log('Autoplay prevented, video will play when user interacts');
+          // Don't force mute - let user control it
+          // The video will start playing on first user interaction with the page
+          setIsPlaying(false);
         }
       };
       
@@ -247,7 +243,6 @@ const VideoDisplay = ({
       // Stop completely when not active
       video.pause();
       video.currentTime = 0;
-      video.muted = true;
       setIsPlaying(false);
     }
   }, [isActive, isMuted]);
