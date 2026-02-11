@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 
 class StripePaymentTestSuite:
-    def __init__(self, base_url: str = "https://eventsphere-21.preview.emergentagent.com"):
+    def __init__(self, base_url: str = "https://videoauditions.preview.emergentagent.com"):
         self.base_url = base_url
         self.admin_token = None
         self.buyer_token = None

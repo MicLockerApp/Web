@@ -274,7 +274,7 @@ Most endpoints require a Bearer token. Obtain a token via `/api/auth/login`.
 
 ### Base URL
 Production: `https://miclockerapp.com/api`
-Preview/Staging: `https://eventsphere-21.preview.emergentagent.com/api`
+Preview/Staging: `https://videoauditions.preview.emergentagent.com/api`
     """,
     version="2.0.0",
     lifespan=lifespan,

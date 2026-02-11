@@ -6,7 +6,7 @@ MicLocker is a comprehensive marketplace API for creative professionals. This do
 ## Live Documentation URLs
 
 ### Swagger UI (Interactive)
-🔗 **https://eventsphere-21.preview.emergentagent.com/api/docs**
+🔗 **https://videoauditions.preview.emergentagent.com/api/docs**
 
 The Swagger UI allows you to:
 - Browse all available endpoints
@@ -15,12 +15,12 @@ The Swagger UI allows you to:
 - Authenticate and test protected endpoints
 
 ### ReDoc (Alternative Format)
-🔗 **https://eventsphere-21.preview.emergentagent.com/api/redoc**
+🔗 **https://videoauditions.preview.emergentagent.com/api/redoc**
 
 ReDoc provides a clean, readable format for API documentation.
 
 ### OpenAPI JSON Spec
-🔗 **https://eventsphere-21.preview.emergentagent.com/api/openapi.json**
+🔗 **https://videoauditions.preview.emergentagent.com/api/openapi.json**
 
 Download the raw OpenAPI 3.1 specification for use in:
 - iOS/Swift code generation
@@ -30,7 +30,7 @@ Download the raw OpenAPI 3.1 specification for use in:
 
 ## Base URL
 ```
-https://eventsphere-21.preview.emergentagent.com/api
+https://videoauditions.preview.emergentagent.com/api
 ```
 
 ## Authentication
@@ -39,7 +39,7 @@ Most endpoints require authentication via Bearer token.
 
 ### Getting a Token
 ```bash
-curl -X POST "https://eventsphere-21.preview.emergentagent.com/api/auth/login" \
+curl -X POST "https://videoauditions.preview.emergentagent.com/api/auth/login" \
   -d "username=your_username&password=your_password"
 ```
 
@@ -54,7 +54,7 @@ Response:
 ### Using the Token
 Include the token in the Authorization header:
 ```bash
-curl -X GET "https://eventsphere-21.preview.emergentagent.com/api/users/profile/me" \
+curl -X GET "https://videoauditions.preview.emergentagent.com/api/users/profile/me" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
@@ -115,19 +115,19 @@ curl -X GET "https://eventsphere-21.preview.emergentagent.com/api/users/profile/
 ### iOS/Swift
 ```bash
 # Using OpenAPI Generator
-openapi-generator generate -i https://eventsphere-21.preview.emergentagent.com/api/openapi.json -g swift5 -o ./ios-client
+openapi-generator generate -i https://videoauditions.preview.emergentagent.com/api/openapi.json -g swift5 -o ./ios-client
 ```
 
 ### Android/Kotlin
 ```bash
 # Using OpenAPI Generator
-openapi-generator generate -i https://eventsphere-21.preview.emergentagent.com/api/openapi.json -g kotlin -o ./android-client
+openapi-generator generate -i https://videoauditions.preview.emergentagent.com/api/openapi.json -g kotlin -o ./android-client
 ```
 
 ### JavaScript/TypeScript
 ```bash
 # Using OpenAPI Generator
-openapi-generator generate -i https://eventsphere-21.preview.emergentagent.com/api/openapi.json -g typescript-axios -o ./ts-client
+openapi-generator generate -i https://videoauditions.preview.emergentagent.com/api/openapi.json -g typescript-axios -o ./ts-client
 ```
 
 ## Rate Limiting

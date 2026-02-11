@@ -9,7 +9,7 @@ import os
 import time
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://eventsphere-21.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://videoauditions.preview.emergentagent.com').rstrip('/')
 
 # Test user credentials - will be created via email verification flow
 TEST_USER_PREFIX = f"accttest_{int(time.time())}"
