@@ -864,6 +864,28 @@ const AuditionsPage = () => {
   const [hasSwipedHorizontal, setHasSwipedHorizontal] = useState(false);
   const [showCategoryBar, setShowCategoryBar] = useState(true);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [userInteracted, setUserInteracted] = useState(false);
+
+  // Enable audio playback after first user interaction (browser autoplay policy workaround)
+  useEffect(() => {
+    const enableAudioOnInteraction = () => {
+      setUserInteracted(true);
+      // Remove listeners after first interaction
+      document.removeEventListener('click', enableAudioOnInteraction);
+      document.removeEventListener('touchstart', enableAudioOnInteraction);
+      document.removeEventListener('keydown', enableAudioOnInteraction);
+    };
+
+    document.addEventListener('click', enableAudioOnInteraction);
+    document.addEventListener('touchstart', enableAudioOnInteraction);
+    document.addEventListener('keydown', enableAudioOnInteraction);
+
+    return () => {
+      document.removeEventListener('click', enableAudioOnInteraction);
+      document.removeEventListener('touchstart', enableAudioOnInteraction);
+      document.removeEventListener('keydown', enableAudioOnInteraction);
+    };
+  }, []);
 
   // Check if user should see the welcome modal (first-time visitors only)
   useEffect(() => {
