@@ -436,6 +436,7 @@ const VideoDisplay = ({
         poster={item.thumbnail_url}
         loop
         playsInline
+        muted={isMuted}
         onClick={togglePlay}
         className="w-full h-full object-cover cursor-pointer"
       />
