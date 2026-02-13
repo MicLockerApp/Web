@@ -13,7 +13,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
   Play, Star, Users, Heart, Share2, Flag, ChevronDown, 
-  Lock, Unlock, Clock, Eye, MessageSquare, Check, X, Loader2
+  Lock, Unlock, Clock, Eye, MessageSquare, Check, X, Loader2, Bell
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
