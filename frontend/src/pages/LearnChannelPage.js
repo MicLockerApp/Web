@@ -517,8 +517,8 @@ const LearnChannelPage = () => {
                     <TierCard 
                       key={tier.id} 
                       tier={tier} 
-                      isSubscribed={subscribedTierId === tier.id}
-                      onSubscribe={handleSubscribe}
+                      isPurchased={purchasedTierId === tier.id}
+                      onPurchase={handlePurchaseTier}
                     />
                   ))}
                 </div>
