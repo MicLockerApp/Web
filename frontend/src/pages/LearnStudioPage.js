@@ -317,6 +317,7 @@ const LearnStudioPage = () => {
   };
 
   const resetTierForm = () => {
+    setEditingTier(null);
     setTierForm({
       name: '', description: '', price_usd: 0, benefits: [], includes_all_content: false
     });
