@@ -1024,6 +1024,77 @@ async def get_my_subscriptions(
     return result
 
 
+# ============== Follow Endpoints (Free notifications) ==============
+
+@router.post("/channels/{channel_id}/follow", status_code=status.HTTP_201_CREATED)
+async def follow_channel(
+    channel_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Follow a channel for notifications (FREE - separate from paid subscriptions)"""
+    db = get_database()
+    
+    channel = await db.learn_channels.find_one({"id": channel_id}, {"_id": 0})
+    if not channel:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    
+    if channel["user_id"] == current_user["id"]:
+        raise HTTPException(status_code=400, detail="Cannot follow your own channel")
+    
+    # Check existing follow
+    existing = await db.learn_follows.find_one({
+        "user_id": current_user["id"],
+        "channel_id": channel_id
+    })
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="Already following")
+    
+    follow = {
+        "id": str(uuid.uuid4()),
+        "user_id": current_user["id"],
+        "channel_id": channel_id,
+        "created_at": datetime.utcnow()
+    }
+    
+    await db.learn_follows.insert_one(follow)
+    await db.learn_channels.update_one({"id": channel_id}, {"$inc": {"subscriber_count": 1}})
+    
+    return {"message": "Following channel", "follow": follow}
+
+
+@router.delete("/channels/{channel_id}/follow", status_code=status.HTTP_204_NO_CONTENT)
+async def unfollow_channel(
+    channel_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Unfollow a channel"""
+    db = get_database()
+    
+    result = await db.learn_follows.delete_one({
+        "user_id": current_user["id"],
+        "channel_id": channel_id
+    })
+    
+    if result.deleted_count:
+        await db.learn_channels.update_one({"id": channel_id}, {"$inc": {"subscriber_count": -1}})
+
+
+@router.get("/following", response_model=List[dict])
+async def get_following(
+    current_user: dict = Depends(get_current_user)
+):
+    """Get channels the user is following (FREE)"""
+    db = get_database()
+    
+    follows = await db.learn_follows.find(
+        {"user_id": current_user["id"]},
+        {"_id": 0}
+    ).to_list(length=100)
+    
+    return follows
+
+
 # ============== Favorites Endpoints ==============
 
 @router.post("/favorites/{target_type}/{target_id}", status_code=status.HTTP_201_CREATED)
