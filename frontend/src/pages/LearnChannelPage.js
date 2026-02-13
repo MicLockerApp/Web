@@ -293,36 +293,50 @@ const LearnChannelPage = () => {
     fetchChannel();
   }, [fetchChannel]);
 
-  // Subscribe to channel
-  const handleSubscribe = async (tier = null) => {
+  // Follow channel (FREE - for notifications)
+  const handleFollow = async () => {
     if (!isAuthenticated) {
       setShowSignUpModal(true);
       return;
     }
     
     try {
-      const url = tier 
-        ? `/learn/channels/${channelId}/subscribe?tier_id=${tier.id}`
-        : `/learn/channels/${channelId}/subscribe`;
-      await api.post(url);
-      setIsSubscribed(true);
-      if (tier) setSubscribedTierId(tier.id);
+      await api.post(`/learn/channels/${channelId}/follow`);
+      setIsFollowing(true);
       setChannel(prev => ({ ...prev, subscriber_count: (prev.subscriber_count || 0) + 1 }));
     } catch (error) {
-      console.error('Error subscribing:', error);
+      console.error('Error following:', error);
     }
   };
 
-  // Unsubscribe
-  const handleUnsubscribe = async () => {
+  // Unfollow channel (FREE)
+  const handleUnfollow = async () => {
     try {
-      await api.delete(`/learn/channels/${channelId}/subscribe`);
-      setIsSubscribed(false);
-      setSubscribedTierId(null);
+      await api.delete(`/learn/channels/${channelId}/follow`);
+      setIsFollowing(false);
       setChannel(prev => ({ ...prev, subscriber_count: Math.max(0, (prev.subscriber_count || 1) - 1) }));
     } catch (error) {
-      console.error('Error unsubscribing:', error);
+      console.error('Error unfollowing:', error);
     }
+  };
+
+  // Purchase tier subscription (PAID - monthly)
+  const handlePurchaseTier = async (tier) => {
+    if (!isAuthenticated) {
+      setShowSignUpModal(true);
+      return;
+    }
+    
+    // For now, show alert - will integrate Stripe later
+    alert(`Payment integration coming soon!\n\nYou're purchasing: ${tier.name}\nPrice: $${tier.price_usd}/month\n\nThis will be connected to Stripe for secure payments.`);
+    
+    // Uncomment when Stripe is integrated:
+    // try {
+    //   await api.post(`/learn/channels/${channelId}/purchase-tier`, { tier_id: tier.id });
+    //   setPurchasedTierId(tier.id);
+    // } catch (error) {
+    //   console.error('Error purchasing tier:', error);
+    // }
   };
 
   if (loading) return <LoadingSpinner />;
