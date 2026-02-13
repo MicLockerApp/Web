@@ -470,7 +470,7 @@ const LearnStudioPage = () => {
                 </label>
                 <select
                   value={channelForm.category}
-                  onChange={(e) => setChannelForm(prev => ({ ...prev, category: e.target.value }))}
+                  onChange={(e) => setChannelForm(prev => ({ ...prev, category: e.target.value, subcategories: [] }))}
                   className={`w-full px-4 py-2 rounded-lg ${
                     isDark ? 'bg-dark-500 text-white border-dark-300' : 'bg-gray-50 text-gray-900 border-gray-200'
                   } border`}
@@ -480,6 +480,40 @@ const LearnStudioPage = () => {
                   ))}
                 </select>
               </div>
+              
+              {/* Subcategories */}
+              {SUBCATEGORIES[channelForm.category] && (
+                <div className="md:col-span-2">
+                  <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Subcategories (Select topics you cover)
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {SUBCATEGORIES[channelForm.category].map(sub => (
+                      <button
+                        key={sub}
+                        type="button"
+                        onClick={() => {
+                          setChannelForm(prev => ({
+                            ...prev,
+                            subcategories: prev.subcategories.includes(sub)
+                              ? prev.subcategories.filter(s => s !== sub)
+                              : [...prev.subcategories, sub]
+                          }));
+                        }}
+                        className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
+                          channelForm.subcategories.includes(sub)
+                            ? 'bg-primary text-black'
+                            : isDark 
+                              ? 'bg-dark-500 text-gray-300 hover:bg-dark-400' 
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {sub}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               
               <div className="md:col-span-2">
                 <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
