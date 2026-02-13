@@ -130,7 +130,7 @@ function AppContent() {
           <ReviewGatingWrapper>
             <Layout>
               <Routes>
-              <Route path="/" element={<AuditionsPage />} />
+              <Route path="/" element={<HomePage />} />
               <Route path="/auditions" element={<AuditionsPage />} />
               <Route path="/gear" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
