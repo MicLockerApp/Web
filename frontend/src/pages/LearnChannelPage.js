@@ -63,7 +63,7 @@ const VideoCard = ({ video, isOwner }) => {
   );
 };
 
-// Playlist Card
+// Playlist Card with reviews
 const PlaylistCard = ({ playlist, onView }) => {
   const { isDark } = useTheme();
   
@@ -107,10 +107,22 @@ const PlaylistCard = ({ playlist, onView }) => {
           <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>
             {playlist.view_count || 0} views
           </span>
+          {/* Show ratings prominently for paid playlists */}
           {playlist.average_rating > 0 && (
             <span className="flex items-center gap-1 text-yellow-500">
               <Star className="w-3 h-3 fill-current" />
               {playlist.average_rating.toFixed(1)}
+              {playlist.review_count > 0 && (
+                <span className={`${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                  ({playlist.review_count})
+                </span>
+              )}
+            </span>
+          )}
+          {/* Show "No reviews yet" for paid playlists without reviews */}
+          {!playlist.is_free && playlist.average_rating === 0 && (
+            <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+              No reviews yet
             </span>
           )}
         </div>
