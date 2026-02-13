@@ -920,12 +920,12 @@ async def get_reviews(
     
     result = []
     for review in reviews:
-        user_info = await get_user_info(db, review["user_id"])
-        result.append(ReviewResponse(
-            **review,
-            reviewer_username=user_info["username"],
-            reviewer_avatar=user_info["avatar"]
-        ))
+        # Only fetch user info if not already in the review document
+        if not review.get("reviewer_username"):
+            user_info = await get_user_info(db, review["user_id"])
+            review["reviewer_username"] = user_info["username"]
+            review["reviewer_avatar"] = user_info["avatar"]
+        result.append(ReviewResponse(**review))
     
     return result
 
