@@ -131,8 +131,8 @@ const PlaylistCard = ({ playlist, onView }) => {
   );
 };
 
-// Subscription Tier Card
-const TierCard = ({ tier, isSubscribed, onSubscribe }) => {
+// Subscription Tier Card - For PAID monthly subscriptions
+const TierCard = ({ tier, isPurchased, onPurchase }) => {
   const { isDark } = useTheme();
   
   return (
@@ -169,15 +169,15 @@ const TierCard = ({ tier, isSubscribed, onSubscribe }) => {
         )}
       </ul>
       <button
-        onClick={() => onSubscribe(tier)}
-        disabled={isSubscribed}
+        onClick={() => onPurchase(tier)}
+        disabled={isPurchased}
         className={`w-full py-2 rounded-lg font-medium transition-colors ${
-          isSubscribed 
+          isPurchased 
             ? 'bg-green-500 text-white cursor-not-allowed'
             : 'bg-primary text-black hover:bg-primary/90'
         }`}
       >
-        {isSubscribed ? 'Subscribed' : 'Subscribe'}
+        {isPurchased ? 'Purchased' : 'Purchase'}
       </button>
     </div>
   );
