@@ -65,6 +65,7 @@ import LearnPage from './pages/LearnPage';
 import LearnChannelPage from './pages/LearnChannelPage';
 import LearnPlaylistPage from './pages/LearnPlaylistPage';
 import LearnStudioPage from './pages/LearnStudioPage';
+import LearnVideoPage from './pages/LearnVideoPage';
 import MapPage from './pages/MapPage';
 import VenueCalendarPage from './pages/VenueCalendarPage';
 import VenueBookingsPage from './pages/VenueBookingsPage';
