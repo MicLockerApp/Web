@@ -23,7 +23,7 @@ const Navbar = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   
   // Check if we're on the auditions feed page (hide search/chatbot there)
-  const isAuditionsPage = location.pathname === '/auditions' || location.pathname === '/';
+  const isAuditionsPage = location.pathname === '/auditions';
   const [notificationCount, setNotificationCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
