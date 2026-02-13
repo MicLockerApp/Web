@@ -684,7 +684,7 @@ const Navbar = () => {
           <div className={`md:hidden py-4 border-t ${isDark ? 'border-dark-300' : 'border-gray-200'}`}>
             <div className="flex flex-col gap-2">
               <Link
-                to="/"
+                to="/auditions"
                 className={`flex items-center gap-2 py-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
