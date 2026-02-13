@@ -595,6 +595,10 @@ const AdminPage = () => {
           />
         )}
 
+        {activeTab === 'learn-banners' && canSeeAllStats && (
+          <LearnBannersTab />
+        )}
+
         {/* Modals */}
         {showUserActionModal && selectedUser && (
           <UserActionModal
