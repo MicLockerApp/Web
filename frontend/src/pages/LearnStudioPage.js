@@ -86,7 +86,7 @@ const LearnStudioPage = () => {
     title: '',
     description: '',
     category: 'musician',
-    subcategory: '',
+    subcategories: [],
     is_free: false,
     price_usd: 0,
     thumbnail_url: ''
