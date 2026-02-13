@@ -213,15 +213,47 @@ Educational content platform inspired by CreativeLive.com where users can create
 - **Payment Integration**: Purchase buttons show alert placeholder (Stripe not connected)
 - Payment will need Stripe integration for one-time purchases and recurring subscriptions
 
-### Test Data
-- Channel: "MicLocker Pro Tips" (ID: 22aabf14-d8fe-4868-b670-ee6db1804d4a)
-- Playlist: "Audio Mixing Fundamentals" (ID: 8dd01f72-3436-4642-9112-9b7b4650715c)
-- Videos: "Introduction to EQ", "Quick Tip: Compression Basics"
+### Test Data (Feb 13, 2026 - Expanded)
+- **12 Channels** across all user categories (Musicians, Audio Engineers, Recording Studios, etc.)
+- **36 Playlists** with mix of free and paid content ($39.99 - $149.99)
+- **120+ Videos** with both free and paid content
+- **81 Reviews** with ratings on paid playlists
+
+Sample channels:
+- Music Academy (Musicians) - Guitar, Piano, Drums courses
+- Audio Engineering School - Mixing, Mastering courses
+- Acting School - Film acting, Audition techniques
+- Comedy Academy - Stand-up, Improv courses
+- Photography Institute - Concert, Portrait photography
+- Film School - Music videos, Live streaming
+- Stage Production Academy - Lighting, Sound tech
+- Music Business School - Artist management, Tour management
+
+### Category & Subcategory Support
+Learn section uses the same 12 main categories as user signup:
+1. Musicians (Guitar, Piano, Drums, Bass, Vocals, etc.)
+2. Audio Engineers (Mixing, Mastering, Live Sound, Producers, etc.)
+3. Recording Studios (Studios, Rehearsal Rooms, Equipment, etc.)
+4. Venues (Concert Hall, Club, Theater, Festival, etc.)
+5. Merchants (Clothing, Vinyl, Instruments, etc.)
+6. Comedians (Stand-up, Improv, Sketch, Musical, etc.)
+7. Actors (Film, Theater, Voice, Commercial, etc.)
+8. Show Pro (Lighting, Stage Manager, Sound Tech, etc.)
+9. Photographers (Concert, Portrait, Event, Product, etc.)
+10. Videographers (Music Video, Live Stream, Documentary, etc.)
+11. Managers (Artist Manager, Tour Manager, Booking Agent, etc.)
+12. Services (Hair, Makeup, Wardrobe, Personal Trainer, etc.)
+
+Creators can select subcategories when creating channels and playlists for better filtering.
 
 ## Pending Tasks
 
 ### P0 (In Progress)
 - ✅ Learn Section scaffolding (COMPLETED Feb 13, 2026)
+- ✅ Categories aligned with user signup (COMPLETED Feb 13, 2026)
+- ✅ Seed data with 10+ videos per category (COMPLETED Feb 13, 2026)
+- ✅ Playlist ratings visible in channel view (COMPLETED Feb 13, 2026)
+- ✅ Paywall flow with locked content indicators (COMPLETED Feb 13, 2026)
 
 ### P1 (High Priority)
 - Fix Direct Message Image Uploader (recurring issue)
