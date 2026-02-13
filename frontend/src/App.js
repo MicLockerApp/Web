@@ -87,9 +87,21 @@ const Layout = ({ children }) => {
     analytics.pageView(location.pathname, { search: location.search });
   }, [location.pathname, location.search]);
 
-  if (isJobsPage || isAuditionsPage) {
-    // Jobs page and Feed page have their own layout
+  if (isJobsPage) {
+    // Jobs page has its own layout
     return <>{children}</>;
+  }
+
+  if (isAuditionsPage) {
+    // Auditions page: show navbar but no footer/banner
+    return (
+      <div className={`flex flex-col min-h-screen transition-colors duration-300 ${isDark ? 'bg-dark-600' : 'bg-gray-50'}`}>
+        <Navbar />
+        <main className="flex-1">
+          {children}
+        </main>
+      </div>
+    );
   }
 
   return (
