@@ -196,7 +196,7 @@ const Navbar = () => {
       isDark 
         ? 'bg-dark-600 border-dark-300' 
         : 'bg-white border-gray-200 shadow-sm'
-    } ${isImmersiveMode && isAuditionsPage ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100'}`}>
+    }`}>
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo - Always show MicLocker text */}
