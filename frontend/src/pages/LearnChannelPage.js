@@ -264,17 +264,22 @@ const LearnChannelPage = () => {
       const reviewsRes = await api.get(`/learn/reviews/channel/${channelId}?limit=10`);
       setReviews(reviewsRes.data);
       
-      // Check subscription status if logged in
+      // Check follow and subscription status if logged in
       if (isAuthenticated) {
         try {
+          // Check if following (free)
+          const followRes = await api.get('/learn/following');
+          const isFollowingChannel = followRes.data.some(f => f.channel_id === channelId);
+          setIsFollowing(isFollowingChannel);
+          
+          // Check purchased tier subscriptions
           const subsRes = await api.get('/learn/subscriptions');
-          const sub = subsRes.data.find(s => s.id === channelId);
-          if (sub) {
-            setIsSubscribed(true);
-            // Would need to fetch tier info separately
+          const purchasedTier = subsRes.data.find(s => s.channel_id === channelId);
+          if (purchasedTier) {
+            setPurchasedTierId(purchasedTier.tier_id);
           }
         } catch (e) {
-          console.log('Not subscribed');
+          console.log('Not following or subscribed');
         }
       }
     } catch (error) {
