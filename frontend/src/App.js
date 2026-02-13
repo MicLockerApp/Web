@@ -156,6 +156,7 @@ function AppContent() {
               <Route path="/learn" element={<LearnPage />} />
               <Route path="/learn/channel/:channelId" element={<LearnChannelPage />} />
               <Route path="/learn/playlist/:playlistId" element={<LearnPlaylistPage />} />
+              <Route path="/learn/video/:videoId" element={<LearnVideoPage />} />
               <Route path="/learn/studio" element={<LearnStudioPage />} />
               <Route path="/map" element={<MapPage />} />
               <Route path="/venue/:venueId/calendar" element={<VenueCalendarPage />} />
