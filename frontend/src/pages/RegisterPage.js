@@ -5,7 +5,7 @@ import { authAPI } from '../services/api';
 import VinylLogo from '../components/VinylLogo';
 import GoogleSignInButton from '../components/GoogleSignInButton';
 import TwoFactorSetup from '../components/TwoFactorSetup';
-import { Check, ChevronRight, ChevronLeft, Info, Mail, AlertCircle } from 'lucide-react';
+import { Check, ChevronRight, ChevronLeft, Info, Mail, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { COUNTRIES, getStatesForCountry, countryHasStates } from '../data/countries';
 import analytics from '../services/analytics';
 
@@ -14,6 +14,8 @@ const RegisterPage = () => {
   const { setUser, setToken } = useAuth();
   const [step, setStep] = useState(1);
   const [categoryOptions, setCategoryOptions] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
