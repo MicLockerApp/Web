@@ -153,6 +153,9 @@ function AppContent() {
               <Route path="/auditions" element={<AuditionsPage />} />
               <Route path="/gigs" element={<GigsPage />} />
               <Route path="/learn" element={<LearnPage />} />
+              <Route path="/learn/channel/:channelId" element={<LearnChannelPage />} />
+              <Route path="/learn/playlist/:playlistId" element={<LearnPlaylistPage />} />
+              <Route path="/learn/studio" element={<LearnStudioPage />} />
               <Route path="/map" element={<MapPage />} />
               <Route path="/venue/:venueId/calendar" element={<VenueCalendarPage />} />
               <Route path="/venue/bookings" element={<VenueBookingsPage />} />
