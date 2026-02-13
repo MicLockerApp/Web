@@ -453,6 +453,11 @@ const AdminPage = () => {
       baseTabs.push({ id: 'employees', label: 'Team', icon: Briefcase });
     }
 
+    // Learn Banners tab - only for admin/owner
+    if (canSeeAllStats) {
+      baseTabs.push({ id: 'learn-banners', label: 'Learn Banners', icon: GraduationCap });
+    }
+
     return baseTabs;
   };
 
