@@ -21,6 +21,7 @@ import { useAuth } from '../context/AuthContext';
 import { gigsAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { GigCard, CreateGigModal, ViewGigModal, CATEGORY_ICONS, CATEGORY_LABELS } from '../components/gigs';
+import SignUpModal from '../components/SignUpModal';
 import {
   List, Search, Filter, Plus, X, ChevronDown, ChevronUp,
   User, Eye, Trash2, Check, Music, Briefcase, RefreshCw
@@ -58,6 +59,9 @@ const GigsPage = () => {
   // My gigs view
   const [showMyGigs, setShowMyGigs] = useState(false);
   const [myGigs, setMyGigs] = useState([]);
+  
+  // Sign Up modal for visitors
+  const [showSignUpModal, setShowSignUpModal] = useState(false);
 
   // Fetch categories on mount
   useEffect(() => {
@@ -192,23 +196,6 @@ const GigsPage = () => {
 
   if (authLoading) return <LoadingSpinner />;
 
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-dark-600 flex items-center justify-center p-4">
-        <div className="bg-dark-400 rounded-2xl p-8 max-w-md w-full text-center">
-          <List className="w-16 h-16 text-primary mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-white mb-2">Gig Board</h1>
-          <p className="text-gray-400 mb-6">
-            Sign in to browse gigs, post what you&apos;re looking for, or share your services.
-          </p>
-          <Link to="/login?redirect=/gigs" className="btn btn-primary w-full">
-            Sign In to Continue
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-dark-600" data-testid="gig-board-page">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -223,18 +210,26 @@ const GigsPage = () => {
           </div>
           
           <div className="flex items-center gap-3">
+            {isAuthenticated && (
+              <button
+                onClick={() => {
+                  setShowMyGigs(!showMyGigs);
+                  if (!showMyGigs) fetchMyGigs();
+                }}
+                className={`btn ${showMyGigs ? 'btn-primary' : 'btn-secondary'}`}
+              >
+                <User className="w-4 h-4" />
+                My Posts
+              </button>
+            )}
             <button
               onClick={() => {
-                setShowMyGigs(!showMyGigs);
-                if (!showMyGigs) fetchMyGigs();
+                if (!isAuthenticated) {
+                  setShowSignUpModal(true);
+                } else {
+                  setShowCreateModal(true);
+                }
               }}
-              className={`btn ${showMyGigs ? 'btn-primary' : 'btn-secondary'}`}
-            >
-              <User className="w-4 h-4" />
-              My Posts
-            </button>
-            <button
-              onClick={() => setShowCreateModal(true)}
               className="btn btn-primary"
               data-testid="create-gig-btn"
             >
@@ -524,6 +519,13 @@ const GigsPage = () => {
           onDelete={() => handleDeleteGig(selectedGig.id)}
         />
       )}
+
+      {/* Sign Up Modal for visitors */}
+      <SignUpModal 
+        isOpen={showSignUpModal} 
+        onClose={() => setShowSignUpModal(false)}
+        action="apply"
+      />
     </div>
   );
 };

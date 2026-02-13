@@ -4,6 +4,7 @@ import { HelpCircle, Send, CheckCircle, AlertCircle, ChevronDown, Ticket, Messag
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import useS3Upload from '../hooks/useS3Upload';
+import SignUpModal from '../components/SignUpModal';
 
 const TICKET_CATEGORIES = [
   { value: 'Order Issue', label: 'Order Issue', description: 'Problems with your order, delivery, or tracking' },
@@ -41,6 +42,7 @@ const HelpCenterPage = () => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [ticketNumber, setTicketNumber] = useState('');
+  const [showSignUpModal, setShowSignUpModal] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -271,7 +273,7 @@ const HelpCenterPage = () => {
             <div className={`rounded-xl p-4 mb-6 ${isDark ? 'bg-yellow-500/10 border border-yellow-500/20' : 'bg-yellow-50 border border-yellow-200'}`}>
               <p className={`text-sm ${isDark ? 'text-yellow-400' : 'text-yellow-700'}`}>
                 <strong>Please log in</strong> to submit a support ticket. This helps us assist you better.{' '}
-                <a href="/login?redirect=/help" className="underline">Log in now</a>
+                <button onClick={() => setShowSignUpModal(true)} className="underline">Log in or Sign up</button>
               </p>
             </div>
           )}
@@ -497,6 +499,13 @@ const HelpCenterPage = () => {
           </p>
         </div>
       </div>
+
+      {/* Sign Up Modal for visitors */}
+      <SignUpModal 
+        isOpen={showSignUpModal} 
+        onClose={() => setShowSignUpModal(false)}
+        action="ticket"
+      />
     </div>
   );
 };

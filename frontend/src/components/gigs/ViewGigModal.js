@@ -16,12 +16,16 @@ import { Link } from 'react-router-dom';
 import {
   X, ChevronLeft, ChevronRight, MapPin, DollarSign, Eye,
   Mail, Phone, Trash2, User, Play, Globe, ExternalLink,
-  Music, Maximize
+  Music, Maximize, UserPlus
 } from 'lucide-react';
 import { CATEGORY_ICONS, CATEGORY_LABELS } from './constants';
+import { useAuth } from '../../context/AuthContext';
+import SignUpModal from '../SignUpModal';
 
 const ViewGigModal = ({ gig, isOwner, onClose, onDelete }) => {
+  const { user } = useAuth();
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
+  const [showSignUpModal, setShowSignUpModal] = useState(false);
   const videoRef = useRef(null);
   const allMedia = gig.media?.length > 0 ? gig.media : [];
   const socialLinks = gig.social_links ? Object.entries(gig.social_links).filter(([_, v]) => v) : [];
@@ -189,10 +193,20 @@ const ViewGigModal = ({ gig, isOwner, onClose, onDelete }) => {
           {(gig.contact_email || gig.contact_phone) && (
             <div className="mb-6 p-4 bg-dark-500 rounded-xl">
               <h3 className="text-lg font-semibold text-white mb-3">Contact</h3>
-              <div className="flex flex-wrap gap-4">
-                {gig.contact_email && <a href={`mailto:${gig.contact_email}`} className="flex items-center gap-2 text-primary hover:underline"><Mail className="w-5 h-5" />{gig.contact_email}</a>}
-                {gig.contact_phone && <a href={`tel:${gig.contact_phone}`} className="flex items-center gap-2 text-primary hover:underline"><Phone className="w-5 h-5" />{gig.contact_phone}</a>}
-              </div>
+              {user ? (
+                <div className="flex flex-wrap gap-4">
+                  {gig.contact_email && <a href={`mailto:${gig.contact_email}`} className="flex items-center gap-2 text-primary hover:underline"><Mail className="w-5 h-5" />{gig.contact_email}</a>}
+                  {gig.contact_phone && <a href={`tel:${gig.contact_phone}`} className="flex items-center gap-2 text-primary hover:underline"><Phone className="w-5 h-5" />{gig.contact_phone}</a>}
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowSignUpModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary text-black rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                >
+                  <UserPlus className="w-5 h-5" />
+                  Sign up to view contact info
+                </button>
+              )}
             </div>
           )}
 
@@ -219,6 +233,13 @@ const ViewGigModal = ({ gig, isOwner, onClose, onDelete }) => {
           <p className="text-gray-500 text-sm">Posted {new Date(gig.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
         </div>
       </div>
+
+      {/* Sign Up Modal for visitors */}
+      <SignUpModal 
+        isOpen={showSignUpModal} 
+        onClose={() => setShowSignUpModal(false)}
+        action="contact"
+      />
     </div>
   );
 };

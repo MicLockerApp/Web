@@ -23,6 +23,7 @@ from routes.stripe_connect_v2_sample import router as stripe_connect_v2_sample_r
 from routes.reports import router as reports_router
 from routes.uploads import router as uploads_router
 from routes.gigs import router as gigs_router
+from routes.learn import router as learn_router
 
 # Delivery tasks import
 from tasks.delivery_tasks import start_delivery_scheduler
@@ -349,6 +350,9 @@ app.include_router(uploads_router, prefix="/api")
 
 # Gig Board routes
 app.include_router(gigs_router, prefix="/api")
+
+# Learn Section routes (educational content platform)
+app.include_router(learn_router, prefix="/api")
 
 # Profile visits routes (Top 8 Fans feature)
 from routes.profile_visits import router as profile_visits_router

@@ -33,11 +33,13 @@ async def get_auditions(
     """
     Get audition items with optional filtering by category, subcategory, and genre.
     
-    - Featured/no filters: returns ALL videos randomized
-    - Category filter: returns videos from that category
-    - All videos come from profile_media collection
+    Featured view logic:
+    - Prioritizes users with the most recent uploads
+    - Groups videos by user and picks their latest video first
+    - Randomizes within time buckets for variety while keeping recent content at top
     """
     import random
+    from datetime import timedelta
     db = get_database()
     
     # Determine if this is the featured view (no category filter or explicitly featured)
@@ -55,23 +57,74 @@ async def get_auditions(
         if genre:
             video_query["genre"] = genre
     
-    # Get ALL videos from profile_media
-    videos = await db.profile_media.find(video_query, {"_id": 0}).to_list(length=100)
+    # Get ALL videos from profile_media, sorted by upload date (newest first)
+    videos = await db.profile_media.find(video_query, {"_id": 0}).sort("uploaded_at", -1).to_list(length=500)
     
-    # Deduplicate by video ID
+    # Deduplicate by video ID and track latest video per user
     seen_ids = set()
-    unique_videos = []
-    for v in videos:
-        if v.get("id") not in seen_ids:
-            seen_ids.add(v.get("id"))
-            unique_videos.append(v)
-    videos = unique_videos
+    user_latest_video = {}  # user_id -> latest video
+    all_unique_videos = []
     
+    for v in videos:
+        video_id = v.get("id")
+        user_id = v.get("user_id")
+        
+        if video_id and video_id not in seen_ids:
+            seen_ids.add(video_id)
+            all_unique_videos.append(v)
+            
+            # Track the latest video per user (first one we see since sorted by date)
+            if user_id and user_id not in user_latest_video:
+                user_latest_video[user_id] = v
+    
+    videos = all_unique_videos
     logger.info(f"Found {len(videos)} unique videos in profile_media (featured={is_featured_view}, category={category})")
     
-    # For featured view, randomize the order
+    # For featured view, prioritize users with latest content
     if is_featured_view and videos:
-        random.shuffle(videos)
+        now = datetime.now(timezone.utc)
+        
+        # Get the latest videos (one per user) and sort by upload date
+        latest_per_user = list(user_latest_video.values())
+        latest_per_user.sort(key=lambda x: x.get("uploaded_at", datetime.min.replace(tzinfo=timezone.utc)), reverse=True)
+        
+        # Split into time buckets for randomization
+        # Bucket 1: Last 24 hours (most recent, randomized among themselves)
+        # Bucket 2: Last 7 days
+        # Bucket 3: Older content
+        bucket_24h = []
+        bucket_7d = []
+        bucket_older = []
+        
+        for video in latest_per_user:
+            upload_time = video.get("uploaded_at")
+            if upload_time:
+                if isinstance(upload_time, str):
+                    try:
+                        upload_time = datetime.fromisoformat(upload_time.replace('Z', '+00:00'))
+                    except (ValueError, TypeError):
+                        upload_time = datetime.min.replace(tzinfo=timezone.utc)
+                elif upload_time.tzinfo is None:
+                    upload_time = upload_time.replace(tzinfo=timezone.utc)
+                    
+                age = now - upload_time
+                if age <= timedelta(hours=24):
+                    bucket_24h.append(video)
+                elif age <= timedelta(days=7):
+                    bucket_7d.append(video)
+                else:
+                    bucket_older.append(video)
+            else:
+                bucket_older.append(video)
+        
+        # Randomize within each bucket
+        random.shuffle(bucket_24h)
+        random.shuffle(bucket_7d)
+        random.shuffle(bucket_older)
+        
+        # Combine: newest first, then recent, then older
+        videos = bucket_24h + bucket_7d + bucket_older
+        logger.info(f"Featured sort: {len(bucket_24h)} in last 24h, {len(bucket_7d)} in last 7d, {len(bucket_older)} older")
     
     if videos:
         # Convert profile_media format to audition format

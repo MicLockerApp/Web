@@ -5,6 +5,7 @@ import { useImmersive } from '../context/ImmersiveContext';
 import { Link, useNavigate } from 'react-router-dom';
 import api, { usersAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import SignUpModal from '../components/SignUpModal';
 
 // Music genres for filtering
 const MUSIC_GENRES = [
@@ -153,6 +154,7 @@ const VideoDisplay = ({
   isActive, 
   isMuted, 
   onToggleMute, 
+  onSetMuted,
   onFilterClick, 
   hasActiveGenre,
   horizontalIndex,
@@ -167,7 +169,8 @@ const VideoDisplay = ({
   onNavigateToProfile,
   showCategoryBar,
   isImmersiveMode,
-  onToggleImmersiveMode
+  onToggleImmersiveMode,
+  onShowSignUpModal
 }) => {
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
@@ -223,16 +226,25 @@ const VideoDisplay = ({
       const playVideo = async () => {
         try {
           video.currentTime = 0;
-          video.muted = isMuted; // Use current mute state (default: unmuted)
+          // Always try to play with sound first (unmuted)
+          video.muted = false;
           await video.play();
           setIsPlaying(true);
+          // Successfully playing with sound - ensure UI reflects this
+          if (onSetMuted) onSetMuted(false);
         } catch (error) {
-          // Autoplay with sound was prevented by browser
-          // Still try to play - browser may have user interaction context
-          console.log('Autoplay prevented, video will play when user interacts');
-          // Don't force mute - let user control it
-          // The video will start playing on first user interaction with the page
-          setIsPlaying(false);
+          // Autoplay with sound was prevented by browser - try muted as fallback
+          console.log('Autoplay with sound prevented, trying muted...');
+          try {
+            video.muted = true;
+            await video.play();
+            setIsPlaying(true);
+            // Browser forced muted playback - update UI to show muted state
+            if (onSetMuted) onSetMuted(true);
+          } catch (mutedError) {
+            console.log('Even muted autoplay failed');
+            setIsPlaying(false);
+          }
         }
       };
       
@@ -245,7 +257,7 @@ const VideoDisplay = ({
       video.currentTime = 0;
       setIsPlaying(false);
     }
-  }, [isActive, isMuted]);
+  }, [isActive, onSetMuted]); // Only depend on isActive - NOT isMuted
 
   // Sync playing state with video element
   useEffect(() => {
@@ -264,10 +276,11 @@ const VideoDisplay = ({
     };
   }, []);
 
-  // Handle mute state - only apply if active
+  // Handle mute state changes - only change muted property, don't restart video
   useEffect(() => {
-    if (videoRef.current && isActive) {
-      videoRef.current.muted = isMuted;
+    const video = videoRef.current;
+    if (video && isActive) {
+      video.muted = isMuted;
     }
   }, [isMuted, isActive]);
 
@@ -287,7 +300,7 @@ const VideoDisplay = ({
   const handleFavorite = async (e) => {
     e.stopPropagation();
     if (!currentUser) {
-      alert('Please log in to save favorites');
+      if (onShowSignUpModal) onShowSignUpModal('favorite');
       return;
     }
     
@@ -451,6 +464,21 @@ const VideoDisplay = ({
             <Play className="w-10 h-10 text-white ml-1" fill="white" />
           </div>
         </div>
+      )}
+
+      {/* Tap for Sound Indicator - shows when muted and video is playing */}
+      {isMuted && isPlaying && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleMute();
+          }}
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/60 backdrop-blur-sm px-4 py-2 rounded-full flex items-center gap-2 animate-pulse z-20"
+          data-testid="tap-for-sound-btn"
+        >
+          <VolumeX className="w-5 h-5 text-white" />
+          <span className="text-white text-sm font-medium">Tap for sound</span>
+        </button>
       )}
 
       {/* Horizontal Position Indicator (dots at top) - ALWAYS show for users with videos */}
@@ -705,7 +733,8 @@ const AuditionItem = ({
   item, 
   isActive, 
   isMuted, 
-  onToggleMute, 
+  onToggleMute,
+  onSetMuted,
   onFilterClick, 
   hasActiveGenre,
   hasSwipedUp,
@@ -714,7 +743,8 @@ const AuditionItem = ({
   onFirstHorizontalSwipe,
   showCategoryBar,
   isImmersiveMode,
-  onToggleImmersiveMode
+  onToggleImmersiveMode,
+  onShowSignUpModal
 }) => {
   const navigate = useNavigate();
   const [userVideos, setUserVideos] = useState([item]);
@@ -814,6 +844,7 @@ const AuditionItem = ({
         isActive={isActive}
         isMuted={isMuted}
         onToggleMute={onToggleMute}
+        onSetMuted={onSetMuted}
         onFilterClick={onFilterClick}
         hasActiveGenre={hasActiveGenre}
         horizontalIndex={horizontalIndex}
@@ -829,6 +860,7 @@ const AuditionItem = ({
         showCategoryBar={showCategoryBar}
         isImmersiveMode={isImmersiveMode}
         onToggleImmersiveMode={onToggleImmersiveMode}
+        onShowSignUpModal={onShowSignUpModal}
       />
       
       {/* Loading indicator when fetching more */}
@@ -864,27 +896,13 @@ const AuditionsPage = () => {
   const [hasSwipedHorizontal, setHasSwipedHorizontal] = useState(false);
   const [showCategoryBar, setShowCategoryBar] = useState(true);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
-  const [userInteracted, setUserInteracted] = useState(false);
+  const [showSignUpModal, setShowSignUpModal] = useState(false);
+  const [signUpModalAction, setSignUpModalAction] = useState('interact');
 
-  // Enable audio playback after first user interaction (browser autoplay policy workaround)
-  useEffect(() => {
-    const enableAudioOnInteraction = () => {
-      setUserInteracted(true);
-      // Remove listeners after first interaction
-      document.removeEventListener('click', enableAudioOnInteraction);
-      document.removeEventListener('touchstart', enableAudioOnInteraction);
-      document.removeEventListener('keydown', enableAudioOnInteraction);
-    };
-
-    document.addEventListener('click', enableAudioOnInteraction);
-    document.addEventListener('touchstart', enableAudioOnInteraction);
-    document.addEventListener('keydown', enableAudioOnInteraction);
-
-    return () => {
-      document.removeEventListener('click', enableAudioOnInteraction);
-      document.removeEventListener('touchstart', enableAudioOnInteraction);
-      document.removeEventListener('keydown', enableAudioOnInteraction);
-    };
+  // Handle showing signup modal for visitors
+  const handleShowSignUpModal = useCallback((action = 'interact') => {
+    setSignUpModalAction(action);
+    setShowSignUpModal(true);
   }, []);
 
   // Check if user should see the welcome modal (first-time visitors only)
@@ -1278,6 +1296,7 @@ const AuditionsPage = () => {
                 isActive={index === currentIndex}
                 isMuted={isMuted}
                 onToggleMute={toggleMute}
+                onSetMuted={setIsMuted}
                 onFilterClick={() => setGenreFilterOpen(true)}
                 hasActiveGenre={!!activeGenre}
                 hasSwipedUp={hasSwipedUp}
@@ -1287,6 +1306,7 @@ const AuditionsPage = () => {
                 showCategoryBar={showCategoryBar}
                 isImmersiveMode={isImmersiveMode}
                 onToggleImmersiveMode={toggleImmersiveMode}
+                onShowSignUpModal={handleShowSignUpModal}
               />
             </div>
           ))}
@@ -1399,6 +1419,13 @@ const AuditionsPage = () => {
           </div>
         </div>
       )}
+
+      {/* Sign Up Modal for visitors */}
+      <SignUpModal 
+        isOpen={showSignUpModal} 
+        onClose={() => setShowSignUpModal(false)}
+        action={signUpModalAction}
+      />
     </div>
   );
 };

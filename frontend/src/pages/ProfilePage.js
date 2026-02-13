@@ -12,6 +12,7 @@ import VinylLogo from '../components/VinylLogo';
 import SpotifyPlayer from '../components/SpotifyPlayer';
 import Top8Fans from '../components/Top8Fans';
 import ProfileMap from '../components/ProfileMap';
+import SignUpModal from '../components/SignUpModal';
 import useProfileVisitTracker from '../hooks/useProfileVisitTracker';
 
 // Categories and subcategories for video uploads
@@ -206,6 +207,10 @@ const ProfilePage = () => {
   const [deleteUsername, setDeleteUsername] = useState('');
   const [deletePassword, setDeletePassword] = useState('');
   const [deletingAccount, setDeletingAccount] = useState(false);
+  
+  // Sign Up modal state for visitors
+  const [showSignUpModal, setShowSignUpModal] = useState(false);
+  const [signUpModalAction, setSignUpModalAction] = useState('interact');
   
   const navigate = useNavigate();
   
@@ -690,19 +695,46 @@ const ProfilePage = () => {
               )}
               
               {!isOwnProfile && (
-                <Link
-                  to={`/messages?to=${profile.id}`}
-                  className={`btn ${['venue', 'audio_engineer', 'recording_studio'].includes(profile.category?.toLowerCase()) ? 'btn-secondary' : 'btn-primary'}`}
-                  data-testid="message-seller-button"
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  Message
-                </Link>
+                currentUser ? (
+                  <Link
+                    to={`/messages?to=${profile.id}`}
+                    className={`btn ${['venue', 'audio_engineer', 'recording_studio'].includes(profile.category?.toLowerCase()) ? 'btn-secondary' : 'btn-primary'}`}
+                    data-testid="message-seller-button"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    Message
+                  </Link>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setSignUpModalAction('message');
+                      setShowSignUpModal(true);
+                    }}
+                    className={`btn ${['venue', 'audio_engineer', 'recording_studio'].includes(profile.category?.toLowerCase()) ? 'btn-secondary' : 'btn-primary'}`}
+                    data-testid="message-seller-button"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    Message
+                  </button>
+                )
               )}
               {/* Report User Button - for viewing other users' profiles */}
               {!isOwnProfile && currentUser && (
                 <button
                   onClick={() => setShowReportModal(true)}
+                  className="btn btn-secondary flex items-center justify-center gap-2 text-red-500 hover:text-red-400 hover:border-red-500/50"
+                  data-testid="report-user-button"
+                >
+                  <Flag className="w-4 h-4" />
+                  Report User
+                </button>
+              )}
+              {!isOwnProfile && !currentUser && (
+                <button
+                  onClick={() => {
+                    setSignUpModalAction('report');
+                    setShowSignUpModal(true);
+                  }}
                   className="btn btn-secondary flex items-center justify-center gap-2 text-red-500 hover:text-red-400 hover:border-red-500/50"
                   data-testid="report-user-button"
                 >
@@ -1931,6 +1963,13 @@ const ProfilePage = () => {
           </div>
         </div>
       )}
+
+      {/* Sign Up Modal for visitors */}
+      <SignUpModal 
+        isOpen={showSignUpModal} 
+        onClose={() => setShowSignUpModal(false)}
+        action={signUpModalAction}
+      />
     </div>
   );
 };

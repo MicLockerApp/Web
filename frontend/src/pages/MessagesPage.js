@@ -6,6 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import { messagesAPI, usersAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import analytics from '../services/analytics';
+import SignUpModal from '../components/SignUpModal';
 
 const MessagesPage = () => {
   const navigate = useNavigate();
@@ -44,12 +45,16 @@ const MessagesPage = () => {
   const [pendingImages, setPendingImages] = useState([]);
   const [uploadingImages, setUploadingImages] = useState(false);
   const fileInputRef = useRef(null);
+  
+  // Show signup modal if not authenticated
+  const [showSignUpModal, setShowSignUpModal] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
     
     if (!isAuthenticated) {
-      navigate('/login');
+      setShowSignUpModal(true);
+      setLoading(false);
       return;
     }
     fetchThreads();
@@ -556,7 +561,7 @@ const MessagesPage = () => {
                             isOwnMessage ? 'justify-end' : 'justify-start'
                           }`}>
                             <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>
-                              {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(msg.created_at + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                             {isOwnMessage && isLastOwnMessage && (
                               <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>
@@ -864,6 +869,16 @@ const MessagesPage = () => {
           </div>
         </div>
       )}
+
+      {/* Sign Up Modal for visitors */}
+      <SignUpModal 
+        isOpen={showSignUpModal} 
+        onClose={() => {
+          setShowSignUpModal(false);
+          navigate('/');
+        }}
+        action="message"
+      />
     </div>
   );
 };

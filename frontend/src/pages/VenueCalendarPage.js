@@ -5,6 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
+import SignUpModal from '../components/SignUpModal';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -52,6 +53,9 @@ const VenueCalendarPage = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [responseType, setResponseType] = useState(null); // 'accept' or 'decline'
   const [responseMessage, setResponseMessage] = useState('');
+  
+  // Sign Up modal state for visitors
+  const [showSignUpModal, setShowSignUpModal] = useState(false);
 
   const isVenueOwner = user && user.id === venueId;
 
@@ -158,7 +162,7 @@ const VenueCalendarPage = () => {
   const handleSubmitRequest = async (e) => {
     e.preventDefault();
     if (!user) {
-      alert('Please sign in to send a booking request');
+      setShowSignUpModal(true);
       return;
     }
     
@@ -358,9 +362,12 @@ const VenueCalendarPage = () => {
                   </p>
                 )}
                 {!user && !isPast && (
-                  <p className={`text-sm mt-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                    <Link to="/login" className="text-primary hover:underline">Sign in</Link> to request a booking.
-                  </p>
+                  <button
+                    onClick={() => setShowSignUpModal(true)}
+                    className={`text-sm mt-2 text-primary hover:underline`}
+                  >
+                    Sign in to request a booking
+                  </button>
                 )}
               </div>
             ) : (
@@ -752,6 +759,13 @@ const VenueCalendarPage = () => {
           </div>
         </div>
       )}
+
+      {/* Sign Up Modal for visitors */}
+      <SignUpModal 
+        isOpen={showSignUpModal} 
+        onClose={() => setShowSignUpModal(false)}
+        action="book"
+      />
     </div>
   );
 };

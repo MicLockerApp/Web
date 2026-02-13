@@ -72,6 +72,37 @@ CI=false
 
 ## Recent Updates (February 2026)
 
+### Visitor Access Feature (Feb 13, 2026)
+- Visitors can now browse the entire website without logging in
+- All viewing features work: Auditions, Profiles, Map, Gigs
+- Interaction features show SignUpModal prompting registration:
+  - Favorite/like auditions → "save favorites" message
+  - Message users → "send messages to other users" message
+  - Post gigs → "apply to gigs" message
+  - Book venues → "book" message
+  - Report users → "report" message
+  - Submit tickets → "ticket" message
+  - View gig contact info → "Sign up to view contact info" button
+- Created new `/app/frontend/src/components/SignUpModal.js` component
+- Updated: AuditionsPage, ProfilePage, GigsPage, ViewGigModal, VenueCalendarPage, MessagesPage, HelpCenterPage
+
+### Autoplay with Sound Feature (Feb 11, 2026)
+- Videos on Auditions page now auto-play with sound enabled by default
+- **Key implementation details:**
+  - Playback `useEffect` only depends on `isActive` (NOT `isMuted`) - prevents video restart on mute toggle
+  - Separate mute `useEffect` handles mute state by only setting `video.muted` property
+  - Autoplay tries unmuted first, falls back to muted if browser blocks
+  - `isMuted` defaults to `false` (sound enabled)
+- **User requirements verified:**
+  1. Videos autoplay immediately when appearing
+  2. Videos play with sound by default
+  3. Clicking video pauses both video and audio
+  4. Mute button mutes audio but video continues playing
+  5. Unmute restores audio synced with video (no restart)
+
+### Files Modified
+- `/app/frontend/src/pages/AuditionsPage.js` - VideoDisplay playback useEffect, separate mute useEffect
+
 ### Admin Panel Role Management
 - Added dedicated "Change Role" button (Shield icon) in Users tab
 - Created `RoleChangeModal.js` for role management
@@ -144,7 +175,7 @@ CI=false
 ## Pending Tasks
 
 ### P1 (High Priority)
-- Fix Direct Message Image Uploader
+- Fix Direct Message Image Uploader (recurring issue)
 
 ### P2 (Medium Priority)
 - Admin user deletion feedback

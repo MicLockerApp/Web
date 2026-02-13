@@ -489,7 +489,7 @@ const TicketDetailView = () => {
             <span>Category: <strong>{ticket.category}</strong></span>
             <span className="flex items-center gap-1">
               <Calendar className="w-3 h-3" />
-              Created: {new Date(ticket.created_at).toLocaleString()}
+              Created: {new Date(ticket.created_at + 'Z').toLocaleString()}
             </span>
             {ticket.order_id && (
               <span>Order: <Link to={`/orders/${ticket.order_id}`} className="text-primary">{ticket.order_id}</Link></span>
@@ -509,7 +509,7 @@ const TicketDetailView = () => {
                   {ticket.customer_name}
                 </span>
                 <span className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                  {new Date(ticket.created_at).toLocaleString()}
+                  {new Date(ticket.created_at + 'Z').toLocaleString()}
                 </span>
               </div>
               <p className={`whitespace-pre-wrap ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -620,7 +620,7 @@ const TicketDetailView = () => {
                         <span className="px-2 py-0.5 bg-primary/20 text-primary text-xs rounded">Staff</span>
                       )}
                       <span className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                        {new Date(reply.created_at).toLocaleString()}
+                        {new Date(reply.created_at + 'Z').toLocaleString()}
                       </span>
                     </div>
                     <p className={`whitespace-pre-wrap ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
