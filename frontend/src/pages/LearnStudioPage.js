@@ -21,21 +21,37 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 
-// Categories
+// Categories matching user signup
 const CATEGORIES = [
   { value: 'musician', label: 'Musicians' },
-  { value: 'audio_engineer', label: 'Audio Engineering' },
+  { value: 'audio_engineer', label: 'Audio Engineers' },
   { value: 'recording_studio', label: 'Recording Studios' },
   { value: 'venue', label: 'Venues' },
-  { value: 'dj', label: 'DJs' },
-  { value: 'producer', label: 'Producers' },
-  { value: 'songwriter', label: 'Songwriters' },
-  { value: 'vocalist', label: 'Vocalists' },
-  { value: 'session_musician', label: 'Session Musicians' },
-  { value: 'music_teacher', label: 'Music Teachers' },
-  { value: 'band', label: 'Bands' },
-  { value: 'other', label: 'Other' }
+  { value: 'merchant', label: 'Merchants' },
+  { value: 'comedian', label: 'Comedians' },
+  { value: 'actor', label: 'Actors' },
+  { value: 'show_pro', label: 'Show Pro' },
+  { value: 'photographer', label: 'Photographers' },
+  { value: 'videographer', label: 'Videographers' },
+  { value: 'manager', label: 'Managers' },
+  { value: 'services', label: 'Services' }
 ];
+
+// Subcategories by main category
+const SUBCATEGORIES = {
+  musician: ["Guitar", "Piano", "Drums", "Bass", "Vocals", "Violin", "Saxophone", "Trumpet", "Keyboard", "Percussion"],
+  audio_engineer: ["Mixing Engineers", "Mastering Engineers", "Live Sound", "Producers", "Sound Design", "Post Production", "Podcast", "Game Audio"],
+  recording_studio: ["Recording Studios", "Rehearsal Rooms", "Equipment Rental", "Acoustics"],
+  venue: ["Concert Hall", "Club", "Theater", "Festival Grounds", "Outdoor Venue"],
+  merchant: ["Clothing", "Vinyl Records", "Instruments", "Accessories", "Equipment"],
+  comedian: ["Stand-up", "Improv", "Sketch Comedy", "Musical Comedy", "Physical Comedy"],
+  actor: ["Film Actor", "Theater Actor", "Voice Actor", "Commercial Actor", "Stunt Performer"],
+  show_pro: ["Lighting Designer", "Stage Manager", "Sound Technician", "Technical Director", "Rigging"],
+  photographer: ["Concert Photographer", "Portrait Photographer", "Event Photographer", "Product Photographer"],
+  videographer: ["Music Video Director", "Live Stream Operator", "Documentary Filmmaker", "Video Editor"],
+  manager: ["Artist Manager", "Tour Manager", "Business Manager", "Booking Agent"],
+  services: ["Hair Stylist", "Makeup Artist", "Wardrobe Stylist", "Personal Trainer", "Catering"]
+};
 
 const LearnStudioPage = () => {
   const { isDark } = useTheme();
