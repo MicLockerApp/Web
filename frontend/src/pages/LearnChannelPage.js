@@ -244,8 +244,8 @@ const LearnChannelPage = () => {
   const [channel, setChannel] = useState(null);
   const [content, setContent] = useState({ free_videos: [], playlists: [], subscription_tiers: [] });
   const [reviews, setReviews] = useState([]);
-  const [isSubscribed, setIsSubscribed] = useState(false);
-  const [subscribedTierId, setSubscribedTierId] = useState(null);
+  const [isFollowing, setIsFollowing] = useState(false);  // Free follow for notifications
+  const [purchasedTierId, setPurchasedTierId] = useState(null);  // Paid subscription tier
   const [activeTab, setActiveTab] = useState('videos');
   const [showSignUpModal, setShowSignUpModal] = useState(false);
   const [playingIntro, setPlayingIntro] = useState(false);
