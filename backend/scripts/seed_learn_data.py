@@ -12,7 +12,7 @@ import random
 
 # Connect to MongoDB
 MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
-DB_NAME = os.environ.get('DB_NAME', 'miclocker')
+DB_NAME = os.environ.get('DB_NAME', 'miclocker_prod')  # Match the backend config
 client = MongoClient(MONGO_URL)
 db = client[DB_NAME]
 
