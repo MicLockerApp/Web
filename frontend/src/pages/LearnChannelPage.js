@@ -394,20 +394,20 @@ const LearnChannelPage = () => {
           {/* Actions */}
           <div className="flex gap-2">
             {!isOwner && (
-              isSubscribed ? (
+              isFollowing ? (
                 <button 
-                  onClick={handleUnsubscribe}
+                  onClick={handleUnfollow}
                   className="btn btn-secondary flex items-center gap-2"
                 >
                   <Check className="w-4 h-4" />
-                  Subscribed
+                  Following
                 </button>
               ) : (
                 <button 
-                  onClick={() => handleSubscribe()}
+                  onClick={handleFollow}
                   className="btn btn-primary flex items-center gap-2"
                 >
-                  <Heart className="w-4 h-4" />
+                  <Bell className="w-4 h-4" />
                   Subscribe
                 </button>
               )
