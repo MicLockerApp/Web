@@ -73,6 +73,7 @@ const LearnStudioPage = () => {
     name: '',
     description: '',
     category: 'musician',
+    subcategories: [],
     intro_video_url: '',
     intro_video_thumbnail: '',
     banner_image: ''
