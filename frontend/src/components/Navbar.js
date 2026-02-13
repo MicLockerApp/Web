@@ -370,7 +370,7 @@ const Navbar = () => {
 
             {/* Auditions icon */}
             <Link 
-              to="/" 
+              to="/auditions" 
               className={`p-2 ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`} 
               data-testid="auditions-link"
               title="Auditions"
