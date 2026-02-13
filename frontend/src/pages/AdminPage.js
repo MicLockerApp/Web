@@ -19,7 +19,7 @@ import { adminAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { 
   AlertCircle, RefreshCw, TrendingUp, BarChart3, Users, Package, 
-  ShoppingCart, Briefcase
+  ShoppingCart, Briefcase, GraduationCap
 } from 'lucide-react';
 
 // Admin components
@@ -29,6 +29,7 @@ import {
   ListingsTab,
   OrdersTab,
   EmployeesTab,
+  LearnBannersTab,
   UserActionModal,
   AddEmployeeModal,
   EditEmployeeModal,
