@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { Eye, EyeOff } from 'lucide-react';
 import VinylLogo from '../components/VinylLogo';
 import GoogleSignInButton from '../components/GoogleSignInButton';
 import analytics from '../services/analytics';
@@ -13,6 +14,7 @@ const LoginPage = () => {
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
