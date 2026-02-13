@@ -172,14 +172,64 @@ CI=false
 - `GET /api/gigs/{id}`
 - `DELETE /api/gigs/{id}`
 
+## Learn Section (February 2026)
+
+### Overview
+Educational content platform inspired by CreativeLive.com where users can create channels, upload video courses, and monetize content.
+
+### Features Implemented
+- **Learn Homepage** (`/learn`): Banner carousel, category filtering, trending channels, all channels section, search/filter
+- **Channel Page** (`/learn/channel/:id`): Channel info, intro video, tabbed content (Free Videos, Playlists, Subscription Tiers, Reviews), subscribe button
+- **Playlist Page** (`/learn/playlist/:id`): Playlist info, video list, stats sidebar, save/share buttons
+- **Video Page** (`/learn/video/:id`): Video player with controls, related videos, channel info, reviews
+- **Creator Studio** (`/learn/studio`): Channel settings, playlist management, video management, subscription tier management (login required)
+
+### Backend API Endpoints
+- `GET /api/learn/channels` - List channels with filters
+- `GET /api/learn/channels/trending` - Trending channels
+- `GET /api/learn/channels/my` - User's own channel
+- `GET /api/learn/channels/:id` - Channel details
+- `GET /api/learn/channels/:id/content` - Channel content (videos, playlists, tiers)
+- `POST/PUT /api/learn/channels` - Create/update channel
+- `GET/POST/PUT/DELETE /api/learn/playlists` - Playlist CRUD
+- `GET/POST/PUT/DELETE /api/learn/videos` - Video CRUD
+- `GET/POST/PUT/DELETE /api/learn/channels/:id/tiers` - Subscription tier CRUD
+- `POST/DELETE /api/learn/channels/:id/subscribe` - Channel subscription
+- `POST/DELETE /api/learn/favorites/:type/:id` - Favorites
+- `GET/POST /api/learn/reviews/:type/:id` - Reviews
+- `GET /api/learn/search` - Search channels, playlists, videos
+- `GET/POST/PUT/DELETE /api/learn/banners` - Admin banner management
+
+### Files Created
+- `/app/backend/models/learn.py` - Pydantic models
+- `/app/backend/routes/learn.py` - API routes
+- `/app/frontend/src/pages/LearnPage.js` - Homepage
+- `/app/frontend/src/pages/LearnChannelPage.js` - Channel view
+- `/app/frontend/src/pages/LearnPlaylistPage.js` - Playlist view
+- `/app/frontend/src/pages/LearnVideoPage.js` - Video player
+- `/app/frontend/src/pages/LearnStudioPage.js` - Creator studio
+
+### MOCKED Features
+- **Payment Integration**: Purchase buttons show alert placeholder (Stripe not connected)
+- Payment will need Stripe integration for one-time purchases and recurring subscriptions
+
+### Test Data
+- Channel: "MicLocker Pro Tips" (ID: 22aabf14-d8fe-4868-b670-ee6db1804d4a)
+- Playlist: "Audio Mixing Fundamentals" (ID: 8dd01f72-3436-4642-9112-9b7b4650715c)
+- Videos: "Introduction to EQ", "Quick Tip: Compression Basics"
+
 ## Pending Tasks
+
+### P0 (In Progress)
+- ✅ Learn Section scaffolding (COMPLETED Feb 13, 2026)
 
 ### P1 (High Priority)
 - Fix Direct Message Image Uploader (recurring issue)
+- Integrate Stripe for Learn section payments
 
 ### P2 (Medium Priority)
-- Admin user deletion feedback
-- "Learn" feature implementation
+- Admin user deletion feedback (user de-prioritized)
+- Admin banner management UI for Learn section
 
 ### P3 (Low Priority)
 - Email delivery (AWS SES)
@@ -189,3 +239,4 @@ CI=false
 - Gig post expiration dates
 - Server-side video thumbnails
 - Elasticsearch integration
+- Learn section search integration with main site search
