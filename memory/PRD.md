@@ -1,14 +1,27 @@
 # MicLocker - Creative Professionals Marketplace
 
 ## Overview
-MicLocker is a full-stack marketplace for creative professionals featuring a TikTok-style "Auditions" video feed as its homepage. Users can discover talent through vertical video browsing, post gigs, and connect with industry professionals.
+MicLocker is a full-stack marketplace for creative professionals featuring:
+- **Gear Marketplace** - Buy/sell equipment and services (Homepage at `/`)
+- **Auditions Feed** - TikTok-style vertical video feed (`/auditions`)
+- **Learn Section** - Educational content platform (`/learn`)
+- **Gig Board** - Job postings for creative professionals (`/gigs`)
+
+## Mobile App Handoff Documentation
+- **Comprehensive Handoff:** `/app/docs/MOBILE_HANDOFF.md`
+- **API Reference:** `/app/docs/API_REFERENCE.md`
+- **OpenAPI Spec:** `/app/docs/openapi.json`
 
 ## Tech Stack
 - **Frontend**: React with Tailwind CSS
 - **Backend**: FastAPI (Python)
 - **Database**: MongoDB
 - **Storage**: AWS S3 for media uploads
-- **Payments**: Stripe + Stripe Connect
+- **Payments**: Stripe + Stripe Connect (MOCKED - not connected)
+
+## Production URLs
+- **Web:** https://miclockerapp.com
+- **API Base:** https://miclockerapp.com/api
 
 ## Core Features
 
