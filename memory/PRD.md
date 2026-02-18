@@ -1,10 +1,16 @@
 # MicLocker - Creative Professionals Marketplace
 
+## Contact Information
+- **Email:** info@miclockerapp.com
+- **Phone:** +1 314-648-0249
+- **Legal:** legal@miclockerapp.com
+
 ## Overview
 MicLocker is a full-stack marketplace for creative professionals featuring:
 - **Gear Marketplace** - Buy/sell equipment and services (Homepage at `/`)
 - **Auditions Feed** - TikTok-style vertical video feed (`/auditions`)
 - **Learn Section** - Educational content platform (`/learn`)
+- **Blog** - Company news, gear reviews, and artist spotlights (`/blog`)
 - **Gig Board** - Job postings for creative professionals (`/gigs`)
 
 ## Mobile App Handoff Documentation
@@ -25,7 +31,17 @@ MicLocker is a full-stack marketplace for creative professionals featuring:
 
 ## Core Features
 
-### 1. Auditions Feed (Homepage)
+### 1. Blog System (NEW)
+- Owner can create/publish blog posts with images, videos, text
+- Toggle between Rich Text and HTML code input modes
+- Blog Editor role for teammates (configurable in Admin Panel)
+- Categories: Industry News, Gear Reviews, Artist Spotlights, Tips & Tutorials, etc.
+- Tags system for organizing content
+- Comments with moderation
+- Draft/Published states
+- Featured images
+
+### 2. Auditions Feed
 - TikTok-style vertical video scrolling
 - Multi-level filtering (Category → Subcategory → Genre)
 - Horizontal swipe to see more from same user
@@ -33,7 +49,7 @@ MicLocker is a full-stack marketplace for creative professionals featuring:
 - Share modal (Facebook, Instagram, X, Reddit, Copy Link)
 - Auto-play with sound
 
-### 2. User Categories
+### 3. User Categories
 **Main Categories:**
 - Musicians (37 subcategories)
 - Audio Engineers (32 subcategories)
