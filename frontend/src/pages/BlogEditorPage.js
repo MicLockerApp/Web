@@ -172,7 +172,7 @@ const BlogEditorPage = () => {
       if (isEditing) {
         await api.put(`/blogs/${id}`, postData);
       } else {
-        const res = await api.post('/blogs/', postData);
+        const res = await api.post('/blogs', postData);
         navigate(`/blog/${res.data.slug}`);
         return;
       }
