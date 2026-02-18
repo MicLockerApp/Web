@@ -241,6 +241,11 @@ const BlogDetailPage = () => {
               </span>
             </div>
 
+            {/* Custom CSS for HTML content */}
+            {post.content_type === 'html' && post.custom_css && (
+              <style dangerouslySetInnerHTML={{ __html: post.custom_css }} />
+            )}
+
             {/* Content */}
             <div 
               className={`prose prose-lg max-w-none ${
@@ -255,6 +260,11 @@ const BlogDetailPage = () => {
                 <div className="whitespace-pre-wrap">{post.content}</div>
               )}
             </div>
+
+            {/* Custom JavaScript for HTML content */}
+            {post.content_type === 'html' && post.custom_js && (
+              <script dangerouslySetInnerHTML={{ __html: post.custom_js }} />
+            )}
 
             {/* Tags */}
             {post.tags && post.tags.length > 0 && (
