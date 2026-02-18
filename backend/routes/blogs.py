@@ -156,7 +156,7 @@ async def create_comment(
     """Add a comment to a blog post."""
     db = get_database()
     # Check if blog exists and allows comments
-    post = await db.blogs.find_one({"id": blog_id, "status": "published"})
+    post = await db.blogs.find_one({"_id": blog_id, "status": "published"})
     if not post:
         raise HTTPException(status_code=404, detail="Blog post not found")
     
@@ -178,7 +178,7 @@ async def create_comment(
     
     # Update comment count
     await db.blogs.update_one(
-        {"id": blog_id},
+        {"_id": blog_id},
         {"$inc": {"comment_count": 1}}
     )
     
@@ -373,7 +373,7 @@ async def delete_comment(
     
     # Update comment count
     await db.blogs.update_one(
-        {"id": blog_id},
+        {"_id": blog_id},
         {"$inc": {"comment_count": -1}}
     )
     
