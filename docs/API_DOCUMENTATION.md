@@ -134,7 +134,7 @@ openapi-generator generate -i https://videoauditions.preview.emergentagent.com/a
 API requests are rate limited. If you exceed the limit, you'll receive a 429 response.
 
 ## Support
-For API support, contact: info@miclockerapp.com
+For API support, contact: info@miclockerapp.com or call +1 314-648-0249
 
 ---
 *Documentation Version: 2.0.0*
