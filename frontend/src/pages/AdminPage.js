@@ -201,6 +201,16 @@ const AdminPage = () => {
     setShowRoleChangeModal(true);
   };
 
+  const handleBlogEditorToggle = async (userId, isBlogEditor) => {
+    try {
+      await api.put(`/admin/users/${userId}/blog-editor`, { is_blog_editor: isBlogEditor });
+      fetchUsers(usersPagination.page);
+    } catch (error) {
+      console.error('Error toggling blog editor:', error);
+      throw error;
+    }
+  };
+
   const handleRoleChangeFromModal = async () => {
     if (!roleChangeUser || !roleChangeSelectedRole) return;
     if (roleChangeSelectedRole === (roleChangeUser.role || 'user')) {
