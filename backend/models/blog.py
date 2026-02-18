@@ -28,6 +28,8 @@ class BlogPostCreate(BaseModel):
     slug: Optional[str] = None  # Auto-generated if not provided
     content: str = Field(..., min_length=1)
     content_type: str = Field(default="rich_text")  # "rich_text" or "html"
+    custom_css: Optional[str] = None  # Custom CSS for HTML content
+    custom_js: Optional[str] = None  # Custom JavaScript for HTML content
     excerpt: Optional[str] = Field(None, max_length=500)
     featured_image: Optional[str] = None
     category: Optional[str] = None
@@ -41,6 +43,8 @@ class BlogPostUpdate(BaseModel):
     slug: Optional[str] = None
     content: Optional[str] = None
     content_type: Optional[str] = None
+    custom_css: Optional[str] = None
+    custom_js: Optional[str] = None
     excerpt: Optional[str] = Field(None, max_length=500)
     featured_image: Optional[str] = None
     category: Optional[str] = None
@@ -55,6 +59,8 @@ class BlogPostInDB(BaseModel):
     slug: str
     content: str
     content_type: str = "rich_text"  # "rich_text" or "html"
+    custom_css: Optional[str] = None
+    custom_js: Optional[str] = None
     excerpt: Optional[str] = None
     featured_image: Optional[str] = None
     category: Optional[str] = None
