@@ -588,6 +588,42 @@ async def change_user_role(
         "new_role": request.role
     }
 
+
+class BlogEditorToggleRequest(BaseModel):
+    is_blog_editor: bool
+
+
+@router.put("/users/{user_id}/blog-editor")
+async def toggle_blog_editor(
+    user_id: str,
+    request: BlogEditorToggleRequest,
+    admin_user: dict = Depends(get_owner_admin)
+):
+    """Toggle blog editor status for a user (owner only)"""
+    db = get_database()
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {
+            "is_blog_editor": request.is_blog_editor,
+            "updated_at": datetime.utcnow()
+        }}
+    )
+    
+    status_text = "granted" if request.is_blog_editor else "revoked"
+    return {
+        "message": f"Blog editor access {status_text}",
+        "user_id": user_id,
+        "is_blog_editor": request.is_blog_editor
+    }
+
 @router.get("/listings")
 async def get_all_listings(
     page: int = Query(1, ge=1),
