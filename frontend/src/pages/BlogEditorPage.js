@@ -337,6 +337,63 @@ const BlogEditorPage = () => {
               </p>
             </div>
 
+            {/* CSS and JavaScript Editors - Only shown in HTML mode */}
+            {contentType === 'html' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Custom CSS */}
+                <div className={`rounded-lg ${isDark ? 'bg-dark-400' : 'bg-white'} border ${isDark ? 'border-dark-300' : 'border-gray-200'} p-4`}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className={`w-3 h-3 rounded-full bg-blue-500`}></div>
+                    <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      Custom CSS
+                    </h3>
+                  </div>
+                  <textarea
+                    value={customCss}
+                    onChange={(e) => setCustomCss(e.target.value)}
+                    placeholder={`.my-class {\n  color: #fff;\n  background: #000;\n}`}
+                    rows={10}
+                    className={`w-full p-3 rounded-lg resize-y font-mono text-xs ${
+                      isDark 
+                        ? 'bg-dark-500 border border-dark-300 text-blue-300 placeholder-gray-600' 
+                        : 'bg-gray-50 border border-gray-200 text-blue-600 placeholder-gray-400'
+                    } focus:outline-none focus:border-blue-500`}
+                    style={{ minHeight: '200px' }}
+                    data-testid="post-css-input"
+                  />
+                  <p className={`mt-2 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                    Add custom CSS styles. Wrapped in {'<style>'} tags automatically.
+                  </p>
+                </div>
+
+                {/* Custom JavaScript */}
+                <div className={`rounded-lg ${isDark ? 'bg-dark-400' : 'bg-white'} border ${isDark ? 'border-dark-300' : 'border-gray-200'} p-4`}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className={`w-3 h-3 rounded-full bg-yellow-500`}></div>
+                    <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      Custom JavaScript
+                    </h3>
+                  </div>
+                  <textarea
+                    value={customJs}
+                    onChange={(e) => setCustomJs(e.target.value)}
+                    placeholder={`// Your JavaScript code here\nconsole.log('Hello from blog post!');`}
+                    rows={10}
+                    className={`w-full p-3 rounded-lg resize-y font-mono text-xs ${
+                      isDark 
+                        ? 'bg-dark-500 border border-dark-300 text-yellow-300 placeholder-gray-600' 
+                        : 'bg-gray-50 border border-gray-200 text-yellow-600 placeholder-gray-400'
+                    } focus:outline-none focus:border-yellow-500`}
+                    style={{ minHeight: '200px' }}
+                    data-testid="post-js-input"
+                  />
+                  <p className={`mt-2 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                    Add custom JavaScript. Wrapped in {'<script>'} tags automatically.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Preview */}
             {showPreview && (
               <div className={`rounded-lg ${isDark ? 'bg-dark-400' : 'bg-white'} border ${isDark ? 'border-dark-300' : 'border-gray-200'} p-6`}>
