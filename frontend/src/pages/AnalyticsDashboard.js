@@ -7,7 +7,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import {
   BarChart3, TrendingUp, DollarSign, Package, Users, Search, MessageSquare,
   ShoppingCart, Tag, AlertTriangle, RefreshCw, Calendar, Clock, ArrowUp, ArrowDown,
-  Activity, Target, Percent, Shield, Eye, Ticket, ChevronRight, Globe, ArrowLeft, X
+  Activity, Target, Percent, Shield, Eye, Ticket, ChevronRight, Globe, ArrowLeft, X, Edit3
 } from 'lucide-react';
 
 const AnalyticsDashboard = () => {
