@@ -69,6 +69,7 @@ async def get_blog_posts(
     current_user: Optional[dict] = Depends(get_current_user_optional)
 ):
     """Get blog posts. Public users only see published posts."""
+    db = get_database()
     query = {}
     
     # Public users only see published posts
