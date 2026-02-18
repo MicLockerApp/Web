@@ -312,10 +312,10 @@ async def update_blog_post(
     
     update_data["updated_at"] = datetime.now(timezone.utc)
     
-    await db.blogs.update_one({"id": blog_id}, {"$set": update_data})
+    await db.blogs.update_one({"_id": blog_id}, {"$set": update_data})
     
     # Get updated post
-    updated_post = await db.blogs.find_one({"id": blog_id})
+    updated_post = await db.blogs.find_one({"_id": blog_id})
     updated_post["id"] = str(updated_post.pop("_id"))
     
     logger.info(f"Blog post updated: {blog_id} by {current_user['username']}")
