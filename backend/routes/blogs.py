@@ -100,10 +100,10 @@ async def get_blog_post(
 ):
     """Get a single blog post by slug or ID."""
     db = get_database()
-    # Try to find by slug first, then by ID
+    # Try to find by slug first, then by ID (stored as _id)
     post = await db.blogs.find_one({"slug": slug_or_id})
     if not post:
-        post = await db.blogs.find_one({"id": slug_or_id})
+        post = await db.blogs.find_one({"_id": slug_or_id})
     
     if not post:
         raise HTTPException(status_code=404, detail="Blog post not found")
