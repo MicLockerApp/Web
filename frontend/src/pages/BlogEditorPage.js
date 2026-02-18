@@ -398,6 +398,9 @@ const BlogEditorPage = () => {
             {showPreview && (
               <div className={`rounded-lg ${isDark ? 'bg-dark-400' : 'bg-white'} border ${isDark ? 'border-dark-300' : 'border-gray-200'} p-6`}>
                 <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Preview</h3>
+                {contentType === 'html' && customCss && (
+                  <style dangerouslySetInnerHTML={{ __html: customCss }} />
+                )}
                 <div className={`prose max-w-none ${isDark ? 'prose-invert' : 'prose-gray'}`}>
                   {contentType === 'html' ? (
                     <div dangerouslySetInnerHTML={{ __html: content }} />
@@ -405,6 +408,11 @@ const BlogEditorPage = () => {
                     <div className="whitespace-pre-wrap">{content}</div>
                   )}
                 </div>
+                {contentType === 'html' && customJs && (
+                  <p className={`mt-4 text-xs ${isDark ? 'text-yellow-400' : 'text-yellow-600'}`}>
+                    ⚠️ JavaScript will execute when the post is viewed (not in preview for security).
+                  </p>
+                )}
               </div>
             )}
           </div>
