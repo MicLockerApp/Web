@@ -15,7 +15,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useDateRange } from '../context/DateRangeContext';
-import { adminAPI } from '../services/api';
+import api, { adminAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { 
   AlertCircle, RefreshCw, TrendingUp, BarChart3, Users, Package, 
