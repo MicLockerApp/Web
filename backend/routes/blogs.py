@@ -278,6 +278,12 @@ async def update_blog_post(
     if post_data.content_type is not None:
         update_data["content_type"] = post_data.content_type
     
+    if post_data.custom_css is not None:
+        update_data["custom_css"] = post_data.custom_css
+    
+    if post_data.custom_js is not None:
+        update_data["custom_js"] = post_data.custom_js
+    
     if post_data.excerpt is not None:
         update_data["excerpt"] = post_data.excerpt
     
