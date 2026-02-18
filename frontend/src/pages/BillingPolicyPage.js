@@ -302,6 +302,9 @@ const BillingPolicyPage = () => {
               <p className="mb-2">
                 Email: <a href="mailto:info@miclockerapp.com" className="text-primary hover:underline">info@miclockerapp.com</a>
               </p>
+              <p className="mb-2">
+                Phone: <a href="tel:+13146480249" className="text-primary hover:underline">+1 314-648-0249</a>
+              </p>
               <p>
                 Support: <Link to="/help" className="text-primary hover:underline">Contact Support</Link>
               </p>
