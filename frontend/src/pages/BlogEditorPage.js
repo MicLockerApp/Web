@@ -159,6 +159,8 @@ const BlogEditorPage = () => {
         slug: slug.trim() || undefined,
         content: content.trim(),
         content_type: contentType,
+        custom_css: contentType === 'html' ? (customCss.trim() || undefined) : undefined,
+        custom_js: contentType === 'html' ? (customJs.trim() || undefined) : undefined,
         excerpt: excerpt.trim() || undefined,
         featured_image: featuredImage || undefined,
         category: category || undefined,
