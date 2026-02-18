@@ -59,7 +59,7 @@ async def get_blog_categories():
     return BLOG_CATEGORIES
 
 
-@router.get("/", response_model=List[BlogPostResponse])
+@router.get("", response_model=List[BlogPostResponse])
 async def get_blog_posts(
     category: Optional[str] = None,
     tag: Optional[str] = None,
