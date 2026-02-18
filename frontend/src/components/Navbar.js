@@ -404,12 +404,12 @@ const Navbar = () => {
               <MapPin className="w-5 h-5" />
             </Link>
             <Link 
-              to="/help" 
+              to="/blog" 
               className={`p-2 ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`} 
-              data-testid="help-link"
-              title="Help Center"
+              data-testid="blog-link"
+              title="Blog"
             >
-              <HelpCircle className="w-5 h-5" />
+              <Newspaper className="w-5 h-5" />
             </Link>
 
             {isAuthenticated ? (
