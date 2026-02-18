@@ -185,11 +185,18 @@ const BlogEditorPage = () => {
         await api.put(`/blogs/${id}`, postData);
       } else {
         const res = await api.post('/blogs', postData);
+        if (publishStatus === 'draft') {
+          // Navigate to edit the newly created draft
+          navigate(`/blog/editor/${res.data.id}`);
+          fetchDrafts(); // Refresh drafts list
+          return;
+        }
         navigate(`/blog/${res.data.slug}`);
         return;
       }
 
       setStatus(publishStatus);
+      fetchDrafts(); // Refresh drafts list after saving
       alert(publishStatus === 'published' ? 'Post published!' : 'Draft saved!');
     } catch (error) {
       console.error('Error saving post:', error);
