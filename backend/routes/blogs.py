@@ -12,7 +12,7 @@ from models.blog import (
     BlogCommentCreate, BlogCommentInDB, BlogCommentResponse,
     BLOG_CATEGORIES
 )
-from routes.auth import get_current_user, get_optional_user
+from services.auth import get_current_user, get_current_user_optional
 from database import db
 
 logger = logging.getLogger(__name__)
