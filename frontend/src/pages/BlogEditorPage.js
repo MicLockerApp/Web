@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
   ArrowLeft, Save, Eye, Image, Video, Code, Type, Tag, Upload, X, 
-  ChevronDown, Loader2, Trash2, Globe, Lock, MessageCircle
+  ChevronDown, Loader2, Trash2, Globe, Lock, MessageCircle, FileText, ChevronRight
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -41,9 +41,12 @@ const BlogEditorPage = () => {
   const [uploading, setUploading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [autoSlug, setAutoSlug] = useState(true);
+  const [drafts, setDrafts] = useState([]);
+  const [showDrafts, setShowDrafts] = useState(false);
 
   useEffect(() => {
     fetchCategories();
+    fetchDrafts();
     if (isEditing) {
       fetchPost();
     }
