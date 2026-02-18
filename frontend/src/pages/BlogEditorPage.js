@@ -24,6 +24,8 @@ const BlogEditorPage = () => {
   const [slug, setSlug] = useState('');
   const [content, setContent] = useState('');
   const [contentType, setContentType] = useState('rich_text'); // 'rich_text' or 'html'
+  const [customCss, setCustomCss] = useState('');
+  const [customJs, setCustomJs] = useState('');
   const [excerpt, setExcerpt] = useState('');
   const [featuredImage, setFeaturedImage] = useState('');
   const [category, setCategory] = useState('');
