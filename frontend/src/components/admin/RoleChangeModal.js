@@ -1,12 +1,13 @@
 /**
  * RoleChangeModal Component
  * 
- * A dedicated modal for changing user roles.
+ * A dedicated modal for changing user roles and permissions.
  * Displays the user info and provides a dropdown to select a new role.
+ * Also includes toggles for special permissions like blog editing.
  */
 
-import React from 'react';
-import { X, Shield } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Shield, Edit3 } from 'lucide-react';
 import { ROLE_OPTIONS } from './utils';
 
 function RoleChangeModal({
@@ -16,13 +17,35 @@ function RoleChangeModal({
   selectedRole,
   setSelectedRole,
   onRoleChange,
+  onBlogEditorToggle,
   onClose
 }) {
+  const [isBlogEditor, setIsBlogEditor] = useState(selectedUser?.is_blog_editor || false);
+  const [blogEditorLoading, setBlogEditorLoading] = useState(false);
+
+  useEffect(() => {
+    if (selectedUser) {
+      setIsBlogEditor(selectedUser.is_blog_editor || false);
+    }
+  }, [selectedUser]);
+
   if (!selectedUser) {
     return null;
   }
 
   const isRoleUnchanged = selectedRole === (selectedUser.role || 'user');
+
+  const handleBlogEditorToggle = async () => {
+    setBlogEditorLoading(true);
+    try {
+      await onBlogEditorToggle(selectedUser.id, !isBlogEditor);
+      setIsBlogEditor(!isBlogEditor);
+    } catch (error) {
+      console.error('Error toggling blog editor:', error);
+    } finally {
+      setBlogEditorLoading(false);
+    }
+  };
 
   /**
    * Returns role badge styling based on role value.
@@ -39,7 +62,7 @@ function RoleChangeModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-dark-400 rounded-xl max-w-lg w-full p-6">
+      <div className="bg-dark-400 rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -75,10 +98,15 @@ function RoleChangeModal({
           <div className="flex-1">
             <p className="text-white font-bold text-lg">{selectedUser.username}</p>
             <p className="text-gray-400 text-sm">{selectedUser.email}</p>
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
               <span className={`badge text-xs capitalize ${getRoleBadgeClass(selectedUser.role)}`}>
                 Current: {selectedUser.role || 'user'}
               </span>
+              {isBlogEditor && (
+                <span className="badge text-xs bg-emerald-500/20 text-emerald-400">
+                  Blog Editor
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -117,6 +145,44 @@ function RoleChangeModal({
             <p><span className="text-cyan-400 font-semibold">Employee:</span> Limited admin access</p>
             <p><span className="text-gray-400 font-semibold">User:</span> Standard user account, no admin access</p>
           </div>
+        </div>
+
+        {/* Special Permissions Section */}
+        <div className="border-2 border-emerald-500/30 bg-emerald-500/10 rounded-xl p-4 mb-4">
+          <label className="block text-emerald-400 font-medium mb-3">
+            Special Permissions
+          </label>
+          
+          {/* Blog Editor Toggle */}
+          <div className="flex items-center justify-between p-3 bg-dark-300/50 rounded-lg">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-emerald-500/20 rounded-full flex items-center justify-center">
+                <Edit3 className="w-5 h-5 text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-white font-medium">Blog Editor</p>
+                <p className="text-gray-500 text-xs">Can create and edit blog posts</p>
+              </div>
+            </div>
+            <button
+              onClick={handleBlogEditorToggle}
+              disabled={blogEditorLoading}
+              className={`relative w-14 h-7 rounded-full transition-colors duration-200 ${
+                isBlogEditor ? 'bg-emerald-500' : 'bg-dark-200'
+              } ${blogEditorLoading ? 'opacity-50' : ''}`}
+              data-testid="blog-editor-toggle"
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform duration-200 ${
+                  isBlogEditor ? 'translate-x-7' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+          
+          <p className="text-xs text-gray-500 mt-3">
+            Note: Blog editors can create and edit posts, but only owners can publish them.
+          </p>
         </div>
 
         {/* Action Buttons */}
