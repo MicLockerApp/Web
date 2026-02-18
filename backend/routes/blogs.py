@@ -190,7 +190,7 @@ async def create_comment(
 # BLOG EDITOR/OWNER ENDPOINTS
 # ============================================================
 
-@router.post("/", response_model=BlogPostResponse)
+@router.post("", response_model=BlogPostResponse)
 async def create_blog_post(
     post_data: BlogPostCreate,
     current_user: dict = Depends(get_current_user)
