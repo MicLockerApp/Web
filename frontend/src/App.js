@@ -71,6 +71,9 @@ import VenueCalendarPage from './pages/VenueCalendarPage';
 import VenueBookingsPage from './pages/VenueBookingsPage';
 import ArtistBookingsPage from './pages/ArtistBookingsPage';
 import AuditionsPage from './pages/AuditionsPage';
+import BlogsPage from './pages/BlogsPage';
+import BlogDetailPage from './pages/BlogDetailPage';
+import BlogEditorPage from './pages/BlogEditorPage';
 
 // Initialize analytics on app load
 analytics.init();
