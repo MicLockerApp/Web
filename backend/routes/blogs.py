@@ -255,7 +255,7 @@ async def update_blog_post(
     if not can_manage_blogs(current_user):
         raise HTTPException(status_code=403, detail="You don't have permission to edit blog posts")
     
-    post = await db.blogs.find_one({"id": blog_id})
+    post = await db.blogs.find_one({"_id": blog_id})
     if not post:
         raise HTTPException(status_code=404, detail="Blog post not found")
     
@@ -267,7 +267,7 @@ async def update_blog_post(
     
     if post_data.slug is not None:
         # Check if new slug is unique
-        existing = await db.blogs.find_one({"slug": post_data.slug, "id": {"$ne": blog_id}})
+        existing = await db.blogs.find_one({"slug": post_data.slug, "_id": {"$ne": blog_id}})
         if existing:
             raise HTTPException(status_code=400, detail="Slug already exists")
         update_data["slug"] = post_data.slug
