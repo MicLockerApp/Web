@@ -219,6 +219,8 @@ async def create_blog_post(
         slug=slug,
         content=post_data.content,
         content_type=post_data.content_type,
+        custom_css=post_data.custom_css,
+        custom_js=post_data.custom_js,
         excerpt=post_data.excerpt,
         featured_image=post_data.featured_image,
         category=post_data.category,
