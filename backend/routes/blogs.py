@@ -66,7 +66,7 @@ async def get_blog_posts(
     status: Optional[str] = "published",
     limit: int = Query(20, ge=1, le=100),
     skip: int = Query(0, ge=0),
-    current_user: Optional[dict] = Depends(get_optional_user)
+    current_user: Optional[dict] = Depends(get_current_user_optional)
 ):
     """Get blog posts. Public users only see published posts."""
     query = {}
@@ -95,7 +95,7 @@ async def get_blog_posts(
 @router.get("/{slug_or_id}", response_model=BlogPostResponse)
 async def get_blog_post(
     slug_or_id: str,
-    current_user: Optional[dict] = Depends(get_optional_user)
+    current_user: Optional[dict] = Depends(get_current_user_optional)
 ):
     """Get a single blog post by slug or ID."""
     # Try to find by slug first, then by ID
