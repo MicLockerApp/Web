@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Calendar, User, Eye, MessageCircle, Tag, Search, Filter, ChevronRight, Newspaper, Edit3 } from 'lucide-react';
+import { Calendar, Eye, MessageCircle, Tag, Search, Filter, Newspaper } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
 const BlogsPage = () => {
   const { isDark } = useTheme();
-  const { user, isAuthenticated } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   
   const [posts, setPosts] = useState([]);
@@ -15,9 +13,6 @@ const BlogsPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || '');
-  
-  // Check if user can manage blogs (owner or blog_editor)
-  const canManageBlogs = user?.role === 'owner' || user?.is_blog_editor;
 
   useEffect(() => {
     fetchCategories();
