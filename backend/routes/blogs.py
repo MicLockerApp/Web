@@ -13,7 +13,7 @@ from models.blog import (
     BLOG_CATEGORIES
 )
 from services.auth import get_current_user, get_current_user_optional
-from database import db
+from database import get_database
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/blogs", tags=["blogs"])
