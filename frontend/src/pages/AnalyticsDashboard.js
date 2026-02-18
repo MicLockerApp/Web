@@ -202,6 +202,18 @@ const AnalyticsDashboard = () => {
               </button>
             )}
             
+            {/* New Blog Post Button - Only for Owner/Blog Editors */}
+            {canManageBlogs && (
+              <Link
+                to="/blog/editor"
+                className="px-3 py-1.5 text-xs rounded-lg bg-primary/20 border border-primary/30 text-primary hover:bg-primary/30 transition-colors flex items-center gap-1"
+                data-testid="new-blog-post-btn"
+              >
+                <Edit3 className="w-3 h-3" />
+                New Blog Post
+              </Link>
+            )}
+            
             {/* Quick date presets */}
             <div className="flex gap-1">
               <button
