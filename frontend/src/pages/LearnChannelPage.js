@@ -13,7 +13,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
   Play, Star, Users, Heart, Share2, Flag, ChevronDown, 
-  Lock, Unlock, Clock, Eye, MessageSquare, Check, X, Loader2
+  Lock, Unlock, Clock, Eye, MessageSquare, Check, X, Loader2, Bell
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -63,7 +63,7 @@ const VideoCard = ({ video, isOwner }) => {
   );
 };
 
-// Playlist Card
+// Playlist Card with reviews
 const PlaylistCard = ({ playlist, onView }) => {
   const { isDark } = useTheme();
   
@@ -107,10 +107,22 @@ const PlaylistCard = ({ playlist, onView }) => {
           <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>
             {playlist.view_count || 0} views
           </span>
+          {/* Show ratings prominently for paid playlists */}
           {playlist.average_rating > 0 && (
             <span className="flex items-center gap-1 text-yellow-500">
               <Star className="w-3 h-3 fill-current" />
               {playlist.average_rating.toFixed(1)}
+              {playlist.review_count > 0 && (
+                <span className={`${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                  ({playlist.review_count})
+                </span>
+              )}
+            </span>
+          )}
+          {/* Show "No reviews yet" for paid playlists without reviews */}
+          {!playlist.is_free && playlist.average_rating === 0 && (
+            <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+              No reviews yet
             </span>
           )}
         </div>
@@ -119,8 +131,8 @@ const PlaylistCard = ({ playlist, onView }) => {
   );
 };
 
-// Subscription Tier Card
-const TierCard = ({ tier, isSubscribed, onSubscribe }) => {
+// Subscription Tier Card - For PAID monthly subscriptions
+const TierCard = ({ tier, isPurchased, onPurchase }) => {
   const { isDark } = useTheme();
   
   return (
@@ -157,15 +169,15 @@ const TierCard = ({ tier, isSubscribed, onSubscribe }) => {
         )}
       </ul>
       <button
-        onClick={() => onSubscribe(tier)}
-        disabled={isSubscribed}
+        onClick={() => onPurchase(tier)}
+        disabled={isPurchased}
         className={`w-full py-2 rounded-lg font-medium transition-colors ${
-          isSubscribed 
+          isPurchased 
             ? 'bg-green-500 text-white cursor-not-allowed'
             : 'bg-primary text-black hover:bg-primary/90'
         }`}
       >
-        {isSubscribed ? 'Subscribed' : 'Subscribe'}
+        {isPurchased ? 'Purchased' : 'Purchase'}
       </button>
     </div>
   );
@@ -232,8 +244,8 @@ const LearnChannelPage = () => {
   const [channel, setChannel] = useState(null);
   const [content, setContent] = useState({ free_videos: [], playlists: [], subscription_tiers: [] });
   const [reviews, setReviews] = useState([]);
-  const [isSubscribed, setIsSubscribed] = useState(false);
-  const [subscribedTierId, setSubscribedTierId] = useState(null);
+  const [isFollowing, setIsFollowing] = useState(false);  // Free follow for notifications
+  const [purchasedTierId, setPurchasedTierId] = useState(null);  // Paid subscription tier
   const [activeTab, setActiveTab] = useState('videos');
   const [showSignUpModal, setShowSignUpModal] = useState(false);
   const [playingIntro, setPlayingIntro] = useState(false);
@@ -252,17 +264,22 @@ const LearnChannelPage = () => {
       const reviewsRes = await api.get(`/learn/reviews/channel/${channelId}?limit=10`);
       setReviews(reviewsRes.data);
       
-      // Check subscription status if logged in
+      // Check follow and subscription status if logged in
       if (isAuthenticated) {
         try {
+          // Check if following (free)
+          const followRes = await api.get('/learn/following');
+          const isFollowingChannel = followRes.data.some(f => f.channel_id === channelId);
+          setIsFollowing(isFollowingChannel);
+          
+          // Check purchased tier subscriptions
           const subsRes = await api.get('/learn/subscriptions');
-          const sub = subsRes.data.find(s => s.id === channelId);
-          if (sub) {
-            setIsSubscribed(true);
-            // Would need to fetch tier info separately
+          const purchasedTier = subsRes.data.find(s => s.channel_id === channelId);
+          if (purchasedTier) {
+            setPurchasedTierId(purchasedTier.tier_id);
           }
         } catch (e) {
-          console.log('Not subscribed');
+          console.log('Not following or subscribed');
         }
       }
     } catch (error) {
@@ -276,36 +293,50 @@ const LearnChannelPage = () => {
     fetchChannel();
   }, [fetchChannel]);
 
-  // Subscribe to channel
-  const handleSubscribe = async (tier = null) => {
+  // Follow channel (FREE - for notifications)
+  const handleFollow = async () => {
     if (!isAuthenticated) {
       setShowSignUpModal(true);
       return;
     }
     
     try {
-      const url = tier 
-        ? `/learn/channels/${channelId}/subscribe?tier_id=${tier.id}`
-        : `/learn/channels/${channelId}/subscribe`;
-      await api.post(url);
-      setIsSubscribed(true);
-      if (tier) setSubscribedTierId(tier.id);
+      await api.post(`/learn/channels/${channelId}/follow`);
+      setIsFollowing(true);
       setChannel(prev => ({ ...prev, subscriber_count: (prev.subscriber_count || 0) + 1 }));
     } catch (error) {
-      console.error('Error subscribing:', error);
+      console.error('Error following:', error);
     }
   };
 
-  // Unsubscribe
-  const handleUnsubscribe = async () => {
+  // Unfollow channel (FREE)
+  const handleUnfollow = async () => {
     try {
-      await api.delete(`/learn/channels/${channelId}/subscribe`);
-      setIsSubscribed(false);
-      setSubscribedTierId(null);
+      await api.delete(`/learn/channels/${channelId}/follow`);
+      setIsFollowing(false);
       setChannel(prev => ({ ...prev, subscriber_count: Math.max(0, (prev.subscriber_count || 1) - 1) }));
     } catch (error) {
-      console.error('Error unsubscribing:', error);
+      console.error('Error unfollowing:', error);
     }
+  };
+
+  // Purchase tier subscription (PAID - monthly)
+  const handlePurchaseTier = async (tier) => {
+    if (!isAuthenticated) {
+      setShowSignUpModal(true);
+      return;
+    }
+    
+    // For now, show alert - will integrate Stripe later
+    alert(`Payment integration coming soon!\n\nYou're purchasing: ${tier.name}\nPrice: $${tier.price_usd}/month\n\nThis will be connected to Stripe for secure payments.`);
+    
+    // Uncomment when Stripe is integrated:
+    // try {
+    //   await api.post(`/learn/channels/${channelId}/purchase-tier`, { tier_id: tier.id });
+    //   setPurchasedTierId(tier.id);
+    // } catch (error) {
+    //   console.error('Error purchasing tier:', error);
+    // }
   };
 
   if (loading) return <LoadingSpinner />;
@@ -363,20 +394,20 @@ const LearnChannelPage = () => {
           {/* Actions */}
           <div className="flex gap-2">
             {!isOwner && (
-              isSubscribed ? (
+              isFollowing ? (
                 <button 
-                  onClick={handleUnsubscribe}
+                  onClick={handleUnfollow}
                   className="btn btn-secondary flex items-center gap-2"
                 >
                   <Check className="w-4 h-4" />
-                  Subscribed
+                  Following
                 </button>
               ) : (
                 <button 
-                  onClick={() => handleSubscribe()}
+                  onClick={handleFollow}
                   className="btn btn-primary flex items-center gap-2"
                 >
-                  <Heart className="w-4 h-4" />
+                  <Bell className="w-4 h-4" />
                   Subscribe
                 </button>
               )
@@ -486,8 +517,8 @@ const LearnChannelPage = () => {
                     <TierCard 
                       key={tier.id} 
                       tier={tier} 
-                      isSubscribed={subscribedTierId === tier.id}
-                      onSubscribe={handleSubscribe}
+                      isPurchased={purchasedTierId === tier.id}
+                      onPurchase={handlePurchaseTier}
                     />
                   ))}
                 </div>

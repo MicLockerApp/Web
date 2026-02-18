@@ -10,6 +10,7 @@ export { default as UsersTab } from './UsersTab';
 export { default as ListingsTab } from './ListingsTab';
 export { default as OrdersTab } from './OrdersTab';
 export { default as EmployeesTab } from './EmployeesTab';
+export { default as LearnBannersTab } from './LearnBannersTab';
 
 // Modal Components
 export { default as UserActionModal } from './UserActionModal';

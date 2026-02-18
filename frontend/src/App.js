@@ -62,6 +62,10 @@ import EUDataPolicyPage from './pages/EUDataPolicyPage';
 import AdminReportsPage from './pages/AdminReportsPage';
 import GigsPage from './pages/GigsPage';
 import LearnPage from './pages/LearnPage';
+import LearnChannelPage from './pages/LearnChannelPage';
+import LearnPlaylistPage from './pages/LearnPlaylistPage';
+import LearnStudioPage from './pages/LearnStudioPage';
+import LearnVideoPage from './pages/LearnVideoPage';
 import MapPage from './pages/MapPage';
 import VenueCalendarPage from './pages/VenueCalendarPage';
 import VenueBookingsPage from './pages/VenueBookingsPage';
@@ -83,9 +87,21 @@ const Layout = ({ children }) => {
     analytics.pageView(location.pathname, { search: location.search });
   }, [location.pathname, location.search]);
 
-  if (isJobsPage || isAuditionsPage) {
-    // Jobs page and Feed page have their own layout
+  if (isJobsPage) {
+    // Jobs page has its own layout
     return <>{children}</>;
+  }
+
+  if (isAuditionsPage) {
+    // Auditions page: show navbar but no footer/banner
+    return (
+      <div className={`flex flex-col min-h-screen transition-colors duration-300 ${isDark ? 'bg-dark-600' : 'bg-gray-50'}`}>
+        <Navbar />
+        <main className="flex-1">
+          {children}
+        </main>
+      </div>
+    );
   }
 
   return (
@@ -126,7 +142,7 @@ function AppContent() {
           <ReviewGatingWrapper>
             <Layout>
               <Routes>
-              <Route path="/" element={<AuditionsPage />} />
+              <Route path="/" element={<HomePage />} />
               <Route path="/auditions" element={<AuditionsPage />} />
               <Route path="/gear" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
@@ -150,6 +166,10 @@ function AppContent() {
               <Route path="/auditions" element={<AuditionsPage />} />
               <Route path="/gigs" element={<GigsPage />} />
               <Route path="/learn" element={<LearnPage />} />
+              <Route path="/learn/channel/:channelId" element={<LearnChannelPage />} />
+              <Route path="/learn/playlist/:playlistId" element={<LearnPlaylistPage />} />
+              <Route path="/learn/video/:videoId" element={<LearnVideoPage />} />
+              <Route path="/learn/studio" element={<LearnStudioPage />} />
               <Route path="/map" element={<MapPage />} />
               <Route path="/venue/:venueId/calendar" element={<VenueCalendarPage />} />
               <Route path="/venue/bookings" element={<VenueBookingsPage />} />

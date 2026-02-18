@@ -23,7 +23,7 @@ const Navbar = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   
   // Check if we're on the auditions feed page (hide search/chatbot there)
-  const isAuditionsPage = location.pathname === '/auditions' || location.pathname === '/';
+  const isAuditionsPage = location.pathname === '/auditions';
   const [notificationCount, setNotificationCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -196,7 +196,7 @@ const Navbar = () => {
       isDark 
         ? 'bg-dark-600 border-dark-300' 
         : 'bg-white border-gray-200 shadow-sm'
-    } ${isImmersiveMode && isAuditionsPage ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100'}`}>
+    }`}>
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo - Always show MicLocker text */}
@@ -370,7 +370,7 @@ const Navbar = () => {
 
             {/* Auditions icon */}
             <Link 
-              to="/" 
+              to="/auditions" 
               className={`p-2 ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`} 
               data-testid="auditions-link"
               title="Auditions"
@@ -684,7 +684,7 @@ const Navbar = () => {
           <div className={`md:hidden py-4 border-t ${isDark ? 'border-dark-300' : 'border-gray-200'}`}>
             <div className="flex flex-col gap-2">
               <Link
-                to="/"
+                to="/auditions"
                 className={`flex items-center gap-2 py-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
                 onClick={() => setMobileMenuOpen(false)}
               >

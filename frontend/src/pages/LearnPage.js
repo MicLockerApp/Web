@@ -20,20 +20,20 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 
-// Categories matching the rest of the site
+// Categories matching user signup categories
 const LEARN_CATEGORIES = [
   { value: 'musician', label: 'Musicians', icon: '🎸' },
-  { value: 'audio_engineer', label: 'Audio Engineering', icon: '🎛️' },
+  { value: 'audio_engineer', label: 'Audio Engineers', icon: '🎛️' },
   { value: 'recording_studio', label: 'Recording Studios', icon: '🎙️' },
   { value: 'venue', label: 'Venues', icon: '🏟️' },
-  { value: 'dj', label: 'DJs', icon: '🎧' },
-  { value: 'producer', label: 'Producers', icon: '🎹' },
-  { value: 'songwriter', label: 'Songwriters', icon: '✍️' },
-  { value: 'vocalist', label: 'Vocalists', icon: '🎤' },
-  { value: 'session_musician', label: 'Session Musicians', icon: '🎻' },
-  { value: 'music_teacher', label: 'Music Teachers', icon: '📚' },
-  { value: 'band', label: 'Bands', icon: '🎪' },
-  { value: 'other', label: 'Other', icon: '🎵' }
+  { value: 'merchant', label: 'Merchants', icon: '🛍️' },
+  { value: 'comedian', label: 'Comedians', icon: '🎭' },
+  { value: 'actor', label: 'Actors', icon: '🎬' },
+  { value: 'show_pro', label: 'Show Pro', icon: '💡' },
+  { value: 'photographer', label: 'Photographers', icon: '📷' },
+  { value: 'videographer', label: 'Videographers', icon: '🎥' },
+  { value: 'manager', label: 'Managers', icon: '📋' },
+  { value: 'services', label: 'Services', icon: '✂️' }
 ];
 
 // Banner Carousel Component

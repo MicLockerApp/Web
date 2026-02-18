@@ -1,14 +1,27 @@
 # MicLocker - Creative Professionals Marketplace
 
 ## Overview
-MicLocker is a full-stack marketplace for creative professionals featuring a TikTok-style "Auditions" video feed as its homepage. Users can discover talent through vertical video browsing, post gigs, and connect with industry professionals.
+MicLocker is a full-stack marketplace for creative professionals featuring:
+- **Gear Marketplace** - Buy/sell equipment and services (Homepage at `/`)
+- **Auditions Feed** - TikTok-style vertical video feed (`/auditions`)
+- **Learn Section** - Educational content platform (`/learn`)
+- **Gig Board** - Job postings for creative professionals (`/gigs`)
+
+## Mobile App Handoff Documentation
+- **Comprehensive Handoff:** `/app/docs/MOBILE_HANDOFF.md`
+- **API Reference:** `/app/docs/API_REFERENCE.md`
+- **OpenAPI Spec:** `/app/docs/openapi.json`
 
 ## Tech Stack
 - **Frontend**: React with Tailwind CSS
 - **Backend**: FastAPI (Python)
 - **Database**: MongoDB
 - **Storage**: AWS S3 for media uploads
-- **Payments**: Stripe + Stripe Connect
+- **Payments**: Stripe + Stripe Connect (MOCKED - not connected)
+
+## Production URLs
+- **Web:** https://miclockerapp.com
+- **API Base:** https://miclockerapp.com/api
 
 ## Core Features
 
@@ -172,14 +185,96 @@ CI=false
 - `GET /api/gigs/{id}`
 - `DELETE /api/gigs/{id}`
 
+## Learn Section (February 2026)
+
+### Overview
+Educational content platform inspired by CreativeLive.com where users can create channels, upload video courses, and monetize content.
+
+### Features Implemented
+- **Learn Homepage** (`/learn`): Banner carousel, category filtering, trending channels, all channels section, search/filter
+- **Channel Page** (`/learn/channel/:id`): Channel info, intro video, tabbed content (Free Videos, Playlists, Subscription Tiers, Reviews), subscribe button
+- **Playlist Page** (`/learn/playlist/:id`): Playlist info, video list, stats sidebar, save/share buttons
+- **Video Page** (`/learn/video/:id`): Video player with controls, related videos, channel info, reviews
+- **Creator Studio** (`/learn/studio`): Channel settings, playlist management, video management, subscription tier management (login required)
+
+### Backend API Endpoints
+- `GET /api/learn/channels` - List channels with filters
+- `GET /api/learn/channels/trending` - Trending channels
+- `GET /api/learn/channels/my` - User's own channel
+- `GET /api/learn/channels/:id` - Channel details
+- `GET /api/learn/channels/:id/content` - Channel content (videos, playlists, tiers)
+- `POST/PUT /api/learn/channels` - Create/update channel
+- `GET/POST/PUT/DELETE /api/learn/playlists` - Playlist CRUD
+- `GET/POST/PUT/DELETE /api/learn/videos` - Video CRUD
+- `GET/POST/PUT/DELETE /api/learn/channels/:id/tiers` - Subscription tier CRUD
+- `POST/DELETE /api/learn/channels/:id/subscribe` - Channel subscription
+- `POST/DELETE /api/learn/favorites/:type/:id` - Favorites
+- `GET/POST /api/learn/reviews/:type/:id` - Reviews
+- `GET /api/learn/search` - Search channels, playlists, videos
+- `GET/POST/PUT/DELETE /api/learn/banners` - Admin banner management
+
+### Files Created
+- `/app/backend/models/learn.py` - Pydantic models
+- `/app/backend/routes/learn.py` - API routes
+- `/app/frontend/src/pages/LearnPage.js` - Homepage
+- `/app/frontend/src/pages/LearnChannelPage.js` - Channel view
+- `/app/frontend/src/pages/LearnPlaylistPage.js` - Playlist view
+- `/app/frontend/src/pages/LearnVideoPage.js` - Video player
+- `/app/frontend/src/pages/LearnStudioPage.js` - Creator studio
+
+### MOCKED Features
+- **Payment Integration**: Purchase buttons show alert placeholder (Stripe not connected)
+- Payment will need Stripe integration for one-time purchases and recurring subscriptions
+
+### Test Data (Feb 13, 2026 - Expanded)
+- **12 Channels** across all user categories (Musicians, Audio Engineers, Recording Studios, etc.)
+- **36 Playlists** with mix of free and paid content ($39.99 - $149.99)
+- **120+ Videos** with both free and paid content
+- **81 Reviews** with ratings on paid playlists
+
+Sample channels:
+- Music Academy (Musicians) - Guitar, Piano, Drums courses
+- Audio Engineering School - Mixing, Mastering courses
+- Acting School - Film acting, Audition techniques
+- Comedy Academy - Stand-up, Improv courses
+- Photography Institute - Concert, Portrait photography
+- Film School - Music videos, Live streaming
+- Stage Production Academy - Lighting, Sound tech
+- Music Business School - Artist management, Tour management
+
+### Category & Subcategory Support
+Learn section uses the same 12 main categories as user signup:
+1. Musicians (Guitar, Piano, Drums, Bass, Vocals, etc.)
+2. Audio Engineers (Mixing, Mastering, Live Sound, Producers, etc.)
+3. Recording Studios (Studios, Rehearsal Rooms, Equipment, etc.)
+4. Venues (Concert Hall, Club, Theater, Festival, etc.)
+5. Merchants (Clothing, Vinyl, Instruments, etc.)
+6. Comedians (Stand-up, Improv, Sketch, Musical, etc.)
+7. Actors (Film, Theater, Voice, Commercial, etc.)
+8. Show Pro (Lighting, Stage Manager, Sound Tech, etc.)
+9. Photographers (Concert, Portrait, Event, Product, etc.)
+10. Videographers (Music Video, Live Stream, Documentary, etc.)
+11. Managers (Artist Manager, Tour Manager, Booking Agent, etc.)
+12. Services (Hair, Makeup, Wardrobe, Personal Trainer, etc.)
+
+Creators can select subcategories when creating channels and playlists for better filtering.
+
 ## Pending Tasks
+
+### P0 (In Progress)
+- ✅ Learn Section scaffolding (COMPLETED Feb 13, 2026)
+- ✅ Categories aligned with user signup (COMPLETED Feb 13, 2026)
+- ✅ Seed data with 10+ videos per category (COMPLETED Feb 13, 2026)
+- ✅ Playlist ratings visible in channel view (COMPLETED Feb 13, 2026)
+- ✅ Paywall flow with locked content indicators (COMPLETED Feb 13, 2026)
 
 ### P1 (High Priority)
 - Fix Direct Message Image Uploader (recurring issue)
+- Integrate Stripe for Learn section payments
 
 ### P2 (Medium Priority)
-- Admin user deletion feedback
-- "Learn" feature implementation
+- Admin user deletion feedback (user de-prioritized)
+- Admin banner management UI for Learn section
 
 ### P3 (Low Priority)
 - Email delivery (AWS SES)
@@ -189,3 +284,4 @@ CI=false
 - Gig post expiration dates
 - Server-side video thumbnails
 - Elasticsearch integration
+- Learn section search integration with main site search

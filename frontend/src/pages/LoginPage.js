@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { Eye, EyeOff } from 'lucide-react';
 import VinylLogo from '../components/VinylLogo';
 import GoogleSignInButton from '../components/GoogleSignInButton';
 import analytics from '../services/analytics';
@@ -13,6 +14,7 @@ const LoginPage = () => {
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -69,13 +71,24 @@ const LoginPage = () => {
 
           <div className="mb-6">
             <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Password</label>
-            <input
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              required
-              data-testid="login-password"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                required
+                data-testid="login-password"
+                className="pr-12"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-700'}`}
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
 
           <button

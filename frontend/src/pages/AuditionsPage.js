@@ -1137,7 +1137,7 @@ const AuditionsPage = () => {
   return (
     <div 
       ref={containerRef}
-      className={`fixed inset-0 ${isDark ? 'bg-dark-600' : 'bg-gray-900'} flex items-center justify-center pt-16`}
+      className={`fixed inset-0 top-16 ${isDark ? 'bg-dark-600' : 'bg-gray-900'} flex items-center justify-center`}
       style={{ touchAction: 'none' }}
       onTouchStart={handleOuterTouch}
       onTouchMove={handleOuterTouch}

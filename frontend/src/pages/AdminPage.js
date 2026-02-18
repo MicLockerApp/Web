@@ -19,7 +19,7 @@ import { adminAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { 
   AlertCircle, RefreshCw, TrendingUp, BarChart3, Users, Package, 
-  ShoppingCart, Briefcase
+  ShoppingCart, Briefcase, GraduationCap
 } from 'lucide-react';
 
 // Admin components
@@ -29,6 +29,7 @@ import {
   ListingsTab,
   OrdersTab,
   EmployeesTab,
+  LearnBannersTab,
   UserActionModal,
   AddEmployeeModal,
   EditEmployeeModal,
@@ -452,6 +453,11 @@ const AdminPage = () => {
       baseTabs.push({ id: 'employees', label: 'Team', icon: Briefcase });
     }
 
+    // Learn Banners tab - only for admin/owner
+    if (canSeeAllStats) {
+      baseTabs.push({ id: 'learn-banners', label: 'Learn Banners', icon: GraduationCap });
+    }
+
     return baseTabs;
   };
 
@@ -587,6 +593,10 @@ const AdminPage = () => {
             onUpdateRole={handleUpdateEmployeeRole}
             onDelete={handleDeleteEmployee}
           />
+        )}
+
+        {activeTab === 'learn-banners' && canSeeAllStats && (
+          <LearnBannersTab />
         )}
 
         {/* Modals */}

@@ -21,21 +21,37 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 
-// Categories
+// Categories matching user signup
 const CATEGORIES = [
   { value: 'musician', label: 'Musicians' },
-  { value: 'audio_engineer', label: 'Audio Engineering' },
+  { value: 'audio_engineer', label: 'Audio Engineers' },
   { value: 'recording_studio', label: 'Recording Studios' },
   { value: 'venue', label: 'Venues' },
-  { value: 'dj', label: 'DJs' },
-  { value: 'producer', label: 'Producers' },
-  { value: 'songwriter', label: 'Songwriters' },
-  { value: 'vocalist', label: 'Vocalists' },
-  { value: 'session_musician', label: 'Session Musicians' },
-  { value: 'music_teacher', label: 'Music Teachers' },
-  { value: 'band', label: 'Bands' },
-  { value: 'other', label: 'Other' }
+  { value: 'merchant', label: 'Merchants' },
+  { value: 'comedian', label: 'Comedians' },
+  { value: 'actor', label: 'Actors' },
+  { value: 'show_pro', label: 'Show Pro' },
+  { value: 'photographer', label: 'Photographers' },
+  { value: 'videographer', label: 'Videographers' },
+  { value: 'manager', label: 'Managers' },
+  { value: 'services', label: 'Services' }
 ];
+
+// Subcategories by main category
+const SUBCATEGORIES = {
+  musician: ["Guitar", "Piano", "Drums", "Bass", "Vocals", "Violin", "Saxophone", "Trumpet", "Keyboard", "Percussion"],
+  audio_engineer: ["Mixing Engineers", "Mastering Engineers", "Live Sound", "Producers", "Sound Design", "Post Production", "Podcast", "Game Audio"],
+  recording_studio: ["Recording Studios", "Rehearsal Rooms", "Equipment Rental", "Acoustics"],
+  venue: ["Concert Hall", "Club", "Theater", "Festival Grounds", "Outdoor Venue"],
+  merchant: ["Clothing", "Vinyl Records", "Instruments", "Accessories", "Equipment"],
+  comedian: ["Stand-up", "Improv", "Sketch Comedy", "Musical Comedy", "Physical Comedy"],
+  actor: ["Film Actor", "Theater Actor", "Voice Actor", "Commercial Actor", "Stunt Performer"],
+  show_pro: ["Lighting Designer", "Stage Manager", "Sound Technician", "Technical Director", "Rigging"],
+  photographer: ["Concert Photographer", "Portrait Photographer", "Event Photographer", "Product Photographer"],
+  videographer: ["Music Video Director", "Live Stream Operator", "Documentary Filmmaker", "Video Editor"],
+  manager: ["Artist Manager", "Tour Manager", "Business Manager", "Booking Agent"],
+  services: ["Hair Stylist", "Makeup Artist", "Wardrobe Stylist", "Personal Trainer", "Catering"]
+};
 
 const LearnStudioPage = () => {
   const { isDark } = useTheme();
@@ -57,6 +73,7 @@ const LearnStudioPage = () => {
     name: '',
     description: '',
     category: 'musician',
+    subcategories: [],
     intro_video_url: '',
     intro_video_thumbnail: '',
     banner_image: ''
@@ -69,7 +86,7 @@ const LearnStudioPage = () => {
     title: '',
     description: '',
     category: 'musician',
-    subcategory: '',
+    subcategories: [],
     is_free: false,
     price_usd: 0,
     thumbnail_url: ''
@@ -300,6 +317,7 @@ const LearnStudioPage = () => {
   };
 
   const resetTierForm = () => {
+    setEditingTier(null);
     setTierForm({
       name: '', description: '', price_usd: 0, benefits: [], includes_all_content: false
     });
@@ -453,7 +471,7 @@ const LearnStudioPage = () => {
                 </label>
                 <select
                   value={channelForm.category}
-                  onChange={(e) => setChannelForm(prev => ({ ...prev, category: e.target.value }))}
+                  onChange={(e) => setChannelForm(prev => ({ ...prev, category: e.target.value, subcategories: [] }))}
                   className={`w-full px-4 py-2 rounded-lg ${
                     isDark ? 'bg-dark-500 text-white border-dark-300' : 'bg-gray-50 text-gray-900 border-gray-200'
                   } border`}
@@ -463,6 +481,40 @@ const LearnStudioPage = () => {
                   ))}
                 </select>
               </div>
+              
+              {/* Subcategories */}
+              {SUBCATEGORIES[channelForm.category] && (
+                <div className="md:col-span-2">
+                  <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Subcategories (Select topics you cover)
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {SUBCATEGORIES[channelForm.category].map(sub => (
+                      <button
+                        key={sub}
+                        type="button"
+                        onClick={() => {
+                          setChannelForm(prev => ({
+                            ...prev,
+                            subcategories: prev.subcategories.includes(sub)
+                              ? prev.subcategories.filter(s => s !== sub)
+                              : [...prev.subcategories, sub]
+                          }));
+                        }}
+                        className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
+                          channelForm.subcategories.includes(sub)
+                            ? 'bg-primary text-black'
+                            : isDark 
+                              ? 'bg-dark-500 text-gray-300 hover:bg-dark-400' 
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {sub}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               
               <div className="md:col-span-2">
                 <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -789,7 +841,7 @@ const LearnStudioPage = () => {
                 </label>
                 <select
                   value={playlistForm.category}
-                  onChange={(e) => setPlaylistForm(prev => ({ ...prev, category: e.target.value }))}
+                  onChange={(e) => setPlaylistForm(prev => ({ ...prev, category: e.target.value, subcategories: [] }))}
                   className={`w-full px-4 py-2 rounded-lg ${isDark ? 'bg-dark-500 text-white' : 'bg-gray-50 text-gray-900'} border ${isDark ? 'border-dark-300' : 'border-gray-200'}`}
                 >
                   {CATEGORIES.map(cat => (
@@ -797,6 +849,40 @@ const LearnStudioPage = () => {
                   ))}
                 </select>
               </div>
+              
+              {/* Subcategories for playlist */}
+              {SUBCATEGORIES[playlistForm.category] && (
+                <div className="md:col-span-2">
+                  <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Subcategories
+                  </label>
+                  <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
+                    {SUBCATEGORIES[playlistForm.category].map(sub => (
+                      <button
+                        key={sub}
+                        type="button"
+                        onClick={() => {
+                          setPlaylistForm(prev => ({
+                            ...prev,
+                            subcategories: (prev.subcategories || []).includes(sub)
+                              ? prev.subcategories.filter(s => s !== sub)
+                              : [...(prev.subcategories || []), sub]
+                          }));
+                        }}
+                        className={`px-2 py-1 rounded-full text-xs transition-colors ${
+                          (playlistForm.subcategories || []).includes(sub)
+                            ? 'bg-primary text-black'
+                            : isDark 
+                              ? 'bg-dark-500 text-gray-300 hover:bg-dark-400' 
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {sub}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               
               <div>
                 <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
