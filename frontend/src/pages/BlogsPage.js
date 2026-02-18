@@ -86,16 +86,6 @@ const BlogsPage = () => {
                 Industry insights, gear reviews, and stories from the music community
               </p>
             </div>
-            {canManageBlogs && (
-              <Link
-                to="/blog/editor"
-                className="btn btn-primary flex items-center gap-2"
-                data-testid="create-post-btn"
-              >
-                <Edit3 className="w-5 h-5" />
-                New Post
-              </Link>
-            )}
           </div>
         </div>
       </div>
