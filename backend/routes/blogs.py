@@ -333,7 +333,7 @@ async def delete_blog_post(
     if current_user.get("role") != "owner":
         raise HTTPException(status_code=403, detail="Only the owner can delete blog posts")
     
-    result = await db.blogs.delete_one({"id": blog_id})
+    result = await db.blogs.delete_one({"_id": blog_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Blog post not found")
     
