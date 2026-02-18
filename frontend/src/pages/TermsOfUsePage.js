@@ -520,6 +520,9 @@ const TermsOfUsePage = () => {
                 <strong>General Inquiries:</strong> info@miclockerapp.com
               </p>
               <p className={`mt-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                <strong>Phone:</strong> <a href="tel:+13146480249" className="text-primary hover:underline">+1 314-648-0249</a>
+              </p>
+              <p className={`mt-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 <strong>Legal Notices:</strong> legal@miclockerapp.com
               </p>
               <p className={`mt-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
