@@ -89,6 +89,8 @@ class BlogPostResponse(BaseModel):
     slug: str
     content: str
     content_type: str
+    custom_css: Optional[str] = None
+    custom_js: Optional[str] = None
     excerpt: Optional[str] = None
     featured_image: Optional[str] = None
     category: Optional[str] = None
