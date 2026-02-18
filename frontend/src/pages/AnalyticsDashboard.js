@@ -42,6 +42,9 @@ const AnalyticsDashboard = () => {
   
   // Check if user can reset (admin or owner)
   const canResetAnalytics = user?.role === 'owner' || user?.role === 'admin' || user?.is_admin;
+  
+  // Check if user can manage blogs (owner or blog_editor)
+  const canManageBlogs = user?.role === 'owner' || user?.is_blog_editor;
 
   const fetchAnalytics = useCallback(async () => {
     if (!isAuthenticated || !user?.is_admin) return;
