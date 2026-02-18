@@ -633,6 +633,7 @@ const AdminPage = () => {
             selectedRole={roleChangeSelectedRole}
             setSelectedRole={setRoleChangeSelectedRole}
             onRoleChange={handleRoleChangeFromModal}
+            onBlogEditorToggle={handleBlogEditorToggle}
             onClose={() => setShowRoleChangeModal(false)}
           />
         )}
