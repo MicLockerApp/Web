@@ -725,12 +725,12 @@ const Navbar = () => {
                 Discover Pros
               </Link>
               <Link
-                to="/help"
+                to="/blog"
                 className={`flex items-center gap-2 py-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                <HelpCircle className="w-5 h-5" />
-                Help Center
+                <Newspaper className="w-5 h-5" />
+                Blog
               </Link>
               {isAuthenticated ? (
                 <>
