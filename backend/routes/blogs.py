@@ -99,6 +99,7 @@ async def get_blog_post(
     current_user: Optional[dict] = Depends(get_current_user_optional)
 ):
     """Get a single blog post by slug or ID."""
+    db = get_database()
     # Try to find by slug first, then by ID
     post = await db.blogs.find_one({"slug": slug_or_id})
     if not post:
@@ -129,6 +130,7 @@ async def get_blog_comments(
     skip: int = Query(0, ge=0)
 ):
     """Get comments for a blog post."""
+    db = get_database()
     cursor = db.blog_comments.find(
         {"blog_id": blog_id, "is_approved": True}
     ).sort("created_at", -1).skip(skip).limit(limit)
@@ -152,6 +154,7 @@ async def create_comment(
     current_user: dict = Depends(get_current_user)
 ):
     """Add a comment to a blog post."""
+    db = get_database()
     # Check if blog exists and allows comments
     post = await db.blogs.find_one({"id": blog_id, "status": "published"})
     if not post:
@@ -193,6 +196,7 @@ async def create_blog_post(
     current_user: dict = Depends(get_current_user)
 ):
     """Create a new blog post. Only owner and blog editors can create posts."""
+    db = get_database()
     if not can_manage_blogs(current_user):
         raise HTTPException(status_code=403, detail="You don't have permission to create blog posts")
     
@@ -245,6 +249,7 @@ async def update_blog_post(
     current_user: dict = Depends(get_current_user)
 ):
     """Update a blog post."""
+    db = get_database()
     if not can_manage_blogs(current_user):
         raise HTTPException(status_code=403, detail="You don't have permission to edit blog posts")
     
@@ -316,6 +321,7 @@ async def delete_blog_post(
     current_user: dict = Depends(get_current_user)
 ):
     """Delete a blog post. Only owner can delete."""
+    db = get_database()
     if current_user.get("role") != "owner":
         raise HTTPException(status_code=403, detail="Only the owner can delete blog posts")
     
@@ -342,6 +348,7 @@ async def delete_comment(
     current_user: dict = Depends(get_current_user)
 ):
     """Delete a comment. Owner, blog editors, or comment author can delete."""
+    db = get_database()
     comment = await db.blog_comments.find_one({"id": comment_id, "blog_id": blog_id})
     if not comment:
         raise HTTPException(status_code=404, detail="Comment not found")
