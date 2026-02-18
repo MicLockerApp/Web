@@ -233,6 +233,82 @@ const BlogEditorPage = () => {
                   Published
                 </span>
               )}
+              
+              {/* My Drafts Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowDrafts(!showDrafts)}
+                  className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg ${
+                    isDark ? 'bg-dark-400 text-gray-300 hover:bg-dark-300' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                  data-testid="my-drafts-btn"
+                >
+                  <FileText className="w-4 h-4" />
+                  My Drafts
+                  {drafts.length > 0 && (
+                    <span className={`px-1.5 py-0.5 text-xs rounded-full ${isDark ? 'bg-yellow-500/30 text-yellow-400' : 'bg-yellow-100 text-yellow-700'}`}>
+                      {drafts.length}
+                    </span>
+                  )}
+                  <ChevronDown className={`w-4 h-4 transition-transform ${showDrafts ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {showDrafts && (
+                  <div className={`absolute top-full left-0 mt-2 w-72 rounded-lg shadow-xl z-50 ${isDark ? 'bg-dark-400 border border-dark-300' : 'bg-white border border-gray-200'}`}>
+                    <div className={`p-3 border-b ${isDark ? 'border-dark-300' : 'border-gray-200'}`}>
+                      <h3 className={`font-semibold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                        Saved Drafts
+                      </h3>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto">
+                      {drafts.length === 0 ? (
+                        <p className={`p-4 text-sm text-center ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                          No drafts saved yet
+                        </p>
+                      ) : (
+                        drafts.map(draft => (
+                          <Link
+                            key={draft.id}
+                            to={`/blog/editor/${draft.id}`}
+                            onClick={() => setShowDrafts(false)}
+                            className={`flex items-center justify-between p-3 ${
+                              isDark ? 'hover:bg-dark-300' : 'hover:bg-gray-50'
+                            } ${draft.id === id ? (isDark ? 'bg-dark-300' : 'bg-gray-100') : ''}`}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm font-medium truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                                {draft.title || 'Untitled'}
+                              </p>
+                              <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                                {new Date(draft.updated_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <ChevronRight className={`w-4 h-4 flex-shrink-0 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+                          </Link>
+                        ))
+                      )}
+                    </div>
+                    {drafts.length > 0 && (
+                      <div className={`p-2 border-t ${isDark ? 'border-dark-300' : 'border-gray-200'}`}>
+                        <Link
+                          to="/blog/editor"
+                          onClick={() => {
+                            setShowDrafts(false);
+                            if (isEditing) {
+                              window.location.href = '/blog/editor';
+                            }
+                          }}
+                          className={`block w-full text-center text-sm py-2 rounded ${
+                            isDark ? 'text-primary hover:bg-dark-300' : 'text-primary hover:bg-gray-50'
+                          }`}
+                        >
+                          + New Post
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
             
             <div className="flex items-center gap-2">
