@@ -157,9 +157,13 @@ const BuyerRulesPage = () => {
                 <strong>Support:</strong>{' '}
                 <Link to="/help" className="text-primary hover:underline">Contact Support</Link>
               </p>
-              <p>
+              <p className="mb-2">
                 <strong>Email:</strong>{' '}
                 <a href="mailto:info@miclockerapp.com" className="text-primary hover:underline">info@miclockerapp.com</a>
+              </p>
+              <p>
+                <strong>Phone:</strong>{' '}
+                <a href="tel:+13146480249" className="text-primary hover:underline">+1 314-648-0249</a>
               </p>
             </div>
           </section>
