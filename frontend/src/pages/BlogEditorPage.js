@@ -79,6 +79,8 @@ const BlogEditorPage = () => {
       setSlug(post.slug);
       setContent(post.content);
       setContentType(post.content_type || 'rich_text');
+      setCustomCss(post.custom_css || '');
+      setCustomJs(post.custom_js || '');
       setExcerpt(post.excerpt || '');
       setFeaturedImage(post.featured_image || '');
       setCategory(post.category || '');
