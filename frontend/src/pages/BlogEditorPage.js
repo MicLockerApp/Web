@@ -74,6 +74,15 @@ const BlogEditorPage = () => {
     }
   };
 
+  const fetchDrafts = async () => {
+    try {
+      const res = await api.get('/blogs?status=draft');
+      setDrafts(res.data);
+    } catch (error) {
+      console.error('Error fetching drafts:', error);
+    }
+  };
+
   const fetchPost = async () => {
     try {
       const res = await api.get(`/blogs/${id}`);
