@@ -540,13 +540,13 @@ const DashboardPage = () => {
                       <div className="flex gap-2">
                         <Link
                           to={`/dashboard/listings/${listing.id}/edit`}
-                          className="p-2 bg-dark-300 rounded-lg hover:bg-dark-200"
+                          className="p-2 bg-dark-300 rounded-lg hover:bg-dark-200 flex items-center justify-center"
                         >
                           <Edit2 className="w-4 h-4 text-gray-400" />
                         </Link>
                         <button
                           onClick={() => handleDeleteListing(listing.id)}
-                          className="p-2 bg-dark-300 rounded-lg hover:bg-red-500/20"
+                          className="p-2 bg-dark-300 rounded-lg hover:bg-red-500/20 flex items-center justify-center"
                         >
                           <Trash2 className="w-4 h-4 text-gray-400" />
                         </button>
