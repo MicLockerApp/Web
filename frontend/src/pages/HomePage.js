@@ -134,7 +134,8 @@ const HomePage = () => {
           </div>
           
           {/* Stats - Reordered: Users, Listings, Platform Fee, Satisfaction */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16 max-w-2xl mx-auto">
+          {/* Column count matches the number of stats shown so the row stays centered. */}
+          <div className={`grid ${totalUsersCount > 0 ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-3'} gap-6 mt-16 max-w-2xl mx-auto`}>
             {/* User count isn't exposed by the app backend; shown only if known. */}
             {totalUsersCount > 0 && (
             <div>
