@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { usersAPI, authAPI } from '../services/api';
+import { authAPI, usersAPI } from '../services/api';
+import { PRO_CATEGORIES } from '../constants/roles';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { Camera, Check, Save, X, User, Mail, Phone, Globe, Eye, EyeOff, MapPin, AlertTriangle, AtSign, Settings } from 'lucide-react';
 import { COUNTRIES, getStatesForCountry, countryHasStates } from '../data/countries';
@@ -97,6 +98,7 @@ const EditProfilePage = () => {
   
   // Account settings state (email & password)
   const [emailForm, setEmailForm] = useState({ newEmail: '', password: '' });
+  const [emailCodeSent, setEmailCodeSent] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
@@ -160,15 +162,7 @@ const EditProfilePage = () => {
     opt_out_of_top_fans: false,
   });
 
-  const CATEGORY_OPTIONS = [
-    { value: 'musician', label: 'Musician', icon: '🎸' },
-    { value: 'audio_engineer', label: 'Audio Engineer', icon: '🎚️' },
-    { value: 'recording_studio', label: 'Recording Studio', icon: '🎙️' },
-    { value: 'venue', label: 'Venue', icon: '🏟️' },
-    { value: 'merchant', label: 'Merchant', icon: '🛍️' },
-    { value: 'comedian', label: 'Comedian', icon: '🎭' },
-    { value: 'actor', label: 'Actor', icon: '🎬' },
-  ];
+  const CATEGORY_OPTIONS = PRO_CATEGORIES.map(c => ({ value: c.value, label: c.label, icon: '' }));
 
   useEffect(() => {
     if (authLoading) return;
@@ -181,7 +175,7 @@ const EditProfilePage = () => {
     const fetchData = async () => {
       try {
         const [profileRes, categoriesRes] = await Promise.all([
-          usersAPI.getProfile(user.id),
+          usersAPI.getProfile('me'),
           authAPI.getCategories()
         ]);
         
@@ -189,8 +183,22 @@ const EditProfilePage = () => {
         setCategoryOptions(categoriesRes.data);
         
         // Extract address from shipping_address if available
-        const shippingAddress = profile.shipping_address || {};
-        const physicalAddress = profile.physical_address || {};
+        // App profile: one physical address + a mailing address (or "same as physical").
+        const sameAsMailing = profile.mailing_same_as_physical !== false;
+        const shippingAddress = sameAsMailing ? {
+          address_line1: profile.address_street, address_line2: profile.address_apartment,
+          city: profile.address_city, state: profile.address_state, postal_code: profile.address_zipcode,
+          country: profile.address_street || profile.address_city ? 'US' : '',
+        } : {
+          address_line1: profile.mailing_address_street, address_line2: profile.mailing_address_apartment,
+          city: profile.mailing_address_city, state: profile.mailing_address_state, postal_code: profile.mailing_address_zipcode,
+          country: profile.mailing_address_street || profile.mailing_address_city ? 'US' : '',
+        };
+        const physicalAddress = {
+          address_line1: profile.address_street, address_line2: profile.address_apartment,
+          city: profile.address_city, state: profile.address_state, postal_code: profile.address_zipcode,
+          country: profile.address_street || profile.address_city ? 'US' : '',
+        };
         
         setFormData({
           username: profile.username || '',
@@ -214,13 +222,13 @@ const EditProfilePage = () => {
           comedian_specialties: profile.comedian_specialties || [],
           actor_specialties: profile.actor_specialties || [],
           // Contact info
-          phone: profile.phone || '',
+          phone: profile.phone_number || '',
           website: profile.website || '',
           // Music platforms only
           apple_music: profile.apple_music || '',
-          spotify: profile.spotify || '',
+          spotify: profile.spotify_playlist_url || '',
           soundcloud: profile.soundcloud || '',
-          spotify_embed_url: profile.spotify_embed_url || '',
+          spotify_embed_url: profile.spotify_playlist_url || '',
           // Mailing address fields from shipping_address
           address_line1: shippingAddress.address_line1 || '',
           address_line2: shippingAddress.address_line2 || '',
@@ -229,7 +237,7 @@ const EditProfilePage = () => {
           postal_code: shippingAddress.postal_code || '',
           country: shippingAddress.country || '',
           // Physical address fields
-          same_as_mailing: profile.same_as_mailing !== false,
+          same_as_mailing: sameAsMailing,
           physical_address_line1: physicalAddress.address_line1 || '',
           physical_address_line2: physicalAddress.address_line2 || '',
           physical_city: physicalAddress.city || '',
@@ -237,11 +245,11 @@ const EditProfilePage = () => {
           physical_postal_code: physicalAddress.postal_code || '',
           physical_country: physicalAddress.country || '',
           // Privacy settings
-          show_email: profile.show_email || false,
+          show_email: !!profile.email_contact,
           show_phone: profile.show_phone || false,
           show_address: profile.show_address || false,
           show_social: profile.show_social !== false,
-          show_physical_address: profile.show_physical_address || false,
+          show_physical_address: !!profile.show_location_on_map,
           // Top 8 Fans settings
           top_fans_visibility: profile.top_fans_visibility || 'public',
           opt_out_of_top_fans: profile.opt_out_of_top_fans || false,
@@ -318,28 +326,37 @@ const EditProfilePage = () => {
   };
 
   // Handle email change
+  // Email change on the app backend: request → code sent to the new address → confirm.
   const handleEmailChange = async (e) => {
     e.preventDefault();
     setEmailError('');
     setEmailSuccess('');
-    
-    if (!emailForm.newEmail || !emailForm.password) {
-      setEmailError('Please fill in all fields');
-      return;
-    }
-    
+
     setSavingEmail(true);
     try {
-      const response = await usersAPI.changeEmail({
-        new_email: emailForm.newEmail,
-        password: emailForm.password
-      });
-      setEmailSuccess('Email changed successfully!');
-      setEmailForm({ newEmail: '', password: '' });
-      if (refreshUser) refreshUser();
-      setTimeout(() => setEmailSuccess(''), 5000);
+      if (!emailCodeSent) {
+        if (!emailForm.newEmail) {
+          setEmailError('Please enter your new email address');
+          return;
+        }
+        await authAPI.requestEmailChange(emailForm.newEmail.trim());
+        setEmailCodeSent(true);
+        setEmailSuccess(`We sent a 6-digit code to ${emailForm.newEmail.trim()}. Enter it below to confirm.`);
+      } else {
+        if (!/^\d{6}$/.test(emailForm.password.trim())) {
+          setEmailError('Enter the 6-digit code from the email');
+          return;
+        }
+        await authAPI.verifyEmailChange(emailForm.password.trim());
+        setEmailSuccess('Email changed successfully!');
+        setEmailForm({ newEmail: '', password: '' });
+        setEmailCodeSent(false);
+        if (refreshUser) refreshUser();
+        setTimeout(() => setEmailSuccess(''), 5000);
+      }
     } catch (err) {
-      setEmailError(err.response?.data?.detail || 'Failed to change email');
+      const d = err.response?.data?.detail;
+      setEmailError(typeof d === 'string' ? d : 'Failed to change email');
     } finally {
       setSavingEmail(false);
     }
@@ -389,65 +406,52 @@ const EditProfilePage = () => {
     setSuccess('');
 
     try {
-      // Build the update payload
+      // Build the app backend's PATCH /profiles/me payload
+      const physical = formData.same_as_mailing ? {
+        street: formData.address_line1, apt: formData.address_line2, city: formData.city,
+        state: formData.state, zip: formData.postal_code,
+      } : {
+        street: formData.physical_address_line1, apt: formData.physical_address_line2, city: formData.physical_city,
+        state: formData.physical_state, zip: formData.physical_postal_code,
+      };
       const updateData = {
-        ...formData,
-        // Map frontend names to backend names
+        handle: formData.username.trim().replace(/^@/, '').toLowerCase(),
         first_name: formData.firstName,
         last_name: formData.lastName,
-        // Build shipping_address object
-        shipping_address: formData.country ? {
-          address_line1: formData.address_line1,
-          address_line2: formData.address_line2,
-          city: formData.city,
-          state: formData.state,
-          postal_code: formData.postal_code,
-          country: formData.country,
-        } : null,
-        // Build physical_address object
-        physical_address: formData.same_as_mailing 
-          ? (formData.country ? {
-              address_line1: formData.address_line1,
-              address_line2: formData.address_line2,
-              city: formData.city,
-              state: formData.state,
-              postal_code: formData.postal_code,
-              country: formData.country,
-            } : null)
-          : (formData.physical_country ? {
-              address_line1: formData.physical_address_line1,
-              address_line2: formData.physical_address_line2,
-              city: formData.physical_city,
-              state: formData.physical_state,
-              postal_code: formData.physical_postal_code,
-              country: formData.physical_country,
-            } : null),
+        bio: formData.bio || null,
+        location: formData.location || null,
+        category: formData.category || null,
+        sub_categories: formData.sub_categories || [],
+        phone_number: formData.phone || null,
+        email_contact: formData.show_email ? (user.email || null) : null,
+        spotify_playlist_url: formData.spotify || formData.spotify_embed_url || null,
+        address_street: physical.street || null,
+        address_apartment: physical.apt || null,
+        address_city: physical.city || null,
+        address_state: physical.state || null,
+        address_zipcode: physical.zip || null,
+        show_location_on_map: !!formData.show_physical_address,
+        mailing_same_as_physical: !!formData.same_as_mailing,
       };
-      
-      // Remove individual address fields from root (they're in shipping_address/physical_address now)
-      delete updateData.firstName;
-      delete updateData.lastName;
-      delete updateData.address_line1;
-      delete updateData.address_line2;
-      delete updateData.city;
-      delete updateData.state;
-      delete updateData.postal_code;
-      delete updateData.country;
-      delete updateData.physical_address_line1;
-      delete updateData.physical_address_line2;
-      delete updateData.physical_city;
-      delete updateData.physical_state;
-      delete updateData.physical_postal_code;
-      delete updateData.physical_country;
-      
+      if (!formData.same_as_mailing) {
+        Object.assign(updateData, {
+          mailing_address_street: formData.address_line1 || null,
+          mailing_address_apartment: formData.address_line2 || null,
+          mailing_address_city: formData.city || null,
+          mailing_address_state: formData.state || null,
+          mailing_address_zipcode: formData.postal_code || null,
+        });
+      }
+
       await usersAPI.updateProfile(updateData);
       setSuccess('Profile updated successfully!');
       if (refreshUser) refreshUser();
       setTimeout(() => {
-        navigate(`/profile/${user.id}`);
+        navigate(`/profile/${updateData.handle}`);
       }, 1500);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to update profile');
+      const d = err.response?.data?.detail;
+      setError(typeof d === 'string' ? d : (Array.isArray(d) && d[0]?.msg) || 'Failed to update profile');
     } finally {
       setSaving(false);
     }
@@ -1042,61 +1046,6 @@ const EditProfilePage = () => {
             </div>
           </div>
 
-          {/* Top 8 Fans Settings */}
-          <div className={`rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
-            <h2 className={`text-lg font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>Top 8 Fans</h2>
-            <p className={`text-sm mb-4 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-              Your top fans are users who visit your profile the most, spend time here, and interact with you.
-            </p>
-            
-            <div className="space-y-4">
-              {/* Visibility Setting */}
-              <div>
-                <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Who can see your Top 8 Fans?
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { value: 'public', label: 'Everyone', icon: '🌍' },
-                    { value: 'private', label: 'Only Me', icon: '🔒' },
-                    { value: 'hidden', label: 'Hidden', icon: '👁️‍🗨️' },
-                  ].map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setFormData({ ...formData, top_fans_visibility: option.value })}
-                      className={`p-3 rounded-lg border-2 text-center transition-all ${
-                        formData.top_fans_visibility === option.value
-                          ? 'border-primary bg-primary/10'
-                          : isDark ? 'border-dark-300 hover:border-gray-600' : 'border-gray-200 hover:border-gray-400'
-                      }`}
-                    >
-                      <span className="text-xl block mb-1">{option.icon}</span>
-                      <span className={`text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{option.label}</span>
-                    </button>
-                  ))}
-                </div>
-                <p className={`text-xs mt-2 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
-                  {formData.top_fans_visibility === 'public' && 'Everyone visiting your profile can see your top fans'}
-                  {formData.top_fans_visibility === 'private' && 'Only you can see who your top fans are'}
-                  {formData.top_fans_visibility === 'hidden' && 'Top 8 Fans section is completely hidden from your profile'}
-                </p>
-              </div>
-              
-              {/* Opt-out Setting */}
-              <div className={`pt-4 border-t ${isDark ? 'border-dark-300' : 'border-gray-200'}`}>
-                <PrivacyToggle
-                  label="Don't show me as a fan on other profiles"
-                  checked={formData.opt_out_of_top_fans}
-                  onChange={() => setFormData({ ...formData, opt_out_of_top_fans: !formData.opt_out_of_top_fans })}
-                />
-                <p className={`text-xs mt-1 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
-                  When enabled, you won't appear in anyone's Top 8 Fans list, even if you frequently visit their profile.
-                </p>
-              </div>
-            </div>
-          </div>
-
           {/* Primary Category Section */}
           <div className={`rounded-xl p-6 ${isDark ? 'bg-dark-400' : 'bg-white border border-gray-200 shadow-sm'}`}>
             <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Primary Category</h2>
@@ -1487,26 +1436,30 @@ const EditProfilePage = () => {
                   data-testid="new-email-input"
                 />
               </div>
+              {emailCodeSent && (
               <div>
                 <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                   <Eye className="w-4 h-4 inline mr-2" />
-                  Current Password
+                  Confirmation Code
                 </label>
                 <input
-                  type="password"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
                   value={emailForm.password}
                   onChange={(e) => setEmailForm({ ...emailForm, password: e.target.value })}
-                  placeholder="Enter your password to confirm"
+                  placeholder="6-digit code"
                   className="w-full"
-                  data-testid="email-password-input"
+                  data-testid="email-code-input"
                 />
               </div>
+              )}
               <button
                 type="submit"
                 className="btn btn-secondary"
                 disabled={savingEmail}
               >
-                {savingEmail ? 'Changing...' : 'Change Email'}
+                {savingEmail ? 'Saving...' : (emailCodeSent ? 'Confirm Email' : 'Send Code')}
               </button>
             </form>
           </div>

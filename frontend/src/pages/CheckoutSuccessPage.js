@@ -10,8 +10,10 @@ import analytics from '../services/analytics';
 const CheckoutSuccessPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const sessionId = searchParams.get('session_id');
   const orderId = searchParams.get('order_id');
+  // Stripe returns here after payment; the order is marked paid by the backend webhook.
+  const sessionId = orderId;
+  const redirectStatus = searchParams.get('redirect_status');
   
   const { isAuthenticated } = useAuth();
   const { clearCart } = useCart();
@@ -85,9 +87,15 @@ const CheckoutSuccessPage = () => {
       return;
     }
 
+    if (redirectStatus === 'failed') {
+      setError('Your payment did not go through. No charge was made. Please try again.');
+      setLoading(false);
+      return;
+    }
+
     pollPaymentStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, sessionId, navigate]);
+  }, [isAuthenticated, sessionId, redirectStatus, navigate]);
 
   if (loading) {
     return (

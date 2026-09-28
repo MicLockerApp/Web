@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Music, Users, Globe, Heart } from 'lucide-react';
 import VinylLogo from '../components/VinylLogo';
-import api from '../services/api';
+import { listingsAPI } from '../services/api';
 
 const AboutPage = () => {
   const [stats, setStats] = useState({
@@ -15,11 +15,12 @@ const AboutPage = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await api.get('/stats/public');
+        // The app backend only exposes the active-listing count publicly.
+        const response = await listingsAPI.getCount();
         setStats({
           users: response.data.total_users || 0,
-          listings: response.data.total_listings || 0,
-          countries: response.data.total_countries || 0,
+          listings: response.data.active_listings || 0,
+          countries: 0,
           loading: false
         });
       } catch (error) {
@@ -142,24 +143,28 @@ const AboutPage = () => {
               <p className="text-4xl md:text-5xl font-bold text-primary mb-2">2026</p>
               <p className="text-gray-400">Founded</p>
             </div>
+            {(stats.loading || stats.users > 0) && (
             <div className="text-center">
               <p className="text-4xl md:text-5xl font-bold text-primary mb-2">
                 {stats.loading ? '...' : formatNumber(stats.users)}
               </p>
               <p className="text-gray-400">Community Members</p>
             </div>
+            )}
             <div className="text-center">
               <p className="text-4xl md:text-5xl font-bold text-primary mb-2">
                 {stats.loading ? '...' : formatNumber(stats.listings)}
               </p>
               <p className="text-gray-400">Items Listed</p>
             </div>
+            {(stats.loading || stats.countries > 0) && (
             <div className="text-center">
               <p className="text-4xl md:text-5xl font-bold text-primary mb-2">
                 {stats.loading ? '...' : stats.countries}
               </p>
               <p className="text-gray-400">Countries</p>
             </div>
+            )}
           </div>
         </div>
       </section>

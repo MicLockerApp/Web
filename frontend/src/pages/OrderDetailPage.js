@@ -6,6 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import { ordersAPI, reviewsAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import StarRating from '../components/StarRating';
+import S3MediaUploader from '../components/S3MediaUploader';
 
 const OrderDetailPage = () => {
   const { id } = useParams();
@@ -21,11 +22,15 @@ const OrderDetailPage = () => {
   const [reviewComment, setReviewComment] = useState('');
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [trackingNumber, setTrackingNumber] = useState('');
+  const [shippingCost, setShippingCost] = useState('');
+  const [handlingCost, setHandlingCost] = useState('');
   const [message, setMessage] = useState({ type: '', text: '' });
   
   // Item condition state (for buyer reviews)
   const [itemCondition, setItemCondition] = useState('');
   const [conditionNotes, setConditionNotes] = useState('');
+  // Delivery proof photos (required by the app backend when confirming delivery)
+  const [proofMediaIds, setProofMediaIds] = useState([]);
   
   // Reviews state
   const [orderReviews, setOrderReviews] = useState({
@@ -83,9 +88,10 @@ const OrderDetailPage = () => {
     }
     setUpdating(true);
     try {
-      await ordersAPI.addTracking(id, { 
-        tracking_number: trackingNumber,
-        carrier: 'Standard Shipping'
+      await ordersAPI.addTracking(id, {
+        tracking_number: trackingNumber.trim(),
+        shipping_cost: shippingCost,
+        handling_cost: handlingCost,
       });
       setMessage({ type: 'success', text: 'Tracking information added!' });
       fetchOrder();
@@ -96,18 +102,8 @@ const OrderDetailPage = () => {
     }
   };
 
-  const handleConfirmDelivery = async () => {
-    setUpdating(true);
-    try {
-      await ordersAPI.confirmDelivery(id);
-      setMessage({ type: 'success', text: 'Delivery confirmed! Thank you.' });
-      fetchOrder();
-    } catch (error) {
-      setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to confirm delivery' });
-    } finally {
-      setUpdating(false);
-    }
-  };
+  // Confirming delivery = proof photo + review of the seller, in one step (same as the apps).
+  const handleConfirmDelivery = () => openReviewModal('buyer_to_seller');
 
   const openReviewModal = (type) => {
     setReviewType(type);
@@ -115,6 +111,7 @@ const OrderDetailPage = () => {
     setReviewComment('');
     setItemCondition('');
     setConditionNotes('');
+    setProofMediaIds([]);
     setShowReviewModal(true);
   };
 
@@ -122,23 +119,20 @@ const OrderDetailPage = () => {
     e.preventDefault();
     setReviewSubmitting(true);
     try {
+      let comment = reviewComment.trim();
+      if (reviewType === 'buyer_to_seller' && itemCondition && itemCondition !== 'as_described') {
+        comment += `\n\nItem condition: ${itemCondition.replace(/_/g, ' ')}${conditionNotes ? ` — ${conditionNotes}` : ''}`;
+      }
       const reviewData = {
         order_id: order.id,
         rating: reviewRating,
-        comment: reviewComment,
-        review_type: reviewType
+        comment,
+        review_type: reviewType,
+        proof_media_ids: proofMediaIds,
       };
-      
-      // Add item condition for buyer reviews
-      if (reviewType === 'buyer_to_seller' && itemCondition) {
-        reviewData.item_condition = itemCondition;
-        if (conditionNotes) {
-          reviewData.condition_notes = conditionNotes;
-        }
-      }
-      
+
       await reviewsAPI.create(reviewData);
-      setMessage({ type: 'success', text: 'Review submitted! Thank you for your feedback.' });
+      setMessage({ type: 'success', text: reviewType === 'buyer_to_seller' ? 'Delivery confirmed and review submitted. Thank you!' : 'Review submitted! Thank you for your feedback.' });
       setShowReviewModal(false);
       fetchOrder(); // Refresh to get updated review status
     } catch (error) {
@@ -254,6 +248,24 @@ const OrderDetailPage = () => {
             <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Seller Actions</h2>
             <div className="flex flex-col md:flex-row gap-4">
               <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={shippingCost}
+                onChange={(e) => setShippingCost(e.target.value)}
+                placeholder="Shipping cost ($)"
+                className="md:w-40"
+              />
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={handlingCost}
+                onChange={(e) => setHandlingCost(e.target.value)}
+                placeholder="Handling cost ($)"
+                className="md:w-40"
+              />
+              <input
                 type="text"
                 value={trackingNumber}
                 onChange={(e) => setTrackingNumber(e.target.value)}
@@ -262,7 +274,7 @@ const OrderDetailPage = () => {
               />
               <button
                 onClick={handleAddTracking}
-                disabled={updating || !trackingNumber.trim()}
+                disabled={updating || !trackingNumber.trim() || shippingCost === '' || handlingCost === ''}
                 className="btn btn-primary"
               >
                 {updating ? 'Adding...' : 'Add Tracking & Ship'}
@@ -420,7 +432,7 @@ const OrderDetailPage = () => {
                   </Link>
                   <p className={isDark ? 'text-gray-400' : 'text-gray-500'}>Qty: {item.quantity}</p>
                   <Link 
-                    to={`/profile/${item.seller_id}`} 
+                    to={`/profile/${item.seller_username}`} 
                     className={`text-sm hover:text-primary ${isDark ? 'text-gray-500' : 'text-gray-400'}`}
                   >
                     Seller: {item.seller_username}
@@ -496,7 +508,7 @@ const OrderDetailPage = () => {
         {/* Contact Button */}
         <div className="mt-6">
           <Link
-            to={`/messages?to=${isBuyer ? order.items?.[0]?.seller_id : order.buyer_id}`}
+            to={`/messages?to=${isBuyer ? order.items?.[0]?.seller_id : order.buyer_id}&handle=${isBuyer ? order.seller_username : order.buyer_username}`}
             className="btn btn-secondary"
           >
             <MessageSquare className="w-4 h-4" />
@@ -550,6 +562,23 @@ const OrderDetailPage = () => {
                   ))}
                 </div>
               </div>
+
+              {/* Delivery proof photo (buyer confirming delivery) */}
+              {reviewType === 'buyer_to_seller' && (
+                <div className="mb-6">
+                  <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Delivery Photo <span className="text-primary">*</span>
+                  </label>
+                  <p className={`text-xs mb-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                    Add at least one photo of the item you received.
+                  </p>
+                  <S3MediaUploader
+                    source="message"
+                    maxFiles={5}
+                    onUploadComplete={(urls, items) => setProofMediaIds(prev => [...prev, ...(items || []).map(i => i.media_id).filter(Boolean)])}
+                  />
+                </div>
+              )}
 
               {/* Item Condition (only for buyer reviewing seller) */}
               {reviewType === 'buyer_to_seller' && (
@@ -641,7 +670,7 @@ const OrderDetailPage = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={reviewSubmitting || reviewComment.length < 10 || (reviewType === 'buyer_to_seller' && !itemCondition)}
+                  disabled={reviewSubmitting || reviewComment.length < 10 || (reviewType === 'buyer_to_seller' && (!itemCondition || proofMediaIds.length === 0))}
                   className="btn btn-primary flex-1"
                   data-testid="submit-review-btn"
                 >

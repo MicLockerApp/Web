@@ -1,16 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { authAPI } from '../services/api';
+import { authAPI, usersAPI } from '../services/api';
 import VinylLogo from '../components/VinylLogo';
-import { Check, ChevronRight, ChevronLeft, Info, Mail, AlertCircle } from 'lucide-react';
+import { Check, ChevronRight, ChevronLeft, Info, AlertCircle } from 'lucide-react';
 import { COUNTRIES, getStatesForCountry, countryHasStates } from '../data/countries';
 import analytics from '../services/analytics';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
-  const { setUser, setToken } = useAuth();
+  const { isAuthenticated, user, loadUser } = useAuth();
   const [step, setStep] = useState(1);
+  // The app backend creates the account on step 1; later steps fill in the profile.
+  const [accountCreated, setAccountCreated] = useState(false);
   const [categoryOptions, setCategoryOptions] = useState(null);
   const [formData, setFormData] = useState({
     firstName: '',
@@ -19,6 +21,7 @@ const RegisterPage = () => {
     email: '',
     password: '',
     confirmPassword: '',
+    dateOfBirth: '',
     category: '',
     sub_categories: [],
     // Musician fields
@@ -60,20 +63,43 @@ const RegisterPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  // Email verification state
-  const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '']);
-  const [resending, setResending] = useState(false);
-  const inputRefs = useRef([]);
 
   const CATEGORY_OPTIONS = [
     { value: 'musician', label: 'Musician', icon: '🎸', description: 'Play instruments or sing' },
+    { value: 'artist', label: 'Artist', icon: '🎤', description: 'Recording or performing artist' },
     { value: 'audio_engineer', label: 'Audio Engineer', icon: '🎚️', description: 'Mix, master, or produce audio' },
-    { value: 'recording_studio', label: 'Recording Studio', icon: '🎙️', description: 'Own or operate a studio' },
+    { value: 'studio', label: 'Recording Studio', icon: '🎙️', description: 'Own or operate a studio' },
     { value: 'venue', label: 'Venue', icon: '🏟️', description: 'Own or manage a music venue' },
+    { value: 'promoter', label: 'Promoter', icon: '📣', description: 'Promote shows and events' },
+    { value: 'manager', label: 'Manager', icon: '📋', description: 'Manage artists or talent' },
+    { value: 'show_pro', label: 'Show Pro', icon: '🎛️', description: 'Stage, lighting, and production crew' },
+    { value: 'photographer', label: 'Photographer', icon: '📷', description: 'Shoot artists, shows, and events' },
+    { value: 'videographer', label: 'Videographer', icon: '🎥', description: 'Film videos, shows, and content' },
     { value: 'merchant', label: 'Merchant', icon: '🛍️', description: 'Sell merchandise & apparel' },
+    { value: 'services', label: 'Services', icon: '🧰', description: 'Offer services to the industry' },
     { value: 'comedian', label: 'Comedian', icon: '🎭', description: 'Perform comedy shows or acts' },
     { value: 'actor', label: 'Actor', icon: '🎬', description: 'Act in film, TV, or theater' },
+    { value: 'public_speaker', label: 'Public Speaker', icon: '🗣️', description: 'Speak at events and conferences' },
+    { value: 'church', label: 'Church', icon: '⛪', description: 'Worship teams and ministries' },
+    { value: 'tattoo_artist', label: 'Tattoo Artist', icon: '🖋️', description: 'Tattoo and body art' },
+    { value: 'hair', label: 'Hair', icon: '💇', description: 'Hair styling for artists and shows' },
+    { value: 'makeup', label: 'Makeup', icon: '💄', description: 'Makeup for artists, shoots, and shows' },
   ];
+
+  // Signed-in accounts that haven't finished setup resume where they left off.
+  useEffect(() => {
+    if (isAuthenticated && user && step === 1) {
+      setAccountCreated(true);
+      setFormData(prev => ({
+        ...prev,
+        firstName: user.first_name || prev.firstName,
+        lastName: user.last_name || prev.lastName,
+        username: user.handle || prev.username,
+        email: user.email || prev.email,
+      }));
+      setStep(user.terms_accepted_at ? 3 : 2);
+    }
+  }, [isAuthenticated, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -86,13 +112,6 @@ const RegisterPage = () => {
     };
     fetchCategories();
   }, []);
-
-  // Focus first code input when entering verification step
-  useEffect(() => {
-    if (step === 2 && inputRefs.current[0]) {
-      inputRefs.current[0].focus();
-    }
-  }, [step]);
 
   // Helper function to extract error message
   const getErrorMessage = (err, defaultMsg) => {
@@ -107,7 +126,7 @@ const RegisterPage = () => {
     return defaultMsg;
   };
 
-  // Step 1: Validate credentials and send verification email
+  // Step 1: Create the account, then claim the username
   const handleBasicSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -122,117 +141,57 @@ const RegisterPage = () => {
       return;
     }
 
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
+    if (!accountCreated) {
+      if (formData.password !== formData.confirmPassword) {
+        setError('Passwords do not match');
+        return;
+      }
+      if (formData.password.length < 8) {
+        setError('Password must be at least 8 characters');
+        return;
+      }
+      if (!formData.dateOfBirth) {
+        setError('Date of birth is required');
+        return;
+      }
     }
 
     setLoading(true);
     try {
-      // Send verification email
-      await authAPI.sendVerification({
-        username: formData.username,
-        email: formData.email,
-        password: formData.password,
-        first_name: formData.firstName.trim(),
-        last_name: formData.lastName.trim()
-      });
-      
-      // Move to email verification step
+      if (!accountCreated) {
+        await authAPI.register({
+          email: formData.email.trim(),
+          first_name: formData.firstName.trim(),
+          last_name: formData.lastName.trim(),
+          date_of_birth: formData.dateOfBirth,
+          password: formData.password,
+        });
+        setAccountCreated(true);
+      }
+      await usersAPI.updateProfile({ handle: formData.username.trim().replace(/^@/, '').toLowerCase() });
+      await loadUser();
       setStep(2);
     } catch (err) {
-      setError(getErrorMessage(err, 'Registration failed. Please try again.'));
+      setError(getErrorMessage(err, accountCreated
+        ? 'That username could not be saved. Please try another.'
+        : 'Registration failed. Please try again.'));
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle verification code input
-  const handleCodeChange = (index, value) => {
-    if (value && !/^\d$/.test(value)) return;
-    
-    const newCode = [...verificationCode];
-    newCode[index] = value;
-    setVerificationCode(newCode);
-    setError('');
-    
-    if (value && index < 5) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleKeyDown = (index, e) => {
-    if (e.key === 'Backspace' && !verificationCode[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
-    
-    if (e.key === 'v' && (e.ctrlKey || e.metaKey)) {
-      e.preventDefault();
-      navigator.clipboard.readText().then(text => {
-        const digits = text.replace(/\D/g, '').slice(0, 6);
-        const newCode = [...verificationCode];
-        digits.split('').forEach((digit, i) => {
-          if (i < 6) newCode[i] = digit;
-        });
-        setVerificationCode(newCode);
-        if (digits.length > 0) {
-          inputRefs.current[Math.min(digits.length, 5)]?.focus();
-        }
-      });
-    }
-  };
-
-  // Step 2: Verify email and create account
-  const handleVerifyEmail = async () => {
-    const fullCode = verificationCode.join('');
-    if (fullCode.length !== 6) {
-      setError('Please enter all 6 digits');
-      return;
-    }
-
+  // Step 2: Accept the Terms of Service (required, same as the apps)
+  const handleAcceptTerms = async () => {
     setLoading(true);
     setError('');
-
     try {
-      const response = await authAPI.verifyEmail({
-        email: formData.email,
-        code: fullCode
-      });
-      
-      // Account created successfully - store token and user
-      const { access_token, user } = response.data;
-      localStorage.setItem('token', access_token);
-      localStorage.setItem('user', JSON.stringify(user));
-      setToken(access_token);
-      setUser(user);
-      
-      // Move to category selection (step 3)
+      await authAPI.acceptTerms();
+      await loadUser();
       setStep(3);
     } catch (err) {
-      setError(getErrorMessage(err, 'Invalid verification code. Please try again.'));
+      setError(getErrorMessage(err, 'Could not save your acceptance. Please try again.'));
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Resend verification code
-  const handleResendCode = async () => {
-    setResending(true);
-    setError('');
-    
-    try {
-      await authAPI.resendVerification({ email: formData.email });
-      setVerificationCode(['', '', '', '', '', '']);
-      inputRefs.current[0]?.focus();
-    } catch (err) {
-      setError('Failed to resend code. Please try again.');
-    } finally {
-      setResending(false);
     }
   };
 
@@ -243,7 +202,7 @@ const RegisterPage = () => {
 
   const handleSubCategoriesSubmit = async (e) => {
     e.preventDefault();
-    setStep(5); // Go to category details
+    setStep(6); // No category-details step on the app backend; go to contact info
   };
 
   const handleFinalSubmit = async (e) => {
@@ -258,78 +217,46 @@ const RegisterPage = () => {
     setError('');
 
     try {
-      const profileData = { 
+      const profileData = {
         category: formData.category,
-        sub_categories: formData.sub_categories.length > 0 ? formData.sub_categories : undefined
+        sub_categories: formData.sub_categories,
       };
+      if (formData.phone) profileData.phone_number = formData.phone;
 
-      if (formData.category === 'musician' || formData.sub_categories.includes('musician')) {
-        profileData.genres = formData.genres;
-        profileData.instruments = formData.instruments;
+      // The app stores one physical address plus an optional separate mailing address.
+      const mailing = formData.address_line1 ? {
+        street: formData.address_line1, apt: formData.address_line2 || null,
+        city: formData.city, state: formData.state, zip: formData.postal_code,
+      } : null;
+      const physical = formData.same_as_mailing ? mailing : (formData.physical_address_line1 ? {
+        street: formData.physical_address_line1, apt: formData.physical_address_line2 || null,
+        city: formData.physical_city, state: formData.physical_state, zip: formData.physical_postal_code,
+      } : null);
+      if (physical) {
+        Object.assign(profileData, {
+          address_street: physical.street, address_apartment: physical.apt,
+          address_city: physical.city, address_state: physical.state, address_zipcode: physical.zip,
+        });
       }
-      if (formData.category === 'audio_engineer' || formData.sub_categories.includes('audio_engineer')) {
-        profileData.specializations = formData.specializations;
-      }
-      if (formData.category === 'recording_studio' || formData.sub_categories.includes('recording_studio')) {
-        profileData.studio_offerings = formData.studio_offerings;
-      }
-      if (formData.category === 'venue' || formData.sub_categories.includes('venue')) {
-        profileData.venue_name = formData.venue_name;
-        profileData.venue_city = formData.venue_city;
-        profileData.venue_capacity = formData.venue_capacity;
-      }
-      if (formData.category === 'merchant' || formData.sub_categories.includes('merchant')) {
-        profileData.merchant_products = formData.merchant_products;
-        profileData.business_name = formData.business_name;
-      }
-
-      // Add contact info if provided
-      if (formData.phone) profileData.phone = formData.phone;
-      
-      // Add mailing/shipping address
-      if (formData.address_line1) {
-        profileData.shipping_address = {
-          address_line1: formData.address_line1,
-          address_line2: formData.address_line2 || '',
-          city: formData.city,
-          state: formData.state,
-          postal_code: formData.postal_code,
-          country: formData.country,
-        };
+      if (mailing) {
+        profileData.mailing_same_as_physical = !!formData.same_as_mailing;
+        if (!formData.same_as_mailing) {
+          Object.assign(profileData, {
+            mailing_address_street: mailing.street, mailing_address_apartment: mailing.apt,
+            mailing_address_city: mailing.city, mailing_address_state: mailing.state, mailing_address_zipcode: mailing.zip,
+          });
+        }
       }
 
-      // Add physical address
-      profileData.same_as_mailing = formData.same_as_mailing;
-      if (formData.same_as_mailing && formData.address_line1) {
-        // Physical is same as mailing
-        profileData.physical_address = {
-          address_line1: formData.address_line1,
-          address_line2: formData.address_line2 || '',
-          city: formData.city,
-          state: formData.state,
-          postal_code: formData.postal_code,
-          country: formData.country,
-        };
-      } else if (!formData.same_as_mailing && formData.physical_address_line1) {
-        // Physical is different
-        profileData.physical_address = {
-          address_line1: formData.physical_address_line1,
-          address_line2: formData.physical_address_line2 || '',
-          city: formData.physical_city,
-          state: formData.physical_state,
-          postal_code: formData.physical_postal_code,
-          country: formData.physical_country,
-        };
-      }
-
-      await authAPI.completeProfile(profileData);
+      await usersAPI.updateProfile(profileData);
+      await loadUser();
       
       // Track user registered event
       analytics.userRegistered(formData.category);
       
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to complete profile');
+      setError(getErrorMessage(err, 'Failed to complete profile'));
     } finally {
       setLoading(false);
     }
@@ -416,11 +343,28 @@ const RegisterPage = () => {
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           required
+          disabled={accountCreated}
           placeholder="john@example.com"
           data-testid="register-email"
         />
       </div>
 
+      {!accountCreated && (
+      <div className="mb-6">
+        <label className="block text-gray-400 mb-2">Date of Birth</label>
+        <input
+          type="date"
+          value={formData.dateOfBirth}
+          onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+          required
+          max={new Date().toISOString().slice(0, 10)}
+          data-testid="register-dob"
+        />
+        <p className="text-gray-500 text-xs mt-1">You must be 13 or older to use MicLocker.</p>
+      </div>
+      )}
+
+      {!accountCreated && (<>
       <div className="mb-6">
         <label className="block text-gray-400 mb-2">Password</label>
         <input
@@ -428,7 +372,7 @@ const RegisterPage = () => {
           value={formData.password}
           onChange={(e) => setFormData({ ...formData, password: e.target.value })}
           required
-          minLength={6}
+          minLength={8}
           data-testid="register-password"
         />
       </div>
@@ -443,6 +387,7 @@ const RegisterPage = () => {
           data-testid="register-confirm-password"
         />
       </div>
+      </>)}
 
       <button
         type="submit"
@@ -456,68 +401,31 @@ const RegisterPage = () => {
     </form>
   );
 
-  // Step 2: Email Verification
+  // Step 2: Terms of Service
   const renderStep2 = () => (
     <div>
-      {/* Info Box */}
       <div className="flex items-start gap-3 p-4 rounded-lg mb-6 bg-blue-500/10 border border-blue-500/20">
-        <Mail className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+        <Info className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
         <div className="text-sm text-blue-300">
-          <p className="font-medium mb-1">Check your inbox!</p>
+          <p className="font-medium mb-1">One last thing before you start</p>
           <p className="text-blue-400">
-            We&apos;ve sent a 6-digit verification code to <strong className="text-white">{formData.email}</strong>. 
-            Don&apos;t forget to check your <strong>spam folder</strong>. The code expires in 15 minutes.
+            Please read and accept the MicLocker{' '}
+            <Link to="/legal/terms-of-use" target="_blank" className="text-white underline">Terms of Use</Link>
+            {' '}and{' '}
+            <Link to="/legal/privacy-policy" target="_blank" className="text-white underline">Privacy Policy</Link>.
+            You need to accept them to use MicLocker.
           </p>
         </div>
       </div>
 
-      {/* Code Input Boxes */}
-      <div className="flex justify-center gap-2 mb-6">
-        {verificationCode.map((digit, index) => (
-          <input
-            key={index}
-            ref={(el) => (inputRefs.current[index] = el)}
-            type="text"
-            inputMode="numeric"
-            maxLength={1}
-            value={digit}
-            onChange={(e) => handleCodeChange(index, e.target.value)}
-            onKeyDown={(e) => handleKeyDown(index, e)}
-            className="w-12 h-14 text-center text-2xl font-bold rounded-lg border-2 transition-all
-              bg-dark-300 border-dark-200 text-white focus:border-primary
-              focus:outline-none focus:ring-2 focus:ring-primary/20"
-            data-testid={`verification-code-${index}`}
-          />
-        ))}
-      </div>
-
-      <div className="flex gap-3 mb-4">
-        <button
-          type="button"
-          onClick={() => setStep(1)}
-          className="btn btn-secondary py-3 px-4"
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-        <button
-          onClick={handleVerifyEmail}
-          className="btn btn-primary flex-1 py-3"
-          disabled={loading || verificationCode.some(d => !d)}
-          data-testid="verify-email-button"
-        >
-          {loading ? 'Verifying...' : 'Verify Email'}
-        </button>
-      </div>
-
-      <div className="text-center">
-        <button
-          onClick={handleResendCode}
-          disabled={resending}
-          className="text-sm text-gray-400 hover:text-primary transition-colors"
-        >
-          {resending ? 'Sending...' : "Didn't receive a code? Resend"}
-        </button>
-      </div>
+      <button
+        onClick={handleAcceptTerms}
+        className="btn btn-primary w-full py-3"
+        disabled={loading}
+        data-testid="accept-terms-button"
+      >
+        {loading ? 'Saving...' : 'I Agree'}
+      </button>
     </div>
   );
 
@@ -1184,7 +1092,7 @@ const RegisterPage = () => {
         <div className="flex gap-3">
           <button
             type="button"
-            onClick={() => setStep(5)}
+            onClick={() => setStep(4)}
             className="btn btn-secondary py-3 px-4"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -1229,7 +1137,7 @@ const RegisterPage = () => {
   const getStepLabel = () => {
     switch (step) {
       case 1: return 'Create your account';
-      case 2: return 'Verify your email';
+      case 2: return 'Accept the Terms of Use';
       case 3: return 'Choose your primary category';
       case 4: return 'Add secondary categories (optional)';
       case 5: return 'Tell us more about yourself';
@@ -1249,7 +1157,7 @@ const RegisterPage = () => {
 
         {/* Progress - 6 steps with email verification */}
         <div className="flex items-center justify-center gap-2 mb-8">
-          {[1, 2, 3, 4, 5, 6].map(s => (
+          {[1, 2, 3, 4, 6].map(s => (
             <div
               key={s}
               className={`w-3 h-3 rounded-full transition-all ${
@@ -1275,7 +1183,7 @@ const RegisterPage = () => {
           {step === 6 && renderStep6()}
         </div>
 
-        {step === 1 && (
+        {step === 1 && !accountCreated && (
           <p className="text-center text-gray-400 mt-6">
             Already have an account?{' '}
             <Link to="/login" className="text-primary hover:underline">

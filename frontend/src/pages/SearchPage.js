@@ -7,22 +7,18 @@ import { useAuth } from '../context/AuthContext';
 import ListingCard from '../components/ListingCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import analytics from '../services/analytics';
+import { GEAR_CATEGORIES, GEAR_CONDITIONS, categoryByLabel } from '../constants/gear';
 
-const CATEGORIES = [
-  'Guitars', 'Bass', 'Keyboards & Synths', 'Drums & Percussion',
-  'Pro Audio', 'Recording Equipment', 'Microphones', 'DJ Equipment',
-  'Studio Monitors', 'Headphones', 'Cables & Connectors', 'Effects Pedals',
-  'Amplifiers', 'Wind Instruments', 'String Instruments', 'Accessories'
-];
+const CATEGORIES = GEAR_CATEGORIES.map(c => c.label);
 
-const CONDITIONS = ['Brand New', 'Mint', 'Excellent', 'Very Good', 'Good', 'Fair', 'Poor'];
+const CONDITIONS = GEAR_CONDITIONS.map(c => c.label);
 
 const UserCard = ({ user }) => {
   const { isDark } = useTheme();
   
   return (
     <Link
-      to={`/profile/${user.id}`}
+      to={`/profile/${user.username}`}
       className={`block rounded-xl p-4 transition-all hover:scale-[1.02] ${
         isDark 
           ? 'bg-dark-400 hover:bg-dark-300' 
@@ -78,7 +74,7 @@ const SearchPage = () => {
 
   const [filters, setFilters] = useState({
     q: searchParams.get('q') || '',
-    category: searchParams.get('category') || '',
+    category: (categoryByLabel(searchParams.get('category')) || {}).label || '',
     condition: searchParams.get('condition') || '',
     minPrice: searchParams.get('min_price') || '',
     maxPrice: searchParams.get('max_price') || '',

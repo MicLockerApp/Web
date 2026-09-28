@@ -4,6 +4,7 @@ import { HelpCircle, Send, CheckCircle, AlertCircle, ChevronDown, Ticket, Messag
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import useS3Upload from '../hooks/useS3Upload';
+import api from '../services/api';
 
 const TICKET_CATEGORIES = [
   { value: 'Order Issue', label: 'Order Issue', description: 'Problems with your order, delivery, or tracking' },
@@ -85,6 +86,7 @@ const HelpCenterPage = () => {
         if (result.success) {
           uploadedFiles.push({
             url: result.url,
+            object_key: result.object_key,
             filename: file.name,
             size: file.size,
             type: file.type
@@ -126,32 +128,24 @@ const HelpCenterPage = () => {
     setError('');
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/tickets`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          category: formData.category,
-          subject: formData.subject,
-          message: formData.message,
-          order_id: formData.order_id || null,
-          attachments: attachments.map(a => ({ url: a.url, filename: a.filename, type: a.type }))
-        })
+      const response = await api.post('/tickets', {
+        category: formData.category,
+        subject: formData.subject,
+        message: formData.message,
+        order_id: formData.order_id || null,
+        attachments: attachments.map(a => ({
+          url: a.url || null,
+          object_key: a.object_key || null,
+          filename: a.filename,
+          content_type: a.type || 'application/octet-stream',
+          size_bytes: a.size,
+        })),
       });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setSuccess(true);
-        setTicketNumber(data.ticket_number);
-      } else {
-        throw new Error(data.detail || 'Failed to submit ticket');
-      }
+      setSuccess(true);
+      setTicketNumber(response.data.ticket_number);
     } catch (err) {
-      setError(err.message || 'Failed to submit support ticket');
+      const d = err.response?.data?.detail;
+      setError(typeof d === 'string' ? d : (Array.isArray(d) && d[0]?.msg) || err.message || 'Failed to submit support ticket');
     } finally {
       setLoading(false);
     }

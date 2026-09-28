@@ -18,20 +18,16 @@ import {
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import GoldMemberBadge from '../components/GoldMemberBadge';
-import api from '../services/api';
+import { usersAPI } from '../services/api';
+import { PRO_CATEGORIES } from '../constants/roles';
 
 const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
 
 // Category options for filtering
+const ROLE_ICONS = { musician: '🎵', audio_engineer: '🎛️', studio: '🎙️', venue: '🏟️', merchant: '🛍️', comedian: '🎭', actor: '🎬' };
 const CATEGORIES = [
   { value: '', label: 'All Professions', icon: '👥' },
-  { value: 'musician', label: 'Musician', icon: '🎵' },
-  { value: 'audio_engineer', label: 'Audio Engineer', icon: '🎛️' },
-  { value: 'recording_studio', label: 'Recording Studio', icon: '🎙️' },
-  { value: 'venue', label: 'Venue', icon: '🏟️' },
-  { value: 'merchant', label: 'Merchant', icon: '🛍️' },
-  { value: 'comedian', label: 'Comedian', icon: '🎭' },
-  { value: 'actor', label: 'Actor', icon: '🎬' },
+  ...PRO_CATEGORIES.map(c => ({ value: c.value, label: c.label, icon: ROLE_ICONS[c.value] || '⭐' })),
 ];
 
 // Subcategories by profession
@@ -99,7 +95,7 @@ const MUSIC_GENRES = [
 ];
 
 // Music industry categories that should show genre filter
-const MUSIC_CATEGORIES = ['musician', 'audio_engineer', 'recording_studio'];
+const MUSIC_CATEGORIES = ['musician', 'audio_engineer', 'studio'];
 
 // Distance radius options
 const RADIUS_OPTIONS = [
@@ -211,18 +207,34 @@ const MapPage = () => {
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const params = {};
-      if (category) params.category = category;
-      if (subCategory) params.sub_category = subCategory;
-      if (genre) params.genre = genre;
+      // App backend returns every opted-in pin; filter here (same as the apps).
+      const response = await usersAPI.getMapPins();
+      const milesBetween = (a, b) => {
+        const toRad = d => (d * Math.PI) / 180;
+        const dLat = toRad(b.lat - a.lat);
+        const dLng = toRad(b.lng - a.lng);
+        const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+        return 3958.8 * 2 * Math.asin(Math.sqrt(h));
+      };
+      let pins = (response.data || []).map(p => ({
+        ...p,
+        id: p.handle,
+        user_id: p.user_id,
+        username: p.handle,
+        profile_image: p.avatar_url,
+        coordinates: { lat: p.lat, lng: p.lng },
+        display_location: [p.address_city, p.address_state].filter(Boolean).join(', ') || p.location,
+        is_approximate: true,
+        genres: [],
+      }));
+      if (category) pins = pins.filter(p => p.category === category || (p.sub_categories || []).includes(category));
+      if (subCategory) pins = pins.filter(p => (p.sub_categories || []).includes(subCategory));
       if (centerLocation && radius) {
-        params.lat = centerLocation.lat;
-        params.lng = centerLocation.lng;
-        params.radius_miles = radius;
+        pins = pins
+          .map(p => ({ ...p, distance_miles: Math.round(milesBetween(centerLocation, p.coordinates) * 10) / 10 }))
+          .filter(p => p.distance_miles <= radius);
       }
-
-      const response = await api.get('/map/users', { params });
-      setUsers(response.data.users || []);
+      setUsers(pins);
     } catch (error) {
       console.error('Error fetching map users:', error);
     } finally {
@@ -390,11 +402,10 @@ const MapPage = () => {
     if (!searchLocation.trim()) return;
 
     try {
-      const response = await api.post('/map/geocode', null, {
-        params: { address: searchLocation }
-      });
-      
-      const loc = response.data;
+      const geocoder = new window.google.maps.Geocoder();
+      const { results } = await geocoder.geocode({ address: searchLocation });
+      if (!results || !results.length) throw new Error('not found');
+      const loc = { lat: results[0].geometry.location.lat(), lng: results[0].geometry.location.lng() };
       setCenterLocation(loc);
       setUseMyLocation(false);
 

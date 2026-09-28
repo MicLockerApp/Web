@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     def database_name(self) -> str:
         """
         Get database name with the following priority:
-        1. DB_NAME environment variable (set by Emergent platform)
+        1. DB_NAME environment variable
         2. Database name from MONGO_URL (extracted by database.py)
         3. Default fallback
         """
@@ -71,9 +71,6 @@ class Settings(BaseSettings):
     # Payment Processing Fee (Stripe standard: 2.9% + $0.30)
     payment_processing_percent: float = float(os.getenv("PAYMENT_PROCESSING_PERCENT", "2.9"))
     payment_processing_fixed: float = float(os.getenv("PAYMENT_PROCESSING_FIXED", "0.30"))
-    
-    # AI Chatbot (Emergent LLM Key)
-    emergent_llm_key: Optional[str] = os.getenv("EMERGENT_LLM_KEY") or None
     
     # Stripe Payment Settings
     stripe_api_key: Optional[str] = os.getenv("STRIPE_API_KEY") or None

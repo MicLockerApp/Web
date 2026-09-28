@@ -1,3 +1,21 @@
+# MicLocker Website (miclockerapp.com)
+
+> **Current setup (Sep 2026):** the website is the React app in `frontend/`,
+> built as a static site on Render (see `render.yaml`). It uses the **same
+> backend as the iOS/Android apps** — `https://api.miclockerapp.com` — so web
+> and app share one set of accounts, listings, messages and orders.
+> `frontend/src/services/api.js` translates the site's calls to that API.
+>
+> The `backend/` folder (FastAPI + MongoDB) is the site's original server. It
+> is **no longer used or deployed**; it is kept for reference only.
+>
+> Not on the website yet (hidden; available in the app or planned): cart,
+> offers, trades, gig board, venue bookings, Top 8 fans, web admin panel.
+>
+> Frontend env vars: see `frontend/.env.example`.
+
+---
+
 # 🎸 MicLocker
 
 <div align="center">
@@ -40,7 +58,6 @@ MicLocker is a full-featured e-commerce marketplace designed specifically for th
 ### Key Highlights
 
 - 🎨 **Black & Yellow Branding** with animated vinyl logo
-- 🤖 **AI-Powered Support Chatbot** using OpenAI GPT-4o-mini
 - 📊 **Real-time Analytics Dashboard** with event-driven architecture
 - 💰 **Flexible Pricing** with "Make an Offer" negotiations
 - 🔐 **Secure Authentication** with JWT tokens
@@ -74,7 +91,6 @@ MicLocker is a full-featured e-commerce marketplace designed specifically for th
 
 ### Communication
 - 💬 **User-to-User Messaging** - Direct chat with read receipts
-- 🤖 **AI Support Chatbot** - 24/7 automated customer support
 - 📧 **Email Notifications** - Order updates, password resets
 
 ---
@@ -107,7 +123,6 @@ MicLocker is a full-featured e-commerce marketplace designed specifically for th
 |---------|---------|
 | **AWS SES** | Transactional emails |
 | **AWS S3** | File storage (optional) |
-| **OpenAI** | AI chatbot (via Emergent LLM) |
 | **Google Maps** | Address display |
 
 ---
@@ -122,7 +137,6 @@ miclocker/
 │   │   ├── routes/          # Analytics API endpoints
 │   │   ├── services/        # Aggregation & query services
 │   │   └── tasks/           # Background aggregation jobs
-│   ├── chatbot/             # AI support chatbot
 │   │   ├── models/          # Conversation schemas
 │   │   ├── routes/          # Chat API endpoints
 │   │   └── services/        # AI, context, conversation services
@@ -145,7 +159,6 @@ miclocker/
 ├── docs/                    # Documentation
 │   ├── API_DOCUMENTATION.md
 │   ├── ANALYTICS_ARCHITECTURE.md
-│   └── CHATBOT_INTEGRATION.md
 └── README.md
 ```
 
@@ -228,7 +241,6 @@ docker-compose up -d
 | **Files** | `/api/files/*` | Image/video uploads |
 | **Admin** | `/api/admin/*` | Platform administration |
 | **Analytics** | `/api/analytics/*` | Business intelligence |
-| **Chatbot** | `/api/chatbot/*` | AI support chat |
 
 📖 **[Full API Documentation →](docs/API_DOCUMENTATION.md)**
 
@@ -263,8 +275,6 @@ PLATFORM_FEE_PERCENT=3
 PAYMENT_PROCESSING_PERCENT=3.19
 PAYMENT_PROCESSING_FIXED=0.49
 
-# AI Chatbot
-EMERGENT_LLM_KEY=your-emergent-key
 ```
 
 ### Frontend (`/frontend/.env`)
@@ -290,11 +300,6 @@ Used for sending transactional emails:
 Used for storing uploaded images and videos.
 
 **Setup**: Create S3 bucket, add credentials to `.env`. Falls back to local storage if not configured.
-
-### OpenAI (via Emergent LLM Key)
-Powers the AI support chatbot with GPT-4o-mini.
-
-**Setup**: Add `EMERGENT_LLM_KEY` to `.env`.
 
 ### Google Maps API
 Displays user addresses on profile pages.
@@ -324,12 +329,6 @@ Displays user addresses on profile pages.
 |------------|-------------|
 | `analytics_events` | Raw event stream (90-day TTL) |
 | `analytics_rollups` | Pre-computed aggregations |
-
-### Chatbot Collections
-
-| Collection | Description |
-|------------|-------------|
-| `chatbot_conversations` | AI chat sessions |
 
 ---
 

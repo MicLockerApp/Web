@@ -1,17 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, User, Menu, X, MessageSquare, LogOut, Package, Edit, Heart, Sun, Moon, Tag, ShoppingBag, LayoutDashboard, Shield, Settings, ArrowLeftRight, List, GraduationCap, Guitar, MapPin, Bell, Calendar } from 'lucide-react';
+import { Search, User, Menu, X, MessageSquare, LogOut, Package, Heart, Sun, Moon, ShoppingBag, LayoutDashboard, Settings, GraduationCap, Guitar, MapPin, Bell } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useCart } from '../context/CartContext';
 import { useTheme } from '../context/ThemeContext';
-import { messagesAPI, searchAPI } from '../services/api';
+import { messagesAPI, searchAPI, notificationsAPI } from '../services/api';
 import VinylLogo from './VinylLogo';
 import AnimatedSearchPlaceholder from './AnimatedSearchPlaceholder';
 import GoldMemberBadge from './GoldMemberBadge';
 
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
-  const { cart } = useCart();
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
@@ -40,13 +38,11 @@ const Navbar = () => {
       }
       try {
         const [msgRes, notifRes] = await Promise.all([
-          messagesAPI.getUnreadCount(),
-          fetch(`${process.env.REACT_APP_BACKEND_URL}/api/notifications/count`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-          }).then(r => r.json()).catch(() => ({ unread_count: 0 }))
+          messagesAPI.getUnreadCount().catch(() => ({ data: { unread_count: 0 } })),
+          notificationsAPI.getInbox().catch(() => ({ data: { unread_count: 0 } })),
         ]);
         setUnreadCount(msgRes.data.unread_count || 0);
-        setNotificationCount(notifRes.unread_count || 0);
+        setNotificationCount(notifRes.data.unread_count || 0);
       } catch (error) {
         console.error('Error fetching counts:', error);
       }
@@ -71,11 +67,9 @@ const Navbar = () => {
 
   const fetchNotifications = async () => {
     try {
-      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/notifications?limit=10`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      const data = await res.json();
-      setNotifications(data || []);
+      const res = await notificationsAPI.getInbox();
+      setNotifications((res.data.notifications || []).slice(0, 10));
+      setNotificationCount(res.data.unread_count || 0);
     } catch (error) {
       console.error('Error fetching notifications:', error);
     }
@@ -90,10 +84,7 @@ const Navbar = () => {
 
   const markNotificationRead = async (notifId) => {
     try {
-      await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/notifications/${notifId}/read`, {
-        method: 'PATCH',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
+      await notificationsAPI.markRead(notifId);
       setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: true } : n));
       setNotificationCount(prev => Math.max(0, prev - 1));
     } catch (error) {
@@ -103,14 +94,7 @@ const Navbar = () => {
 
   const markAllNotificationsRead = async () => {
     try {
-      await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/notifications/mark-read`, {
-        method: 'POST',
-        headers: { 
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ mark_all_read: true })
-      });
+      await notificationsAPI.markAllRead();
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
       setNotificationCount(0);
     } catch (error) {
@@ -253,7 +237,7 @@ const Navbar = () => {
                         {searchResults.users.map((user) => (
                           <Link
                             key={user.id}
-                            to={`/profile/${user.id}`}
+                            to={`/profile/${user.username}`}
                             onClick={handleResultClick}
                             className={`flex items-center gap-3 px-3 py-2 transition-colors ${
                               isDark 
@@ -372,14 +356,6 @@ const Navbar = () => {
               <>
                 {/* New Feature Buttons */}
                 <Link 
-                  to="/gigs" 
-                  className={`p-2 ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`} 
-                  data-testid="gigs-link"
-                  title="Gigs"
-                >
-                  <List className="w-5 h-5" />
-                </Link>
-                <Link 
                   to="/learn" 
                   className={`p-2 ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`} 
                   data-testid="learn-link"
@@ -471,14 +447,6 @@ const Navbar = () => {
                     </span>
                   )}
                 </Link>
-                <Link to="/cart" className={`p-2 relative ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`} data-testid="cart-link">
-                  <ShoppingCart className="w-5 h-5" />
-                  {cart.item_count > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-black text-xs font-bold rounded-full flex items-center justify-center">
-                      {cart.item_count}
-                    </span>
-                  )}
-                </Link>
                 <div className="relative">
                   <button
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
@@ -496,7 +464,7 @@ const Navbar = () => {
                         <p className={`text-sm break-all ${isDark ? 'text-gray-400' : 'text-gray-500'}`} title={user?.email}>{user?.email}</p>
                       </div>
                       <Link
-                        to={`/profile/${user?.id}`}
+                        to={`/profile/${user?.username}`}
                         className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-gray-300 hover:bg-dark-300' : 'text-gray-700 hover:bg-gray-50'}`}
                         onClick={() => setUserMenuOpen(false)}
                       >
@@ -511,28 +479,6 @@ const Navbar = () => {
                         <LayoutDashboard className="w-4 h-4" />
                         Dashboard
                       </Link>
-                      {/* Booking Links - Show based on user type */}
-                      {['venue', 'audio_engineer', 'recording_studio'].includes(user?.category?.toLowerCase()) ? (
-                        <Link
-                          to="/venue/bookings"
-                          className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-gray-300 hover:bg-dark-300' : 'text-gray-700 hover:bg-gray-50'}`}
-                          onClick={() => setUserMenuOpen(false)}
-                          data-testid="venue-bookings-link"
-                        >
-                          <Calendar className="w-4 h-4" />
-                          Manage Bookings
-                        </Link>
-                      ) : (
-                        <Link
-                          to="/my-bookings"
-                          className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-gray-300 hover:bg-dark-300' : 'text-gray-700 hover:bg-gray-50'}`}
-                          onClick={() => setUserMenuOpen(false)}
-                          data-testid="artist-bookings-link"
-                        >
-                          <Calendar className="w-4 h-4" />
-                          My Bookings
-                        </Link>
-                      )}
                       <Link
                         to="/orders"
                         className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-gray-300 hover:bg-dark-300' : 'text-gray-700 hover:bg-gray-50'}`}
@@ -540,22 +486,6 @@ const Navbar = () => {
                       >
                         <ShoppingBag className="w-4 h-4" />
                         Orders
-                      </Link>
-                      <Link
-                        to="/trades"
-                        className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-gray-300 hover:bg-dark-300' : 'text-gray-700 hover:bg-gray-50'}`}
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        <ArrowLeftRight className="w-4 h-4" />
-                        Trades
-                      </Link>
-                      <Link
-                        to="/offers"
-                        className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-gray-300 hover:bg-dark-300' : 'text-gray-700 hover:bg-gray-50'}`}
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        <Tag className="w-4 h-4" />
-                        Offers
                       </Link>
                       <Link
                         to="/favorites"
@@ -585,15 +515,6 @@ const Navbar = () => {
                         {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                         {isDark ? 'Light Mode' : 'Dark Mode'}
                       </button>
-                      {(user?.is_admin || user?.is_employee) && (
-                        <Link
-                          to="/admin"
-                          className={`flex items-center gap-2 px-4 py-2 ${isDark ? 'text-primary hover:bg-dark-300' : 'text-primary hover:bg-gray-50'}`}
-                          onClick={() => setUserMenuOpen(false)}
-                        >
-                          Admin Panel
-                        </Link>
-                      )}
                       <button
                         onClick={handleLogout}
                         className={`flex items-center gap-2 px-4 py-2 w-full text-left text-red-400 ${isDark ? 'hover:bg-dark-300' : 'hover:bg-gray-50'}`}
@@ -681,14 +602,6 @@ const Navbar = () => {
               {isAuthenticated ? (
                 <>
                   <Link
-                    to="/gigs"
-                    className={`flex items-center gap-2 py-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <List className="w-5 h-5" />
-                    Gigs
-                  </Link>
-                  <Link
                     to="/learn"
                     className={`flex items-center gap-2 py-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
                     onClick={() => setMobileMenuOpen(false)}
@@ -718,20 +631,7 @@ const Navbar = () => {
                     )}
                   </Link>
                   <Link
-                    to="/cart"
-                    className={`flex items-center gap-2 py-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <ShoppingCart className="w-5 h-5" />
-                    Cart
-                    {cart.item_count > 0 && (
-                      <span className="ml-auto bg-primary text-black text-xs px-2 py-0.5 rounded-full">
-                        {cart.item_count}
-                      </span>
-                    )}
-                  </Link>
-                  <Link
-                    to={`/profile/${user?.id}`}
+                    to={`/profile/${user?.username}`}
                     className={`flex items-center gap-2 py-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
                     onClick={() => setMobileMenuOpen(false)}
                   >
@@ -746,16 +646,6 @@ const Navbar = () => {
                     <Package className="w-5 h-5" />
                     My Listings
                   </Link>
-                  {(user?.is_admin || user?.is_employee) && (
-                    <Link
-                      to="/admin"
-                      className="flex items-center gap-2 py-2 text-primary font-medium"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      <Shield className="w-5 h-5" />
-                      Admin Panel
-                    </Link>
-                  )}
                   <button
                     onClick={() => {
                       toggleTheme();

@@ -10,7 +10,6 @@ import StarRating from '../components/StarRating';
 import GoldMemberBadge from '../components/GoldMemberBadge';
 import VinylLogo from '../components/VinylLogo';
 import SpotifyPlayer from '../components/SpotifyPlayer';
-import Top8Fans from '../components/Top8Fans';
 import ProfileMap from '../components/ProfileMap';
 import useProfileVisitTracker from '../hooks/useProfileVisitTracker';
 
@@ -46,7 +45,8 @@ const ProfilePage = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('listings');
 
-  const isOwnProfile = currentUser?.id === id;
+  // Profiles are addressed by @handle.
+  const isOwnProfile = !!currentUser?.username && currentUser.username.toLowerCase() === String(id).replace(/^@/, '').toLowerCase();
 
   // Track profile visits for Top 8 Fans feature
   useProfileVisitTracker(id);
@@ -57,9 +57,9 @@ const ProfilePage = () => {
         const [profileRes, listingsRes, reviewsRes] = await Promise.all([
           usersAPI.getProfile(id),
           usersAPI.getUserListings(id, { limit: 12 }),
-          usersAPI.getUserReviews(id, { limit: 10 }),
+          usersAPI.getUserReviews(id, { limit: 10 }).catch(() => ({ data: { reviews: [] } })),
         ]);
-        setProfile(profileRes.data);
+        setProfile({ ...profileRes.data, rating: reviewsRes.data.average_rating, review_count: reviewsRes.data.review_count || 0 });
         setListings(listingsRes.data.listings || []);
         setReviews(reviewsRes.data.reviews || []);
       } catch (error) {
@@ -208,7 +208,7 @@ const ProfilePage = () => {
               {/* Rating */}
               <div className="flex items-center gap-4 mb-4">
                 <StarRating rating={profile.rating || 0} showValue totalReviews={profile.review_count} />
-                <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>· {profile.total_sales} sales</span>
+                {profile.total_sales != null && <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>· {profile.total_sales} sales</span>}
                 {/* Lifetime Free Fees Badge - only visible on own profile */}
                 {isOwnProfile && currentUser?.has_lifetime_free_fees && (
                   <span className="badge bg-green-500/20 text-green-400 border border-green-500/30 flex items-center gap-1">
@@ -228,10 +228,12 @@ const ProfilePage = () => {
                     {profile.location}
                   </span>
                 )}
+                {profile.created_at && (
                 <span className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
                   Member since {new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                 </span>
+                )}
               </div>
 
               {/* Bio */}
@@ -305,22 +307,11 @@ const ProfilePage = () => {
 
             {/* Actions */}
             <div className="flex flex-col gap-2">
-              {/* Calendar Button for Bookable Categories (Venues, Audio Engineers, Recording Studios) */}
-              {['venue', 'audio_engineer', 'recording_studio'].includes(profile.category?.toLowerCase()) && (
-                <Link
-                  to={`/venue/${profile.id}/calendar`}
-                  className="btn btn-primary flex items-center justify-center gap-2"
-                  data-testid="provider-calendar-button"
-                >
-                  <Calendar className="w-4 h-4" />
-                  {profile.category === 'venue' ? 'View Calendar' : 'Book Session'}
-                </Link>
-              )}
               
               {!isOwnProfile && (
                 <Link
-                  to={`/messages?to=${profile.id}`}
-                  className={`btn ${['venue', 'audio_engineer', 'recording_studio'].includes(profile.category?.toLowerCase()) ? 'btn-secondary' : 'btn-primary'}`}
+                  to={`/messages?to=${profile.id}&handle=${profile.username}`}
+                  className="btn btn-primary"
                   data-testid="message-seller-button"
                 >
                   <MessageSquare className="w-4 h-4" />
@@ -405,7 +396,7 @@ const ProfilePage = () => {
 
           {/* Top 8 Fans Section */}
           <div className={`mt-6 pt-6 border-t ${isDark ? 'border-dark-300' : 'border-gray-200'}`}>
-            <Top8Fans profileId={id} isOwner={isOwnProfile} />
+
           </div>
 
           {/* Physical Address Section with Google Map */}

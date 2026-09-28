@@ -169,6 +169,10 @@ class MicLockerAnalytics {
    * Flush event queue
    */
   flush() {
+    // The app backend has no analytics endpoint; events are dropped until one exists.
+    this.eventQueue = [];
+    return;
+    // eslint-disable-next-line no-unreachable
     if (this.eventQueue.length === 0) return;
 
     const events = this.eventQueue.splice(0, ANALYTICS_CONFIG.maxQueueSize);

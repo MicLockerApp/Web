@@ -1,0 +1,34 @@
+# Render Blueprint for the miclockerapp.com website (static React build).
+# The site talks to the app backend at api.miclockerapp.com — there is no
+# website-specific server.
+services:
+  - type: web
+    runtime: static
+    name: miclocker-web
+    rootDir: frontend
+    buildCommand: npm ci --legacy-peer-deps && npm run build
+    staticPublishPath: build
+    envVars:
+      - key: REACT_APP_API_URL
+        value: https://api.miclockerapp.com
+      # Same Stripe publishable key the apps use (pk_live_... / pk_test_...)
+      - key: REACT_APP_STRIPE_PUBLISHABLE_KEY
+        sync: false
+      # Browser key for the Discover Pros map and address search
+      - key: REACT_APP_GOOGLE_MAPS_API_KEY
+        sync: false
+    headers:
+      - path: /.well-known/apple-app-site-association
+        name: Content-Type
+        value: application/json
+      - path: /apple-app-site-association
+        name: Content-Type
+        value: application/json
+    routes:
+      # Single-page app: every path that isn't a real file serves index.html
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    domains:
+      - miclockerapp.com
+      - www.miclockerapp.com

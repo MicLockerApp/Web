@@ -8,6 +8,9 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import S3MediaUploader from '../components/S3MediaUploader';
 import analytics from '../services/analytics';
 
+// Deleting messages/conversations isn't supported by the app backend yet.
+const CAN_DELETE = false;
+
 const MessagesPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -24,6 +27,8 @@ const MessagesPage = () => {
   
   // For starting a new conversation
   const toUserId = searchParams.get('to');
+  const toHandle = searchParams.get('handle');
+  const openThreadId = searchParams.get('thread');
   const [newRecipient, setNewRecipient] = useState(null);
   
   // New conversation modal state
@@ -44,6 +49,7 @@ const MessagesPage = () => {
   // Image upload state
   const [showImageUploader, setShowImageUploader] = useState(false);
   const [pendingImages, setPendingImages] = useState([]);
+  const [pendingMediaIds, setPendingMediaIds] = useState([]);
   const [uploadingImages, setUploadingImages] = useState(false);
 
   useEffect(() => {
@@ -79,7 +85,13 @@ const MessagesPage = () => {
   const fetchThreads = async () => {
     try {
       const response = await messagesAPI.getThreads({ limit: 50 });
-      setThreads(response.data.threads || []);
+      const list = response.data.threads || [];
+      setThreads(list);
+      if (openThreadId && !selectedThread) {
+        const target = list.find(t => t.id === openThreadId);
+        if (target) selectThread(target);
+      }
+      return list;
     } catch (error) {
       console.error('Error fetching threads:', error);
     } finally {
@@ -89,7 +101,7 @@ const MessagesPage = () => {
 
   const fetchNewRecipient = async () => {
     try {
-      const response = await usersAPI.getProfile(toUserId);
+      const response = await usersAPI.getProfile(toHandle || toUserId);
       setNewRecipient(response.data);
     } catch (error) {
       console.error('Error fetching recipient:', error);
@@ -124,9 +136,10 @@ const MessagesPage = () => {
     setSending(true);
     try {
       const recipientId = selectedThread?.other_user_id || toUserId;
-      await messagesAPI.send(recipientId, newMessage.trim() || ' ', null, pendingImages.length > 0 ? pendingImages : null);
+      await messagesAPI.send(recipientId, newMessage.trim() || ' ', null, pendingMediaIds);
       setNewMessage('');
       setPendingImages([]);
+      setPendingMediaIds([]);
       setShowImageUploader(false);
       
       // Track message sent
@@ -138,9 +151,7 @@ const MessagesPage = () => {
       } else {
         await fetchThreads();
         const threadsRes = await messagesAPI.getThreads({ limit: 50 });
-        const newThread = threadsRes.data.threads?.find(t => 
-          t.participants.includes(toUserId)
-        );
+        const newThread = threadsRes.data.threads?.find(t => t.other_user_id === toUserId);
         if (newThread) {
           selectThread(newThread);
         }
@@ -341,8 +352,8 @@ const MessagesPage = () => {
                         </div>
                       </div>
                     </button>
-                    {/* Thread menu button */}
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {/* Thread menu button (deleting conversations isn't on the app backend yet) */}
+                    {CAN_DELETE && <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -375,7 +386,7 @@ const MessagesPage = () => {
                           </button>
                         </div>
                       )}
-                    </div>
+                    </div>}
                   </div>
                 ))
               ) : (
@@ -438,7 +449,7 @@ const MessagesPage = () => {
                         className={`flex group ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
                       >
                         {/* Delete button - positioned before message for own messages */}
-                        {isOwnMessage && (
+                        {CAN_DELETE && isOwnMessage && (
                           <button
                             onClick={() => setShowDeleteConfirm(msg.id)}
                             disabled={deletingMessage === msg.id}
@@ -542,7 +553,7 @@ const MessagesPage = () => {
                           />
                           <button
                             type="button"
-                            onClick={() => setPendingImages(prev => prev.filter((_, i) => i !== idx))}
+                            onClick={() => { setPendingImages(prev => prev.filter((_, i) => i !== idx)); setPendingMediaIds(prev => prev.filter((_, i) => i !== idx)); }}
                             className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center"
                           >
                             <X className="w-3 h-3 text-white" />
@@ -556,8 +567,10 @@ const MessagesPage = () => {
                   {showImageUploader && (
                     <div className={`mb-3 p-3 rounded-lg ${isDark ? 'bg-dark-300' : 'bg-gray-100'}`}>
                       <S3MediaUploader
-                        onUploadComplete={(urls) => {
+                        source="message"
+                        onUploadComplete={(urls, items) => {
                           setPendingImages(prev => [...prev, ...urls]);
+                          setPendingMediaIds(prev => [...prev, ...(items || []).map(i => i.media_id).filter(Boolean)]);
                           setShowImageUploader(false);
                         }}
                         maxFiles={5}

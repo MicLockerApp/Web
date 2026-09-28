@@ -135,12 +135,15 @@ const HomePage = () => {
           
           {/* Stats - Reordered: Users, Listings, Platform Fee, Satisfaction */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16 max-w-2xl mx-auto">
+            {/* User count isn't exposed by the app backend; shown only if known. */}
+            {totalUsersCount > 0 && (
             <div>
               <p className="text-3xl font-bold text-primary">
                 <AnimatedCounter target={totalUsersCount} duration={2500} />
               </p>
               <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Active Users</p>
             </div>
+            )}
             <div>
               <p className="text-3xl font-bold text-primary">
                 <AnimatedCounter target={activeListingsCount} duration={2500} />

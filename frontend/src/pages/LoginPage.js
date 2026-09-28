@@ -55,9 +55,10 @@ const LoginPage = () => {
           )}
 
           <div className="mb-6">
-            <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Username or Email</label>
+            <label className={`block mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Email</label>
             <input
-              type="text"
+              type="email"
+              autoComplete="email"
               value={formData.username}
               onChange={(e) => setFormData({ ...formData, username: e.target.value })}
               required

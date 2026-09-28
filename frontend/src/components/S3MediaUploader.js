@@ -10,6 +10,9 @@ const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/webm'];
 
 const S3MediaUploader = ({ 
   listingId = null,
+  source = 'marketplace',
+  imagesOnly = true,
+  onUploadComplete,
   maxFiles = 10,
   onChange,
   initialMedia = [],
@@ -32,6 +35,9 @@ const S3MediaUploader = ({
   const validateFile = (file) => {
     const isImage = ALLOWED_IMAGE_TYPES.includes(file.type);
     const isVideo = ALLOWED_VIDEO_TYPES.includes(file.type);
+    if (imagesOnly && isVideo) {
+      return { valid: false, error: 'Only photos can be attached here (JPEG, PNG, WebP).' };
+    }
     
     if (!isImage && !isVideo) {
       return { valid: false, error: `Invalid file type: ${file.type}. Only images (JPEG, PNG, WebP, GIF) and videos (MP4, MOV, WebM) are allowed.` };
@@ -78,7 +84,7 @@ const S3MediaUploader = ({
 
     // Upload files one by one
     for (const { file, type, preview } of filesToUpload) {
-      const result = await uploadFile(file, listingId);
+      const result = await uploadFile(file, source);
       
       // Remove from queue
       setUploadQueue(prev => prev.filter(name => name !== file.name));
@@ -86,6 +92,7 @@ const S3MediaUploader = ({
       if (result.success) {
         const newMedia = {
           key: result.key,
+          media_id: result.media_id,
           url: result.url,
           type,
           filename: file.name,
@@ -93,6 +100,7 @@ const S3MediaUploader = ({
         };
         
         setMedia(prev => [...prev, newMedia]);
+        if (onUploadComplete) onUploadComplete([result.url], [newMedia]);
         
         // Clean up local preview
         URL.revokeObjectURL(preview);
@@ -116,7 +124,7 @@ const S3MediaUploader = ({
     
     // Clear input
     e.target.value = '';
-  }, [media.length, maxFiles, uploadFile, listingId, setError]);
+  }, [media.length, maxFiles, uploadFile, source, setError, onUploadComplete]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleRemove = useCallback(async (index) => {
     const item = media[index];
@@ -273,7 +281,7 @@ const S3MediaUploader = ({
             <input
               type="file"
               multiple
-              accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm"
+              accept={imagesOnly ? "image/jpeg,image/png,image/webp" : "image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm"}
               onChange={handleFileSelect}
               className="hidden"
               disabled={isUploading}
@@ -291,7 +299,7 @@ const S3MediaUploader = ({
       <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} space-y-1`}>
         <p>• First image will be the primary photo</p>
         <p>• Images: JPEG, PNG, WebP, GIF (max 10MB each)</p>
-        <p>• Videos: MP4, MOV, WebM (max 100MB each)</p>
+        {!imagesOnly && <p>• Videos: MP4, MOV, WebM (max 100MB each)</p>}
         <p>• Drag and drop or click to upload</p>
         <div className={`mt-3 p-3 rounded-lg ${isDark ? 'bg-yellow-500/10 border border-yellow-500/30' : 'bg-yellow-50 border border-yellow-200'}`}>
           <p className={`font-medium ${isDark ? 'text-yellow-400' : 'text-yellow-700'}`}>

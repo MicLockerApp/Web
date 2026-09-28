@@ -1,16 +1,16 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, useParams } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { DateRangeProvider } from './context/DateRangeContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
-import ChatWidget from './components/ChatWidget';
 import WelcomeBanner from './components/WelcomeBanner';
 import ReviewGatingWrapper from './components/ReviewGatingWrapper';
 import analytics from './services/analytics';
-import usePresenceTracker from './hooks/usePresenceTracker';
+import AppOnlyNotice from './components/site/AppOnlyNotice';
+import SharedVideoPage from './pages/SharedVideoPage';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -20,10 +20,8 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import VerifyResetCodePage from './pages/VerifyResetCodePage';
 import SearchPage from './pages/SearchPage';
 import ListingDetailPage from './pages/ListingDetailPage';
-import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
 import CheckoutSuccessPage from './pages/CheckoutSuccessPage';
-import CheckoutCancelPage from './pages/CheckoutCancelPage';
 import ProfilePage from './pages/ProfilePage';
 import EditProfilePage from './pages/EditProfilePage';
 import FavoritesPage from './pages/FavoritesPage';
@@ -31,42 +29,48 @@ import DashboardPage from './pages/DashboardPage';
 import CreateListingPage from './pages/CreateListingPage';
 import EditListingPage from './pages/EditListingPage';
 import MessagesPage from './pages/MessagesPage';
-import AdminPage from './pages/AdminPage';
-import AnalyticsDashboard from './pages/AnalyticsDashboard';
 import ReturnPolicyPage from './pages/ReturnPolicyPage';
 import CareersPage from './pages/CareersPage';
 import JobSearchPage from './pages/JobSearchPage';
 import AboutPage from './pages/AboutPage';
-import OffersPage from './pages/OffersPage';
 import OrdersPage from './pages/OrdersPage';
 import OrderDetailPage from './pages/OrderDetailPage';
 import ContactSupportPage from './pages/ContactSupportPage';
 import HelpCenterPage from './pages/HelpCenterPage';
-import AdminTicketsPage from './pages/AdminTicketsPage';
 import LegalPage from './pages/LegalPage';
 import TermsOfUsePage from './pages/TermsOfUsePage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import BillingPolicyPage from './pages/BillingPolicyPage';
 import PurchaseProtectionPage from './pages/PurchaseProtectionPage';
-import EmployeeSetupPage from './pages/EmployeeSetupPage';
 import CommunityRulesBuyersPage from './pages/CommunityRulesBuyersPage';
 import CommunityRulesSellersPage from './pages/CommunityRulesSellersPage';
-import TradesPage from './pages/TradesPage';
-import TradeDetailPage from './pages/TradeDetailPage';
 import PayoutsAndCreditsPage from './pages/PayoutsAndCreditsPage';
 import IntellectualPropertyPage from './pages/IntellectualPropertyPage';
 import SearchAndAdRankingPage from './pages/SearchAndAdRankingPage';
 import EUDataPolicyPage from './pages/EUDataPolicyPage';
-import AdminReportsPage from './pages/AdminReportsPage';
-import GigsPage from './pages/GigsPage';
 import LearnPage from './pages/LearnPage';
 import MapPage from './pages/MapPage';
-import VenueCalendarPage from './pages/VenueCalendarPage';
-import VenueBookingsPage from './pages/VenueBookingsPage';
-import ArtistBookingsPage from './pages/ArtistBookingsPage';
 
-// Initialize analytics on app load
+// Analytics are a no-op until the app backend has an events endpoint.
 analytics.init();
+
+// /listings/{id} is the app's share-link path; show the website listing page.
+const ListingShareRedirect = () => {
+  const { id } = useParams();
+  return <Navigate to={`/listing/${id}`} replace />;
+};
+
+// Signed-in accounts must finish setup (Terms + role/username) first — same
+// rule as the apps. Everything else stays reachable only after that.
+const SETUP_ALLOWED = ['/register', '/login', '/legal', '/about', '/help', '/contact-support'];
+const SetupGate = ({ children }) => {
+  const { needsTerms, needsProfileSetup, loading } = useAuth();
+  const location = useLocation();
+  if (loading) return children;
+  const allowed = SETUP_ALLOWED.some(p => location.pathname === p || location.pathname.startsWith(`${p}/`));
+  if ((needsTerms || needsProfileSetup) && !allowed) return <Navigate to="/register" replace />;
+  return children;
+};
 
 // Layout component that conditionally shows navbar/footer
 const Layout = ({ children }) => {
@@ -96,20 +100,14 @@ const Layout = ({ children }) => {
   );
 };
 
-// Presence Tracker Component - must be inside AuthProvider
-const PresenceTrackerComponent = () => {
-  usePresenceTracker();
-  return null;
-};
-
 function AppContent() {
   return (
     <Router>
       <AuthProvider>
-        <PresenceTrackerComponent />
         <CartProvider>
           <ReviewGatingWrapper>
             <Layout>
+              <SetupGate>
               <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
@@ -118,43 +116,43 @@ function AppContent() {
               <Route path="/forgot-password/verify" element={<VerifyResetCodePage />} />
               <Route path="/search" element={<SearchPage />} />
               <Route path="/listing/:id" element={<ListingDetailPage />} />
-              <Route path="/cart" element={<CartPage />} />
+              <Route path="/cart" element={<AppOnlyNotice feature="The cart" />} />
               <Route path="/checkout" element={<CheckoutPage />} />
               <Route path="/checkout/success" element={<CheckoutSuccessPage />} />
-              <Route path="/checkout/cancel" element={<CheckoutCancelPage />} />
+              <Route path="/checkout/cancel" element={<Navigate to="/" replace />} />
               <Route path="/profile/:id" element={<ProfilePage />} />
               <Route path="/profile/edit" element={<EditProfilePage />} />
-              <Route path="/profile/:id/edit" element={<EditProfilePage />} />
+              <Route path="/profile/:id/edit" element={<Navigate to="/profile/edit" replace />} />
               <Route path="/settings" element={<EditProfilePage />} />
               <Route path="/account" element={<EditProfilePage />} />
               <Route path="/account/settings" element={<EditProfilePage />} />
               <Route path="/favorites" element={<FavoritesPage />} />
-              <Route path="/gigs" element={<GigsPage />} />
+              <Route path="/gigs" element={<AppOnlyNotice feature="The gig board" />} />
               <Route path="/learn" element={<LearnPage />} />
               <Route path="/map" element={<MapPage />} />
-              <Route path="/venue/:venueId/calendar" element={<VenueCalendarPage />} />
-              <Route path="/venue/bookings" element={<VenueBookingsPage />} />
-              <Route path="/my-bookings" element={<ArtistBookingsPage />} />
+              <Route path="/venue/:venueId/calendar" element={<AppOnlyNotice feature="Venue calendars" />} />
+              <Route path="/venue/bookings" element={<AppOnlyNotice feature="Bookings" />} />
+              <Route path="/my-bookings" element={<AppOnlyNotice feature="Bookings" />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/dashboard/listings/:id/edit" element={<EditListingPage />} />
               <Route path="/sell" element={<CreateListingPage />} />
-              <Route path="/offers" element={<OffersPage />} />
+              <Route path="/offers" element={<AppOnlyNotice feature="Offers" />} />
               <Route path="/orders" element={<OrdersPage />} />
               <Route path="/orders/:id" element={<OrderDetailPage />} />
-              <Route path="/trades" element={<TradesPage />} />
-              <Route path="/trades/:tradeId" element={<TradeDetailPage />} />
+              <Route path="/trades" element={<AppOnlyNotice feature="Trades" />} />
+              <Route path="/trades/:tradeId" element={<AppOnlyNotice feature="Trades" />} />
               <Route path="/messages" element={<MessagesPage />} />
-              <Route path="/admin" element={<AdminPage />} />
-              <Route path="/admin/analytics" element={<AnalyticsDashboard />} />
+              <Route path="/admin" element={<AppOnlyNotice feature="The admin panel" />} />
+              <Route path="/admin/analytics" element={<AppOnlyNotice feature="The admin panel" />} />
               <Route path="/returns" element={<ReturnPolicyPage />} />
               <Route path="/careers" element={<CareersPage />} />
               <Route path="/careers/jobs" element={<JobSearchPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/contact-support" element={<ContactSupportPage />} />
               <Route path="/help" element={<HelpCenterPage />} />
-              <Route path="/admin/tickets" element={<AdminTicketsPage />} />
-              <Route path="/admin/tickets/:id" element={<AdminTicketsPage />} />
-              <Route path="/admin/reports" element={<AdminReportsPage />} />
+              <Route path="/admin/tickets" element={<AppOnlyNotice feature="The admin panel" />} />
+              <Route path="/admin/tickets/:id" element={<AppOnlyNotice feature="The admin panel" />} />
+              <Route path="/admin/reports" element={<AppOnlyNotice feature="The admin panel" />} />
               <Route path="/legal" element={<LegalPage />} />
               <Route path="/legal/terms-of-use" element={<TermsOfUsePage />} />
               <Route path="/legal/privacy-policy" element={<PrivacyPolicyPage />} />
@@ -166,7 +164,9 @@ function AppContent() {
               <Route path="/legal/intellectual-property" element={<IntellectualPropertyPage />} />
               <Route path="/legal/search-ranking" element={<SearchAndAdRankingPage />} />
               <Route path="/legal/eu-policy" element={<EUDataPolicyPage />} />
-              <Route path="/employee-setup" element={<EmployeeSetupPage />} />
+              <Route path="/employee-setup" element={<Navigate to="/" replace />} />
+              <Route path="/listings/:id" element={<ListingShareRedirect />} />
+              <Route path="/videos/:id" element={<SharedVideoPage />} />
               {/* Fallback */}
               <Route path="*" element={
                 <div className="min-h-screen flex items-center justify-center">
@@ -177,9 +177,8 @@ function AppContent() {
                 </div>
               } />
             </Routes>
+              </SetupGate>
           </Layout>
-          {/* AI Chat Widget - Stateless UI, can be replaced with Crisp */}
-          <ChatWidget />
           </ReviewGatingWrapper>
         </CartProvider>
       </AuthProvider>

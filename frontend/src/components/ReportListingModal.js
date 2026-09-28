@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Flag, AlertTriangle, Send } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-import api from '../services/api';
+import { reportsAPI } from '../services/api';
 
 const REPORT_CATEGORIES = [
   { id: 'inaccurate', label: 'Inaccurate Information', description: 'Misleading title, description, or photos' },
@@ -41,15 +41,8 @@ const ReportListingModal = ({ isOpen, onClose, listing, onSuccess }) => {
     setError('');
 
     try {
-      await api.post('/reports/listing', {
-        listing_id: listing.id,
-        category: selectedCategory,
-        description: description.trim(),
-        listing_url: `${window.location.origin}/listing/${listing.id}`,
-        listing_title: listing.title,
-        seller_id: listing.seller_id,
-        seller_username: listing.seller_username
-      });
+      const category = REPORT_CATEGORIES.find(c => c.id === selectedCategory);
+      await reportsAPI.reportListing(listing.id, category ? category.label : 'Other', description.trim());
       
       setSuccess(true);
       if (onSuccess) onSuccess();

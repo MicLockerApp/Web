@@ -1,27 +1,43 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { authAPI } from '../services/api';
+import { authAPI, tokenStore } from '../services/api';
 
 const AuthContext = createContext(null);
+
+const rememberUser = (u) => {
+  try {
+    if (u) localStorage.setItem('user', JSON.stringify({ id: u.id, username: u.username }));
+    else localStorage.removeItem('user');
+  } catch { /* storage unavailable */ }
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Assume signed in while the saved session is being checked, so protected
+  // pages don't bounce to /login on a hard refresh.
+  const [isAuthenticated, setIsAuthenticated] = useState(() => !!tokenStore.access());
 
   const loadUser = useCallback(async () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
+    if (!tokenStore.access()) {
+      setUser(null);
+      setIsAuthenticated(false);
       setLoading(false);
-      return;
+      return null;
     }
-
     try {
       const response = await authAPI.getMe();
       setUser(response.data);
+      rememberUser(response.data);
       setIsAuthenticated(true);
+      return response.data;
     } catch (error) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      const status = error.response?.status;
+      if (status === 401 || status === 403) {
+        tokenStore.clear();
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+      return null;
     } finally {
       setLoading(false);
     }
@@ -31,22 +47,24 @@ export const AuthProvider = ({ children }) => {
     loadUser();
   }, [loadUser]);
 
-  const login = async (username, password) => {
-    const response = await authAPI.login(username, password);
-    const { access_token } = response.data;
-    localStorage.setItem('token', access_token);
+  // Sign in with email + password.
+  const login = async (email, password) => {
+    const response = await authAPI.login(email, password);
     await loadUser();
     return response.data;
   };
 
+  // { email, first_name, last_name, date_of_birth (YYYY-MM-DD), password }
   const register = async (userData) => {
     const response = await authAPI.register(userData);
+    await loadUser();
     return response.data;
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    authAPI.logout();
+    tokenStore.clear();
+    rememberUser(null);
     setUser(null);
     setIsAuthenticated(false);
   };
@@ -55,21 +73,27 @@ export const AuthProvider = ({ children }) => {
     setUser(prev => ({ ...prev, ...userData }));
   };
 
-  // Setter function for direct token management (used by email verification signup)
-  const setToken = (token) => {
+  const setToken = (token, refresh) => {
     if (token) {
-      localStorage.setItem('token', token);
+      tokenStore.set(token, refresh);
       setIsAuthenticated(true);
     } else {
-      localStorage.removeItem('token');
+      tokenStore.clear();
       setIsAuthenticated(false);
     }
   };
+
+  // Same gate as the apps: signed-in accounts must have accepted the Terms
+  // and picked a role/handle before using the site.
+  const needsTerms = isAuthenticated && user && !user.terms_accepted_at;
+  const needsProfileSetup = isAuthenticated && user && (!user.category || !user.handle);
 
   const value = {
     user,
     loading,
     isAuthenticated,
+    needsTerms,
+    needsProfileSetup,
     login,
     register,
     logout,

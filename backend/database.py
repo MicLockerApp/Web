@@ -21,7 +21,7 @@ def extract_db_name_from_url(mongo_url: str) -> str:
     - mongodb://localhost:27017/testdb -> testdb
     - mongodb://localhost:27017 -> None (use default)
     
-    Also extracts appName parameter as fallback (common in Emergent deployments)
+    Also extracts the appName parameter as a fallback.
     """
     try:
         # Parse the URL
@@ -34,8 +34,7 @@ def extract_db_name_from_url(mongo_url: str) -> str:
             if db_name:
                 return db_name
         
-        # Fallback: Try to extract appName from query string (Emergent convention)
-        # The appName often matches the database name in Emergent's setup
+        # Fallback: try the appName query parameter
         if "appName=" in mongo_url:
             import re
             match = re.search(r'appName=([^&]+)', mongo_url)
@@ -52,15 +51,13 @@ def extract_db_name_from_url(mongo_url: str) -> str:
 def get_database_name() -> str:
     """
     Get database name with the following priority:
-    1. DB_NAME environment variable (set by Emergent platform)
+    1. DB_NAME environment variable
     2. Database name extracted from MONGO_URL connection string
     3. Default to 'test' for Atlas (MongoDB default) or environment-based for local
-    
-    This ensures compatibility with Emergent's managed MongoDB Atlas.
     """
     mongo_url = os.getenv("MONGO_URL", "mongodb://localhost:27017")
     
-    # Priority 1: Check for explicit DB_NAME env var (set by Emergent platform)
+    # Priority 1: explicit DB_NAME env var
     db_name_env = os.getenv("DB_NAME")
     if db_name_env:
         logger.info(f"Using database from DB_NAME env var: {db_name_env}")
@@ -78,7 +75,6 @@ def get_database_name() -> str:
     
     if is_atlas:
         # Use MongoDB's default database 'test' for Atlas
-        # This is the database Emergent's MongoDB user has access to
         db_name = "test"
         logger.info(f"Using default Atlas database: {db_name}")
     else:

@@ -25,7 +25,6 @@ http://localhost:8001/api
 10. [Files](#10-files)
 11. [Admin](#11-admin)
 12. [Analytics](#12-analytics)
-13. [Chatbot](#13-chatbot)
 14. [Error Handling](#error-handling)
 
 ---
@@ -1057,115 +1056,6 @@ Submit batch of frontend analytics events.
 
 ---
 
-## 13. Chatbot
-
-### POST /api/chatbot/message
-Send a message to the AI chatbot.
-
-**Request Body:**
-```json
-{
-  "session_id": "unique_session_id",
-  "message": "I need help with my order",
-  "user_id": null,
-  "source": "web_widget",
-  "context": {
-    "page": "/orders"
-  }
-}
-```
-
-**Response:** `200 OK`
-```json
-{
-  "session_id": "unique_session_id",
-  "message": "I can help you with that! Could you provide your order ID?",
-  "conversation_id": "uuid",
-  "intent": "order_inquiry",
-  "suggested_actions": [
-    {"label": "Enter order ID", "value": "My order ID is "},
-    {"label": "View my orders", "value": "Show me my recent orders"}
-  ],
-  "escalate_to_human": false,
-  "metadata": {}
-}
-```
-
-**Intent Types:**
-- `order_inquiry` - Questions about orders
-- `refund_request` - Return/refund requests
-- `account_help` - Account-related issues
-- `seller_support` - Seller questions
-- `payment_issue` - Payment problems
-- `escalation_request` - Request for human agent
-- `greeting` - General greeting
-- `general_inquiry` - Everything else
-
----
-
-### GET /api/chatbot/conversation/{session_id}
-Get conversation history.
-
-**Response:** `200 OK`
-```json
-{
-  "found": true,
-  "session_id": "unique_session_id",
-  "conversation_id": "uuid",
-  "status": "active",
-  "messages": [
-    {
-      "role": "user",
-      "content": "I need help",
-      "timestamp": "2024-01-15T10:00:00Z"
-    },
-    {
-      "role": "assistant",
-      "content": "How can I help you today?",
-      "timestamp": "2024-01-15T10:00:01Z"
-    }
-  ],
-  "escalated": false
-}
-```
-
----
-
-### POST /api/chatbot/resolve/{session_id}
-Mark conversation as resolved.
-
----
-
-### GET /api/chatbot/admin/stats
-Get chatbot analytics (admin only).
-
-**Response:** `200 OK`
-```json
-{
-  "total_conversations": 150,
-  "active_conversations": 5,
-  "resolved_conversations": 140,
-  "escalated_conversations": 5,
-  "conversations_today": 12,
-  "avg_messages_per_conversation": 4.2,
-  "escalation_rate": 3.3
-}
-```
-
----
-
-### GET /api/chatbot/admin/conversations
-Get all conversations (admin only).
-
-**Query Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| status | string | No | active, resolved, escalated |
-| limit | int | No | Max results |
-| skip | int | No | Offset for pagination |
-
----
-
 ## Error Handling
 
 ### Standard Error Response
@@ -1210,7 +1100,6 @@ Get all conversations (admin only).
 | Endpoint | Limit |
 |----------|-------|
 | POST /api/messages | 20 per minute |
-| POST /api/chatbot/message | 30 per minute |
 | POST /api/auth/login | 5 per minute |
 | POST /api/auth/forgot-password | 3 per minute |
 

@@ -86,7 +86,7 @@ const DashboardPage = () => {
     setLoading(true);
     try {
       if (activeTab === 'listings') {
-        const res = await listingsAPI.search({ seller_id: user.id, limit: 50 });
+        const res = await listingsAPI.getMine(user.id);
         setListings(res.data.listings || []);
       } else if (activeTab === 'orders') {
         const res = await ordersAPI.getAll({ limit: 50 });
@@ -170,9 +170,9 @@ const DashboardPage = () => {
   const openTrackingModal = (order) => {
     setSelectedOrder(order);
     setTrackingData({
-      carrier: order.tracking_info?.carrier || 'USPS',
       tracking_number: order.tracking_info?.tracking_number || '',
-      estimated_delivery: order.tracking_info?.estimated_delivery || ''
+      shipping_cost: '',
+      handling_cost: ''
     });
     setTrackingError('');
     setTrackingSuccess('');
@@ -486,7 +486,6 @@ const DashboardPage = () => {
             { id: 'listings', label: 'My Listings', icon: Package },
             { id: 'sales', label: 'Sales', icon: DollarSign, badge: pendingShipments > 0 ? pendingShipments : null },
             { id: 'orders', label: 'Purchases', icon: Package },
-            { id: 'offers', label: 'Offers', icon: MessageSquare, badge: offers.filter(o => o.status === 'pending').length || null },
           ].map(tab => (
             <button
               key={tab.id}
@@ -844,18 +843,31 @@ const DashboardPage = () => {
 
             <form onSubmit={handleAddTracking} className="space-y-4">
               <div>
-                <label className="block text-gray-400 text-sm mb-1">Shipping Carrier *</label>
-                <select
-                  value={trackingData.carrier}
-                  onChange={(e) => setTrackingData({...trackingData, carrier: e.target.value})}
+                <label className="block text-gray-400 text-sm mb-1">Shipping Cost ($) *</label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  step="0.01"
+                  value={trackingData.shipping_cost}
+                  onChange={(e) => setTrackingData({...trackingData, shipping_cost: e.target.value})}
+                  placeholder="0.00"
                   className="w-full"
-                >
-                  <option value="USPS">USPS</option>
-                  <option value="UPS">UPS</option>
-                  <option value="FedEx">FedEx</option>
-                  <option value="DHL">DHL</option>
-                  <option value="Other">Other</option>
-                </select>
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-400 text-sm mb-1">Handling Cost ($) *</label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  step="0.01"
+                  value={trackingData.handling_cost}
+                  onChange={(e) => setTrackingData({...trackingData, handling_cost: e.target.value})}
+                  placeholder="0.00"
+                  className="w-full"
+                />
               </div>
 
               <div>
@@ -870,16 +882,6 @@ const DashboardPage = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-gray-400 text-sm mb-1">Estimated Delivery (optional)</label>
-                <input
-                  type="text"
-                  value={trackingData.estimated_delivery}
-                  onChange={(e) => setTrackingData({...trackingData, estimated_delivery: e.target.value})}
-                  placeholder="e.g., January 25, 2026"
-                  className="w-full"
-                />
-              </div>
 
               <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
                 <p className="text-blue-400 text-sm">

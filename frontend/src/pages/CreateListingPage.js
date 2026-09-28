@@ -4,16 +4,11 @@ import { Upload, X, Plus, Image, Video } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { listingsAPI } from '../services/api';
 import S3MediaUploader from '../components/S3MediaUploader';
+import { GEAR_CATEGORIES, GEAR_CONDITIONS } from '../constants/gear';
 
-const CATEGORIES = [
-  'Guitars', 'Bass', 'Keyboards & Synths', 'Drums & Percussion',
-  'Pro Audio', 'Recording Equipment', 'Microphones', 'DJ Equipment',
-  'Studio Monitors', 'Headphones', 'Cables & Connectors', 'Effects Pedals',
-  'Amplifiers', 'Wind Instruments', 'String Instruments', 'Accessories',
-  'Cases & Bags', 'Stands & Mounts', 'Software & Plugins', 'Other'
-];
+const CATEGORIES = GEAR_CATEGORIES.map(c => c.label);
 
-const CONDITIONS = ['Brand New', 'Mint', 'Excellent', 'Very Good', 'Good', 'Fair', 'Poor'];
+const CONDITIONS = GEAR_CONDITIONS.map(c => c.label);
 
 const CreateListingPage = () => {
   const navigate = useNavigate();
@@ -25,12 +20,13 @@ const CreateListingPage = () => {
     title: '',
     description: '',
     brand: '',
-    model: '',
+    location: '',
     category: '',
     condition: '',
     price: '',
     quantity: 1,
     accepts_offers: true,
+    willing_to_trade: false,
     shipping_method: 'Standard',
     shipping_price: '',
     payment_plan_enabled: false,
@@ -65,38 +61,24 @@ const CreateListingPage = () => {
       return;
     }
 
-    try {
-      // Prepare media data from S3 uploads
-      const mediaData = uploadedMedia.map((item, index) => ({
-        url: item.url,
-        key: item.key,
-        type: item.type,
-        is_primary: index === 0
-      }));
+    if (uploadedMedia.length === 0) {
+      setError('Add at least one photo');
+      setLoading(false);
+      return;
+    }
 
-      // Create listing with S3 media URLs
+    try {
       const listingData = {
         title: formData.title,
         description: formData.description,
         brand: formData.brand || null,
-        model: formData.model || null,
+        location: formData.location || null,
         category: formData.category,
         condition: formData.condition,
-        price: parseFloat(formData.price),
-        quantity: parseInt(formData.quantity),
+        price: formData.price,
         accepts_offers: formData.accepts_offers,
-        shipping: {
-          method: formData.shipping_method,
-          price: parseFloat(formData.shipping_price) || 0,
-          estimated_days: '3-5 business days',
-        },
-        payment_plan: {
-          enabled: formData.payment_plan_enabled,
-          num_payments: formData.payment_plan_payments,
-          down_payment_percent: 25,
-        },
-        tags: formData.tags.split(',').map(t => t.trim()).filter(t => t),
-        media: mediaData,  // S3 media URLs
+        willing_to_trade: formData.willing_to_trade,
+        image_media_ids: uploadedMedia.map(item => item.media_id || item.key).filter(Boolean),
       };
 
       const response = await listingsAPI.create(listingData);
@@ -155,12 +137,12 @@ const CreateListingPage = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-400 mb-2">Model</label>
+                  <label className="block text-gray-400 mb-2">Location</label>
                   <input
                     type="text"
-                    value={formData.model}
-                    onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                    placeholder="e.g., American Professional II"
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    placeholder="e.g., St. Louis, MO"
                   />
                 </div>
               </div>
@@ -206,15 +188,6 @@ const CreateListingPage = () => {
                   data-testid="listing-description"
                 />
               </div>
-              <div>
-                <label className="block text-gray-400 mb-2">Tags (comma separated)</label>
-                <input
-                  type="text"
-                  value={formData.tags}
-                  onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                  placeholder="e.g., guitar, electric, vintage"
-                />
-              </div>
             </div>
           </div>
 
@@ -222,7 +195,7 @@ const CreateListingPage = () => {
           <div className="bg-dark-400 rounded-xl p-6 mb-6">
             <h2 className="text-lg font-semibold text-white mb-4">Pricing</h2>
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div>
                   <label className="block text-gray-400 mb-2">Price * <span className="text-xs text-gray-500">(min $5.00)</span></label>
                   <div className="relative">
@@ -240,16 +213,6 @@ const CreateListingPage = () => {
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-gray-400 mb-2">Quantity</label>
-                  <input
-                    type="number"
-                    value={formData.quantity}
-                    onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                    min="1"
-                    data-testid="listing-quantity"
-                  />
-                </div>
               </div>
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
@@ -260,72 +223,17 @@ const CreateListingPage = () => {
                 />
                 <span className="text-white">Accept Offers</span>
               </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.willing_to_trade}
+                  onChange={(e) => setFormData({ ...formData, willing_to_trade: e.target.checked })}
+                  className="w-5 h-5 rounded bg-dark-300 border-dark-200 text-primary focus:ring-primary"
+                />
+                <span className="text-white">Willing to Trade</span>
+              </label>
+              <p className="text-gray-500 text-sm">Shipping and handling are added when you ship the item.</p>
             </div>
-          </div>
-
-          {/* Shipping */}
-          <div className="bg-dark-400 rounded-xl p-6 mb-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Shipping</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-gray-400 mb-2">Shipping Method</label>
-                <select
-                  value={formData.shipping_method}
-                  onChange={(e) => setFormData({ ...formData, shipping_method: e.target.value })}
-                >
-                  <option value="Standard">Standard Shipping</option>
-                  <option value="Express">Express Shipping</option>
-                  <option value="Local Pickup">Local Pickup Only</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-gray-400 mb-2">Shipping Cost</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                  <input
-                    type="number"
-                    value={formData.shipping_price}
-                    onChange={(e) => setFormData({ ...formData, shipping_price: e.target.value })}
-                    className="pl-8"
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Payment Plan */}
-          <div className="bg-dark-400 rounded-xl p-6 mb-6">
-            <label className="flex items-center justify-between cursor-pointer mb-4">
-              <span className="text-lg font-semibold text-white">Payment Plan</span>
-              <input
-                type="checkbox"
-                checked={formData.payment_plan_enabled}
-                onChange={(e) => setFormData({ ...formData, payment_plan_enabled: e.target.checked })}
-                className="w-5 h-5 rounded bg-dark-300 border-dark-200 text-primary focus:ring-primary"
-              />
-            </label>
-            {formData.payment_plan_enabled && (
-              <div>
-                <label className="block text-gray-400 mb-2">Number of Payments</label>
-                <select
-                  value={formData.payment_plan_payments}
-                  onChange={(e) => setFormData({ ...formData, payment_plan_payments: parseInt(e.target.value) })}
-                >
-                  <option value="2">2 payments</option>
-                  <option value="3">3 payments</option>
-                  <option value="4">4 payments</option>
-                  <option value="6">6 payments</option>
-                </select>
-                {formData.price && (
-                  <p className="text-gray-400 text-sm mt-2">
-                    Buyers can pay ${(parseFloat(formData.price) / formData.payment_plan_payments).toFixed(2)} per payment
-                  </p>
-                )}
-              </div>
-            )}
           </div>
 
           <button

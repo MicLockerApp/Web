@@ -1,31 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, DollarSign, Tag, Box, Truck, Save, Trash2 } from 'lucide-react';
+import { ArrowLeft, DollarSign, Save, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { listingsAPI } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import S3MediaUploader from '../components/S3MediaUploader';
+import { GEAR_CATEGORIES, GEAR_CONDITIONS } from '../constants/gear';
 
-const CATEGORIES = [
-  'Guitars', 'Bass', 'Drums & Percussion', 'Keyboards & Synths', 'Pro Audio',
-  'Recording', 'DJ & Electronic', 'Microphones', 'Amplifiers', 'Effects & Pedals',
-  'Accessories', 'Studio Equipment', 'Live Sound', 'Vintage', 'Other'
-];
+const CATEGORIES = GEAR_CATEGORIES.map(c => c.label);
 
-const CONDITIONS = [
-  { value: 'new', label: 'Brand New' },
-  { value: 'mint', label: 'Mint' },
-  { value: 'excellent', label: 'Excellent' },
-  { value: 'very_good', label: 'Very Good' },
-  { value: 'good', label: 'Good' },
-  { value: 'fair', label: 'Fair' },
-  { value: 'poor', label: 'Poor' },
-];
+const CONDITIONS = GEAR_CONDITIONS.map(c => ({ value: c.key, label: c.label }));
 
 const EditListingPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -39,23 +28,20 @@ const EditListingPage = () => {
     category: '',
     condition: '',
     brand: '',
-    model: '',
-    quantity: 1,
+    location: '',
     accepts_offers: true,
-    shipping_price: '',
-    shipping_days: '',
-    payment_plan_enabled: false,
-    payment_plan_payments: 3,
+    willing_to_trade: false,
   });
   const [media, setMedia] = useState([]);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!isAuthenticated) {
       navigate('/login');
       return;
     }
-    fetchListing();
-  }, [id, isAuthenticated, navigate]);
+    if (user) fetchListing();
+  }, [id, isAuthenticated, authLoading, user, navigate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchListing = async () => {
     try {
@@ -73,15 +59,11 @@ const EditListingPage = () => {
         description: listing.description || '',
         price: listing.price?.toString() || '',
         category: listing.category || '',
-        condition: listing.condition || '',
+        condition: listing.condition_key || '',
         brand: listing.brand || '',
-        model: listing.model || '',
-        quantity: listing.quantity || 1,
+        location: listing.location || '',
         accepts_offers: listing.accepts_offers !== false,
-        shipping_price: listing.shipping?.price?.toString() || '',
-        shipping_days: listing.shipping?.estimated_days || '',
-        payment_plan_enabled: listing.payment_plan?.enabled || false,
-        payment_plan_payments: listing.payment_plan?.num_payments || 3,
+        willing_to_trade: !!listing.willing_to_trade,
       });
       setMedia(listing.media || []);
     } catch (error) {
@@ -104,7 +86,8 @@ const EditListingPage = () => {
   const handleMediaChange = useCallback((newMedia) => {
     // Convert S3MediaUploader format to listing media format
     const converted = newMedia.map((item, index) => ({
-      id: item.key || `media-${index}`,
+      id: item.media_id || item.key || `media-${index}`,
+      media_id: item.media_id || item.key,
       url: item.url,
       media_type: item.type,
       is_primary: index === 0,
@@ -137,25 +120,18 @@ const EditListingPage = () => {
     setMessage({ type: '', text: '' });
 
     try {
+      const ordered = [...media].sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0));
       const listingData = {
         title: formData.title,
         description: formData.description,
-        price: parseFloat(formData.price),
+        price: formData.price,
         category: formData.category,
         condition: formData.condition,
         brand: formData.brand || null,
-        model: formData.model || null,
-        quantity: parseInt(formData.quantity),
+        location: formData.location || null,
         accepts_offers: formData.accepts_offers,
-        shipping: formData.shipping_price ? {
-          price: parseFloat(formData.shipping_price),
-          estimated_days: formData.shipping_days || '3-5 business days',
-        } : null,
-        payment_plan: formData.payment_plan_enabled ? {
-          enabled: true,
-          num_payments: parseInt(formData.payment_plan_payments),
-        } : null,
-        media: media,
+        willing_to_trade: formData.willing_to_trade,
+        image_media_ids: ordered.map(m => m.media_id).filter(Boolean),
       };
 
       await listingsAPI.update(id, listingData);
@@ -208,7 +184,8 @@ const EditListingPage = () => {
             listingId={id}
             onChange={handleMediaChange}
             initialMedia={media.map(m => ({
-              key: m.id,
+              key: m.media_id,
+              media_id: m.media_id,
               url: m.url,
               type: m.media_type,
               filename: m.id
@@ -257,12 +234,13 @@ const EditListingPage = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-400 mb-2">Model</label>
+                  <label className="block text-gray-400 mb-2">Location</label>
                   <input
                     type="text"
-                    name="model"
-                    value={formData.model}
+                    name="location"
+                    value={formData.location}
                     onChange={handleChange}
+                    placeholder="e.g., St. Louis, MO"
                   />
                 </div>
               </div>
@@ -308,7 +286,7 @@ const EditListingPage = () => {
             </h2>
             
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div>
                   <label className="block text-gray-400 mb-2">Price *</label>
                   <div className="relative">
@@ -326,16 +304,6 @@ const EditListingPage = () => {
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-gray-400 mb-2">Quantity</label>
-                  <input
-                    type="number"
-                    name="quantity"
-                    value={formData.quantity}
-                    onChange={handleChange}
-                    min="1"
-                  />
-                </div>
               </div>
 
               <label className="flex items-center gap-3 cursor-pointer">
@@ -352,65 +320,13 @@ const EditListingPage = () => {
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"
-                  name="payment_plan_enabled"
-                  checked={formData.payment_plan_enabled}
+                  name="willing_to_trade"
+                  checked={formData.willing_to_trade}
                   onChange={handleChange}
                   className="w-5 h-5 rounded"
                 />
-                <span className="text-white">Offer payment plan</span>
+                <span className="text-white">Willing to trade</span>
               </label>
-
-              {formData.payment_plan_enabled && (
-                <div>
-                  <label className="block text-gray-400 mb-2">Number of Payments</label>
-                  <select
-                    name="payment_plan_payments"
-                    value={formData.payment_plan_payments}
-                    onChange={handleChange}
-                  >
-                    {[2, 3, 4, 6, 12].map(n => (
-                      <option key={n} value={n}>{n} payments of ${(parseFloat(formData.price || 0) / n).toFixed(2)}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Shipping */}
-          <div className="bg-dark-400 rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <Truck className="w-5 h-5" />
-              Shipping
-            </h2>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-gray-400 mb-2">Shipping Cost</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                  <input
-                    type="number"
-                    name="shipping_price"
-                    value={formData.shipping_price}
-                    onChange={handleChange}
-                    min="0"
-                    step="0.01"
-                    className="pl-8"
-                    placeholder="0 for free shipping"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-gray-400 mb-2">Estimated Delivery</label>
-                <input
-                  type="text"
-                  name="shipping_days"
-                  value={formData.shipping_days}
-                  onChange={handleChange}
-                  placeholder="e.g., 3-5 business days"
-                />
-              </div>
             </div>
           </div>
 

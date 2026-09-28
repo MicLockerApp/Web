@@ -31,9 +31,6 @@ from tasks.delivery_tasks import start_delivery_scheduler
 from analytics.routes import analytics_router, events_router
 from analytics.tasks import start_scheduler, stop_scheduler, run_initial_aggregation
 
-# Chatbot imports
-from chatbot.routes import chatbot_router
-
 # Password hashing
 from passlib.context import CryptContext
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -290,9 +287,6 @@ app.include_router(stats_router, prefix="/api")
 # Analytics routes
 app.include_router(analytics_router, prefix="/api")
 app.include_router(events_router, prefix="/api")
-
-# Chatbot routes
-app.include_router(chatbot_router, prefix="/api")
 
 # Stripe Connect V2 Sample routes (demonstration integration)
 app.include_router(stripe_connect_v2_sample_router, prefix="/api")

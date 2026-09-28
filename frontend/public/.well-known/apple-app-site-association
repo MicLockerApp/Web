@@ -1,0 +1,22 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appIDs": [
+          "6R6MQNLHPL.com.miclockerapp.MicLocker"
+        ],
+        "components": [
+          {
+            "/": "/videos/*",
+            "comment": "Open shared MicLocker videos in the app."
+          },
+          {
+            "/": "/listings/*",
+            "comment": "Open shared gear listings in the app."
+          }
+        ]
+      }
+    ]
+  }
+}

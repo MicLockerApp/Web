@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ShoppingCart, MessageSquare, Heart, Share2, Star, ChevronLeft, ChevronRight, Check, X, Copy, Facebook, Twitter, Mail, Link as LinkIcon, ArrowLeftRight, Flag, Play, Volume2, ArrowLeft } from 'lucide-react';
-import { listingsAPI, offersAPI, cartAPI, usersAPI, tradesAPI } from '../services/api';
+import { MessageSquare, Heart, Share2, ChevronLeft, ChevronRight, X, Copy, Facebook, Twitter, Mail, Link as LinkIcon, Flag, Play, Volume2, ArrowLeft } from 'lucide-react';
+import { listingsAPI, usersAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { useCart } from '../context/CartContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import StarRating from '../components/StarRating';
 import analytics from '../services/analytics';
@@ -13,25 +12,17 @@ const ListingDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-  const { addItem } = useCart();
   const videoRef = useRef(null);
   
   const [listing, setListing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [showOfferModal, setShowOfferModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
-  const [showTradeModal, setShowTradeModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
-  const [offerPrice, setOfferPrice] = useState('');
-  const [offerMessage, setOfferMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [isFavorited, setIsFavorited] = useState(false);
   const [favLoading, setFavLoading] = useState(false);
-  const [myListings, setMyListings] = useState([]);
-  const [selectedTradeListingId, setSelectedTradeListingId] = useState('');
-  const [tradeEligibility, setTradeEligibility] = useState(null);
 
   useEffect(() => {
     const fetchListing = async () => {
@@ -51,9 +42,8 @@ const ListingDetailPage = () => {
         // Check if listing is favorited
         if (isAuthenticated) {
           try {
-            const favResponse = await usersAPI.getFavorites();
-            const favorites = favResponse.data.listings || [];
-            setIsFavorited(favorites.some(fav => fav.id === id));
+            const favResponse = await usersAPI.checkFavorite(id);
+            setIsFavorited(!!favResponse.data.is_favorite);
           } catch (err) {
             console.error('Error checking favorites:', err);
           }
@@ -126,105 +116,26 @@ const ListingDetailPage = () => {
     }
   };
 
-  const handleAddToCart = async () => {
+  // One listing per purchase, same as the apps.
+  const handleBuyNow = () => {
     if (!isAuthenticated) {
       navigate('/login');
       return;
     }
-    try {
-      await addItem(listing.id);
-      setMessage({ type: 'success', text: 'Added to cart!' });
-      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
-      
-      // Track add to cart event
-      analytics.addToCart(listing.id, listing.price, 1, listing.category, false);
-    } catch (error) {
-      setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to add to cart' });
-    }
+    navigate(`/checkout?listing=${listing.id}`);
   };
 
-  const handleBuyNow = async () => {
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
-    try {
-      await addItem(listing.id);
-      navigate('/cart');
-    } catch (error) {
-      setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to add to cart' });
-    }
-  };
-
-  const handleMakeOffer = async (e) => {
-    e.preventDefault();
+  const handleMessageSeller = async () => {
     if (!isAuthenticated) {
       navigate('/login');
       return;
     }
     setSubmitting(true);
     try {
-      await offersAPI.create({
-        listing_id: listing.id,
-        offer_price: parseFloat(offerPrice),
-        message: offerMessage,
-      });
-      setShowOfferModal(false);
-      setOfferPrice('');
-      setOfferMessage('');
-      setMessage({ type: 'success', text: 'Offer submitted!' });
+      const response = await listingsAPI.messageSeller(listing.id);
+      navigate(`/messages?thread=${response.data.conversation_id}`);
     } catch (error) {
-      setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to submit offer' });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleOpenTradeModal = async () => {
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
-    
-    // Check trade eligibility
-    try {
-      const eligResponse = await tradesAPI.checkEligibility();
-      setTradeEligibility(eligResponse.data);
-      
-      if (!eligResponse.data.eligible) {
-        setMessage({ type: 'error', text: eligResponse.data.reason });
-        return;
-      }
-      
-      // Fetch user's active listings
-      const listingsResponse = await listingsAPI.getSellerListings(user.id, { status: 'active' });
-      setMyListings(listingsResponse.data.listings || []);
-      setShowTradeModal(true);
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to check trade eligibility' });
-    }
-  };
-
-  const handleProposeTrade = async (e) => {
-    e.preventDefault();
-    if (!selectedTradeListingId) {
-      setMessage({ type: 'error', text: 'Please select one of your listings to trade' });
-      return;
-    }
-    
-    setSubmitting(true);
-    try {
-      const response = await tradesAPI.create(selectedTradeListingId, listing.id);
-      setShowTradeModal(false);
-      setSelectedTradeListingId('');
-      setMessage({ type: 'success', text: 'Trade proposal sent!' });
-      
-      // Navigate to trade detail page
-      setTimeout(() => {
-        navigate(`/trades/${response.data.trade_id}`);
-      }, 1500);
-    } catch (error) {
-      setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to propose trade' });
+      setMessage({ type: 'error', text: error.response?.data?.detail || 'Could not open a conversation with the seller' });
     } finally {
       setSubmitting(false);
     }
@@ -430,7 +341,7 @@ const ListingDetailPage = () => {
 
             {/* Seller Info */}
             <Link
-              to={`/profile/${listing.seller_id}`}
+              to={`/profile/${listing.seller_username}`}
               className="flex items-center gap-3 p-4 bg-dark-400 rounded-lg mb-6 hover:bg-dark-300 transition-colors"
               data-testid="seller-link"
             >
@@ -472,32 +383,14 @@ const ListingDetailPage = () => {
                   Buy It Now
                 </button>
                 <button
-                  onClick={handleAddToCart}
+                  onClick={handleMessageSeller}
                   className="btn btn-secondary w-full py-3"
-                  data-testid="add-to-cart-button"
+                  disabled={submitting}
+                  data-testid="message-seller-button"
                 >
-                  <ShoppingCart className="w-5 h-5" />
-                  Add to Cart
+                  <MessageSquare className="w-5 h-5" />
+                  Message Seller
                 </button>
-                <div className="flex gap-3">
-                  {listing.accepts_offers && (
-                    <button
-                      onClick={() => setShowOfferModal(true)}
-                      className="btn btn-outline flex-1 py-3"
-                      data-testid="make-offer-button"
-                    >
-                      Make an Offer
-                    </button>
-                  )}
-                  <button
-                    onClick={handleOpenTradeModal}
-                    className="btn btn-outline flex-1 py-3"
-                    data-testid="propose-trade-button"
-                  >
-                    <ArrowLeftRight className="w-5 h-5 mr-2" />
-                    Trade
-                  </button>
-                </div>
               </div>
             )}
 
@@ -554,58 +447,6 @@ const ListingDetailPage = () => {
         </div>
       </div>
 
-      {/* Offer Modal */}
-      {showOfferModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-          <div className="bg-dark-400 rounded-xl p-6 max-w-md w-full">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-white">Make an Offer</h2>
-              <button onClick={() => setShowOfferModal(false)} className="text-gray-400 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <form onSubmit={handleMakeOffer}>
-              <div className="mb-4">
-                <label className="block text-gray-400 mb-2">Your Offer</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                  <input
-                    type="number"
-                    value={offerPrice}
-                    onChange={(e) => setOfferPrice(e.target.value)}
-                    placeholder={listing.price.toString()}
-                    className="pl-8"
-                    required
-                    min="1"
-                    step="0.01"
-                    data-testid="offer-price-input"
-                  />
-                </div>
-                <p className="text-sm text-gray-500 mt-1">List price: ${listing.price.toLocaleString()}</p>
-              </div>
-              <div className="mb-6">
-                <label className="block text-gray-400 mb-2">Message (optional)</label>
-                <textarea
-                  value={offerMessage}
-                  onChange={(e) => setOfferMessage(e.target.value)}
-                  rows={3}
-                  placeholder="Add a message to the seller..."
-                  data-testid="offer-message-input"
-                />
-              </div>
-              <button
-                type="submit"
-                className="btn btn-primary w-full py-3"
-                disabled={submitting}
-                data-testid="submit-offer-button"
-              >
-                {submitting ? 'Submitting...' : 'Submit Offer'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* Share Modal */}
       {showShareModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
@@ -658,109 +499,6 @@ const ListingDetailPage = () => {
                 <span className="truncate">{window.location.href}</span>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Trade Modal */}
-      {showTradeModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-          <div className="bg-dark-400 rounded-xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-white">Propose a Trade</h2>
-              <button onClick={() => setShowTradeModal(false)} className="text-gray-400 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Trade Info Banner */}
-            <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 mb-6">
-              <p className="text-sm text-primary">
-                <strong>🎉 Trades are free!</strong> No platform fees. You have {tradeEligibility?.trades_remaining || 1} free trade(s) this month.
-              </p>
-            </div>
-
-            {/* Item you want */}
-            <div className="mb-6">
-              <p className="text-gray-400 text-sm mb-2">You want:</p>
-              <div className="flex items-center gap-3 p-3 bg-dark-300 rounded-lg">
-                {listing.media?.[0]?.url ? (
-                  <img 
-                    src={listing.media[0].url} 
-                    alt={listing.title}
-                    className="w-16 h-16 object-cover rounded-lg"
-                  />
-                ) : (
-                  <div className="w-16 h-16 bg-dark-200 rounded-lg" />
-                )}
-                <div>
-                  <p className="text-white font-medium">{listing.title}</p>
-                  <p className="text-gray-400 text-sm">${listing.price?.toLocaleString()}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Select your listing */}
-            <form onSubmit={handleProposeTrade}>
-              <div className="mb-6">
-                <label className="block text-gray-400 mb-2">Select one of your listings to trade:</label>
-                
-                {myListings.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-gray-400 mb-4">You don&apos;t have any active listings to trade.</p>
-                    <Link to="/sell" className="btn btn-primary">
-                      Create a Listing
-                    </Link>
-                  </div>
-                ) : (
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {myListings.map(myListing => (
-                      <label 
-                        key={myListing.id}
-                        className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors border ${
-                          selectedTradeListingId === myListing.id 
-                            ? 'bg-primary/10 border-primary' 
-                            : 'bg-dark-300 border-transparent hover:bg-dark-200'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="tradeListing"
-                          value={myListing.id}
-                          checked={selectedTradeListingId === myListing.id}
-                          onChange={(e) => setSelectedTradeListingId(e.target.value)}
-                          className="text-primary"
-                        />
-                        {myListing.media?.[0]?.url ? (
-                          <img 
-                            src={myListing.media[0].url} 
-                            alt={myListing.title}
-                            className="w-12 h-12 object-cover rounded-lg"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 bg-dark-200 rounded-lg" />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-white font-medium truncate">{myListing.title}</p>
-                          <p className="text-gray-400 text-sm">${myListing.price?.toLocaleString()}</p>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {myListings.length > 0 && (
-                <button
-                  type="submit"
-                  className="btn btn-primary w-full py-3"
-                  disabled={submitting || !selectedTradeListingId}
-                  data-testid="submit-trade-button"
-                >
-                  {submitting ? 'Sending...' : 'Propose Trade'}
-                </button>
-              )}
-            </form>
           </div>
         </div>
       )}
