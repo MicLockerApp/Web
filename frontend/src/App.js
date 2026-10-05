@@ -49,6 +49,7 @@ import SearchAndAdRankingPage from './pages/SearchAndAdRankingPage';
 import EUDataPolicyPage from './pages/EUDataPolicyPage';
 import LearnPage from './pages/LearnPage';
 import MapPage from './pages/MapPage';
+import FeedbackPage from './pages/FeedbackPage';
 
 // Analytics are a no-op until the app backend has an events endpoint.
 analytics.init();
@@ -61,7 +62,7 @@ const ListingShareRedirect = () => {
 
 // Signed-in accounts must finish setup (Terms + role/username) first — same
 // rule as the apps. Everything else stays reachable only after that.
-const SETUP_ALLOWED = ['/register', '/login', '/legal', '/about', '/help', '/contact-support'];
+const SETUP_ALLOWED = ['/register', '/login', '/legal', '/about', '/help', '/contact-support', '/feedback'];
 const SetupGate = ({ children }) => {
   const { needsTerms, needsProfileSetup, loading } = useAuth();
   const location = useLocation();
@@ -148,6 +149,7 @@ function AppContent() {
               <Route path="/about" element={<AboutPage />} />
               <Route path="/contact-support" element={<ContactSupportPage />} />
               <Route path="/help" element={<HelpCenterPage />} />
+              <Route path="/feedback" element={<FeedbackPage />} />
               <Route path="/admin/tickets" element={<AppOnlyNotice feature="The admin panel" />} />
               <Route path="/admin/tickets/:id" element={<AppOnlyNotice feature="The admin panel" />} />
               <Route path="/admin/reports" element={<AppOnlyNotice feature="The admin panel" />} />

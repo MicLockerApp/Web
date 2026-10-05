@@ -17,6 +17,10 @@ services:
       # Browser key for the Discover Pros map and address search
       - key: REACT_APP_GOOGLE_MAPS_API_KEY
         sync: false
+      # WishKit project key for /feedback (same project as the iOS app's
+      # WISHKIT_API_KEY, so requests are shared across platforms)
+      - key: REACT_APP_WISHKIT_PROJECT_KEY
+        sync: false
     headers:
       - path: /.well-known/apple-app-site-association
         name: Content-Type

@@ -52,6 +52,7 @@ const Footer = () => {
             <h3 className={`font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Help</h3>
             <ul className="space-y-2">
               <li><Link to="/help" className={`text-sm hover:text-primary ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Contact Support</Link></li>
+              <li><Link to="/feedback" className={`text-sm hover:text-primary ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Feature Requests</Link></li>
               <li><Link to="/returns" className={`text-sm hover:text-primary ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Returns</Link></li>
             </ul>
           </div>
