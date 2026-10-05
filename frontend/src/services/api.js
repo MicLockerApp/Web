@@ -382,6 +382,11 @@ export const authAPI = {
   changePassword: (currentPassword, newPassword) =>
     api.post('/auth/change-password', { old_password: currentPassword, new_password: newPassword, confirm_password: newPassword }),
   requestEmailChange: (newEmail) => api.post('/auth/email-change/request', { new_email: newEmail }),
+  // Account deletion -- same two calls the apps make. The preview says
+  // whether the account can be deleted right now (sold orders still in
+  // progress block it) and how many active listings will be removed.
+  getDeletionPreview: () => api.get('/auth/me/deletion-preview'),
+  deleteAccount: () => api.delete('/auth/me'),
   verifyEmailChange: (code) => api.post('/auth/email-change/confirm', { code }),
   getCategories: async () => {
     const { PRO_CATEGORIES } = await import('../constants/roles');

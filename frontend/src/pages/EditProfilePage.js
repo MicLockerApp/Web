@@ -85,7 +85,7 @@ const PhysicalAddressWarningModal = ({ isOpen, onConfirm, onCancel }) => {
 
 const EditProfilePage = () => {
   const navigate = useNavigate();
-  const { user, refreshUser, loading: authLoading } = useAuth();
+  const { user, refreshUser, loading: authLoading, logout } = useAuth();
   const { isDark } = useTheme();
   const fileInputRef = useRef(null);
   const [categoryOptions, setCategoryOptions] = useState(null);
@@ -106,6 +106,12 @@ const EditProfilePage = () => {
   const [passwordSuccess, setPasswordSuccess] = useState('');
   const [savingEmail, setSavingEmail] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
+
+  // Delete account (same flow as the apps: check → warn → type DELETE → delete)
+  const [deleteStep, setDeleteStep] = useState('idle'); // idle | checking | confirm | deleting
+  const [deletePreview, setDeletePreview] = useState(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleteError, setDeleteError] = useState('');
   
   const [formData, setFormData] = useState({
     username: '',
@@ -359,6 +365,45 @@ const EditProfilePage = () => {
       setEmailError(typeof d === 'string' ? d : 'Failed to change email');
     } finally {
       setSavingEmail(false);
+    }
+  };
+
+  // Step 1: ask the backend whether this account can be deleted right now.
+  const handleStartDelete = async () => {
+    setDeleteError('');
+    setDeleteStep('checking');
+    try {
+      const res = await authAPI.getDeletionPreview();
+      const preview = res.data || {};
+      if (!preview.can_delete) {
+        setDeleteError(preview.block_reason || 'You cannot delete your account right now.');
+        setDeleteStep('idle');
+        return;
+      }
+      setDeletePreview(preview);
+      setDeleteConfirmText('');
+      setDeleteStep('confirm');
+    } catch (err) {
+      setDeleteError(err.response?.data?.detail || 'We could not check whether your account can be deleted. Please try again.');
+      setDeleteStep('idle');
+    }
+  };
+
+  // Step 2: delete, then sign out and go to the home page.
+  const handleConfirmDelete = async () => {
+    if (deleteConfirmText.trim().toUpperCase() !== 'DELETE') return;
+    setDeleteError('');
+    setDeleteStep('deleting');
+    try {
+      await authAPI.deleteAccount();
+      // Leave this page before clearing the session, so its "not signed in
+      // → /login" redirect never fires; the visitor lands on the home page.
+      navigate('/', { replace: true });
+      logout();
+    } catch (err) {
+      const detail = err.response?.data?.detail;
+      setDeleteError(typeof detail === 'string' ? detail : 'Your account could not be deleted. Please try again or contact support.');
+      setDeleteStep('confirm');
     }
   };
 
@@ -1529,6 +1574,80 @@ const EditProfilePage = () => {
                 {savingPassword ? 'Changing...' : 'Change Password'}
               </button>
             </form>
+          </div>
+
+          {/* Delete Account */}
+          <div className="pt-6 mt-6 border-t border-dark-300" data-testid="delete-account-section">
+            <h3 className="text-lg font-medium mb-2 text-red-400 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5" />
+              Delete Account
+            </h3>
+            <p className={`text-sm mb-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              Permanently removes your account and all associated data — videos, photos, messages, listings and profile. This cannot be undone.
+            </p>
+
+            {deleteError && (
+              <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm">
+                {deleteError}
+              </div>
+            )}
+
+            {(deleteStep === 'idle' || deleteStep === 'checking') && (
+              <button
+                type="button"
+                onClick={handleStartDelete}
+                disabled={deleteStep === 'checking'}
+                className="px-4 py-2 rounded-lg border border-red-500/60 text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                data-testid="delete-account-button"
+              >
+                {deleteStep === 'checking' ? 'Checking...' : 'Delete Account'}
+              </button>
+            )}
+
+            {(deleteStep === 'confirm' || deleteStep === 'deleting') && (
+              <div className="p-4 rounded-lg border border-red-500/50 bg-red-500/10 space-y-4">
+                <p className={`text-sm ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+                  <strong>Are you absolutely sure?</strong> Your account will be deleted immediately and there is no way to recover it.
+                  {deletePreview?.active_gear_listing_count > 0 && (
+                    <> You still have {deletePreview.active_gear_listing_count === 1 ? '1 available gear listing' : `${deletePreview.active_gear_listing_count} available gear listings`}; {deletePreview.active_gear_listing_count === 1 ? 'it' : 'they'} will be deleted too.</>
+                  )}
+                </p>
+                <div>
+                  <label className={`block mb-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Type DELETE to confirm
+                  </label>
+                  <input
+                    type="text"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    placeholder="DELETE"
+                    autoComplete="off"
+                    className="w-full"
+                    disabled={deleteStep === 'deleting'}
+                    data-testid="delete-confirm-input"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={handleConfirmDelete}
+                    disabled={deleteStep === 'deleting' || deleteConfirmText.trim().toUpperCase() !== 'DELETE'}
+                    className="px-4 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
+                    data-testid="delete-confirm-button"
+                  >
+                    {deleteStep === 'deleting' ? 'Deleting...' : 'Permanently Delete My Account'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setDeleteStep('idle'); setDeleteConfirmText(''); setDeleteError(''); }}
+                    disabled={deleteStep === 'deleting'}
+                    className="btn btn-secondary"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
