@@ -9,7 +9,6 @@ import Footer from './components/Footer';
 import ReviewGatingWrapper from './components/ReviewGatingWrapper';
 import analytics from './services/analytics';
 import AppOnlyNotice from './components/site/AppOnlyNotice';
-import AppDownloadModal from './components/AppDownloadModal';
 import SharedVideoPage from './pages/SharedVideoPage';
 
 // Pages
@@ -103,7 +102,6 @@ const Layout = ({ children }) => {
 function AppContent() {
   return (
     <Router>
-      <AppDownloadModal />
       <AuthProvider>
         <CartProvider>
           <ReviewGatingWrapper>

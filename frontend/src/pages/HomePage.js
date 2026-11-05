@@ -5,9 +5,10 @@ import { listingsAPI } from '../services/api';
 import ListingCard from '../components/ListingCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PromoModal from '../components/PromoModal';
-import { APP_STORE_URL } from '../components/AppDownloadModal';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+
+const APP_STORE_URL = 'https://apps.apple.com/us/app/miclocker/id6768870077';
 
 const CATEGORIES = [
   { name: 'Guitars', icon: '🎸', color: 'from-orange-500 to-red-500' },
@@ -93,7 +94,14 @@ const HomePage = () => {
           <p className={`text-xl mb-8 max-w-2xl mx-auto ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             The gold standard of the music and entertainment industry
           </p>
-          <div className="flex justify-center">
+          <div className="flex flex-col items-center gap-5">
+            {/* Logo asset is black on transparent; the filter renders it white on the dark theme. */}
+            <img
+              src={`${process.env.PUBLIC_URL}/apple-logo.png`}
+              alt="Apple logo"
+              className={`h-14 w-auto ${isDark ? 'brightness-0 invert' : ''}`}
+              data-testid="hero-apple-logo"
+            />
             <a
               href={APP_STORE_URL}
               target="_blank"
