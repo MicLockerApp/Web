@@ -1,41 +1,19 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 
-const APP_STORE_URL = 'https://apps.apple.com/us/app/miclocker/id6768870077';
-const STORAGE_KEY = 'miclocker_app_modal_seen';
+export const APP_STORE_URL = 'https://apps.apple.com/us/app/miclocker/id6768870077';
 const SHOW_DELAY_MS = 800;
 
-// localStorage can throw (private mode, blocked site data), so every access is guarded.
-const hasSeenModal = () => {
-  try {
-    return localStorage.getItem(STORAGE_KEY) === 'true';
-  } catch {
-    return false;
-  }
-};
-
-const markModalSeen = () => {
-  try {
-    localStorage.setItem(STORAGE_KEY, 'true');
-  } catch {
-    /* storage unavailable: the modal simply won't be remembered across reloads */
-  }
-};
-
-// One-time "Download the iOS app" prompt for first-time visitors.
+// "Download the iOS app" prompt. Shows on every page load; nothing is remembered between visits.
 const AppDownloadModal = () => {
   const [isOpen, setIsOpen] = useState(false);
   const ctaRef = useRef(null);
 
   const close = useCallback(() => setIsOpen(false), []);
 
-  // Open once for visitors who have never seen it. Counts as "seen" the moment it shows.
+  // Open on every page load, shortly after the page appears.
   useEffect(() => {
-    if (hasSeenModal()) return undefined;
-    const timer = setTimeout(() => {
-      setIsOpen(true);
-      markModalSeen();
-    }, SHOW_DELAY_MS);
+    const timer = setTimeout(() => setIsOpen(true), SHOW_DELAY_MS);
     return () => clearTimeout(timer);
   }, []);
 

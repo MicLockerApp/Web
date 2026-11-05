@@ -5,6 +5,7 @@ import { listingsAPI } from '../services/api';
 import ListingCard from '../components/ListingCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PromoModal from '../components/PromoModal';
+import { APP_STORE_URL } from '../components/AppDownloadModal';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -19,42 +20,12 @@ const CATEGORIES = [
   { name: 'Effects Pedals', icon: '🎛️', color: 'from-cyan-500 to-blue-500' },
 ];
 
-// Animated counter component
-const AnimatedCounter = ({ target, duration = 2000 }) => {
-  const [count, setCount] = useState(0);
-
-  useEffect(() => {
-    let startTime;
-    let animationFrame;
-
-    const animate = (timestamp) => {
-      if (!startTime) startTime = timestamp;
-      const progress = Math.min((timestamp - startTime) / duration, 1);
-      
-      // Easing function for smooth animation
-      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
-      setCount(Math.floor(easeOutQuart * target));
-
-      if (progress < 1) {
-        animationFrame = requestAnimationFrame(animate);
-      }
-    };
-
-    animationFrame = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(animationFrame);
-  }, [target, duration]);
-
-  return <span>{count.toLocaleString()}</span>;
-};
-
 const HomePage = () => {
   const { isDark } = useTheme();
   const { isAuthenticated } = useAuth();
   const [featuredListings, setFeaturedListings] = useState([]);
   const [recentListings, setRecentListings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeListingsCount, setActiveListingsCount] = useState(0);
-  const [totalUsersCount, setTotalUsersCount] = useState(0);
   const [promoEligible, setPromoEligible] = useState(false);
   const [promoSpotsRemaining, setPromoSpotsRemaining] = useState(300);
   const [showPromoModal, setShowPromoModal] = useState(false);
@@ -69,8 +40,6 @@ const HomePage = () => {
         ]);
         setFeaturedListings(featured.data.listings || []);
         setRecentListings(recent.data.listings || []);
-        setActiveListingsCount(stats.data.active_listings || 0);
-        setTotalUsersCount(stats.data.total_users || 0);
         setPromoEligible(stats.data.promo_eligible || false);
         setPromoSpotsRemaining(stats.data.promo_spots_remaining || 0);
       } catch (error) {
@@ -119,46 +88,21 @@ const HomePage = () => {
         
         <div className="relative max-w-7xl mx-auto text-center">
           <h1 className={`text-4xl md:text-6xl font-bold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            By Industry Pros. <span className="text-primary">For Industry Pros.</span>
+            Your talent deserves to be <span className="text-primary">discovered</span>
           </h1>
           <p className={`text-xl mb-8 max-w-2xl mx-auto ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             The gold standard of the music and entertainment industry
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/search" className="btn btn-primary px-8 py-3 text-lg">
-              Browse Gear
-            </Link>
-            <Link to="/sell" className="btn btn-outline px-8 py-3 text-lg">
-              Sell Your Gear
-            </Link>
-          </div>
-          
-          {/* Stats - Reordered: Users, Listings, Platform Fee, Satisfaction */}
-          {/* Column count matches the number of stats shown so the row stays centered. */}
-          <div className={`grid ${totalUsersCount > 0 ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-3'} gap-6 mt-16 max-w-2xl mx-auto`}>
-            {/* User count isn't exposed by the app backend; shown only if known. */}
-            {totalUsersCount > 0 && (
-            <div>
-              <p className="text-3xl font-bold text-primary">
-                <AnimatedCounter target={totalUsersCount} duration={2500} />
-              </p>
-              <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Active Users</p>
-            </div>
-            )}
-            <div>
-              <p className="text-3xl font-bold text-primary">
-                <AnimatedCounter target={activeListingsCount} duration={2500} />
-              </p>
-              <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Active Listings</p>
-            </div>
-            <div>
-              <p className="text-3xl font-bold text-primary">3%</p>
-              <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Platform Fee</p>
-            </div>
-            <div>
-              <p className="text-3xl font-bold text-primary">100%</p>
-              <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Satisfaction</p>
-            </div>
+          <div className="flex justify-center">
+            <a
+              href={APP_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-primary px-8 py-3 text-lg"
+              data-testid="hero-download-ios-app"
+            >
+              Download the iOS app
+            </a>
           </div>
         </div>
       </section>
